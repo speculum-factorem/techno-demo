@@ -20,6 +20,8 @@ const Sidebar: React.FC = () => {
     { path: '/app/weather', icon: 'cloud', label: 'Погода' },
     { path: '/app/alerts', icon: 'notifications', label: 'Уведомления', badge: unreadCount },
     { path: '/app/model-metrics', icon: 'model_training', label: 'Метрики модели' },
+    { path: '/app/field-insights', icon: 'fact_check', label: 'Паспорт и финансы' },
+    { path: '/app/scenario-planner', icon: 'science', label: 'Сценарии что если' },
   ]
 
   return (

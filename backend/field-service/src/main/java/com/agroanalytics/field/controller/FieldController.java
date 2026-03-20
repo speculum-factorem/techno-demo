@@ -1,7 +1,10 @@
 package com.agroanalytics.field.controller;
 
 import com.agroanalytics.field.dto.CreateFieldDto;
+import com.agroanalytics.field.dto.FieldFinanceDto;
 import com.agroanalytics.field.dto.FieldDto;
+import com.agroanalytics.field.dto.FieldPassportDto;
+import com.agroanalytics.field.dto.FieldSatelliteDto;
 import com.agroanalytics.field.security.RequestActor;
 import com.agroanalytics.field.service.FieldService;
 import jakarta.validation.Valid;
@@ -44,6 +47,37 @@ public class FieldController {
             @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
         RequestActor actor = RequestActor.fromHeaders(orgIdHeader, roleHeader, internalToken, internalApiToken);
         return ResponseEntity.ok(fieldService.getFieldById(id, actor));
+    }
+
+    @GetMapping("/{id}/passport")
+    public ResponseEntity<FieldPassportDto> getFieldPassport(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Organization-Id", required = false) String orgIdHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader,
+            @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
+        RequestActor actor = RequestActor.fromHeaders(orgIdHeader, roleHeader, internalToken, internalApiToken);
+        return ResponseEntity.ok(fieldService.getFieldPassport(id, actor));
+    }
+
+    @GetMapping("/{id}/satellite")
+    public ResponseEntity<FieldSatelliteDto> getFieldSatellite(
+            @PathVariable UUID id,
+            @RequestParam(defaultValue = "14") int days,
+            @RequestHeader(value = "X-Organization-Id", required = false) String orgIdHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader,
+            @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
+        RequestActor actor = RequestActor.fromHeaders(orgIdHeader, roleHeader, internalToken, internalApiToken);
+        return ResponseEntity.ok(fieldService.getFieldSatellite(id, days, actor));
+    }
+
+    @GetMapping("/{id}/finance")
+    public ResponseEntity<FieldFinanceDto> getFieldFinance(
+            @PathVariable UUID id,
+            @RequestHeader(value = "X-Organization-Id", required = false) String orgIdHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader,
+            @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
+        RequestActor actor = RequestActor.fromHeaders(orgIdHeader, roleHeader, internalToken, internalApiToken);
+        return ResponseEntity.ok(fieldService.getFieldFinance(id, actor));
     }
 
     @PostMapping

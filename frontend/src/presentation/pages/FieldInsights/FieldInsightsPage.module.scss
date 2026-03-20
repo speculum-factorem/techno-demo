@@ -1,0 +1,46 @@
+@use '@presentation/styles/variables' as *;
+@use '@presentation/styles/mixins' as *;
+
+.page { @include flex(column, flex-start, stretch, 16px); }
+.header { @include flex(row, space-between, flex-end, 16px); }
+.title { font-size: $font-size-xl; font-weight: 700; }
+.subtitle { color: $text-secondary; }
+.selector { min-width: 320px; }
+.errorCard { color: $danger; }
+
+.kpiGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+.kpiLabel { color: $text-secondary; font-size: $font-size-sm; }
+.kpiValue { font-size: $font-size-lg; font-weight: 700; margin-top: 4px; }
+
+.grid2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.sectionTitle { font-size: $font-size-md; margin-bottom: 10px; }
+.chartWrap { width: 100%; height: 260px; }
+.meta { margin-top: 8px; }
+.list { margin-left: 18px; color: $text-secondary; }
+
+.table { @include flex(column, flex-start, stretch, 6px); }
+.row {
+  display: grid;
+  grid-template-columns: 120px 1fr 140px 140px;
+  gap: 10px;
+  background: $surface-variant;
+  border-radius: $radius-md;
+  padding: 8px 10px;
+  font-size: $font-size-sm;
+}
+
+.financeTop {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 10px;
+}

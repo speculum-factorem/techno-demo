@@ -3,6 +3,7 @@ import { USE_MOCK } from './config'
 import { YieldForecast, ForecastRequest, HistoricalYield } from '@domain/entities/Forecast'
 import { IrrigationRecommendation, IrrigationSchedule } from '@domain/entities/Irrigation'
 import { AnomalyResult, ModelMetrics } from '@domain/entities/Anomaly'
+import { WhatIfSimulationRequest, WhatIfSimulationResponse } from '@domain/entities/Scenario'
 import { mockYieldForecasts, mockHistoricalYields, mockIrrigationRecommendations, mockModelMetrics } from './MockData'
 
 type HistoricalYieldApiDto = {
@@ -103,6 +104,48 @@ export const analyticsApi = {
       return mockModelMetrics
     }
     const { data } = await apiClient.get<ModelMetrics>('/analytics/model/metrics')
+    return data
+  },
+
+  async simulateWhatIf(request: WhatIfSimulationRequest): Promise<WhatIfSimulationResponse> {
+    if (USE_MOCK) {
+      await new Promise(r => setTimeout(r, 700))
+      const baseline = {
+        name: 'Базовый',
+        irrigationMultiplier: 1,
+        seedingMultiplier: 1,
+        expectedYield: 4.6,
+        expectedYieldDeltaPercent: 0,
+        expectedWaterM3: 2200,
+        expectedWaterDeltaPercent: 0,
+        expectedRevenue: 2860000,
+        expectedCost: 1200000,
+        expectedProfit: 1660000,
+        roiPercent: 138.3,
+      }
+      const scenarios = request.scenarios.map((s, i) => ({
+        name: s.name || `Сценарий ${i + 1}`,
+        irrigationMultiplier: s.irrigationMultiplier,
+        seedingMultiplier: s.seedingMultiplier,
+        expectedYield: Number((4.6 * (1 + (s.irrigationMultiplier - 1) * 0.2 + (s.seedingMultiplier - 1) * 0.14)).toFixed(2)),
+        expectedYieldDeltaPercent: Number((((1 + (s.irrigationMultiplier - 1) * 0.2 + (s.seedingMultiplier - 1) * 0.14) - 1) * 100).toFixed(2)),
+        expectedWaterM3: Number((2200 * s.irrigationMultiplier).toFixed(1)),
+        expectedWaterDeltaPercent: Number(((s.irrigationMultiplier - 1) * 100).toFixed(2)),
+        expectedRevenue: 0,
+        expectedCost: 0,
+        expectedProfit: 0,
+        roiPercent: Number((130 + i * 6).toFixed(2)),
+      }))
+      return {
+        fieldId: request.fieldId,
+        fieldName: 'Поле',
+        baseline,
+        scenarios,
+        recommendedScenario: scenarios[0]?.name || 'Базовый',
+        generatedAt: new Date().toISOString(),
+      }
+    }
+    const { data } = await apiClient.post<WhatIfSimulationResponse>('/analytics/scenario/what-if', request)
     return data
   },
 }

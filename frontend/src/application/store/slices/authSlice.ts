@@ -6,6 +6,7 @@ interface AuthState {
   user: User | null
   tokens: AuthTokens | null
   isAuthenticated: boolean
+  initialized: boolean
   loading: boolean
   error: string | null
   registerSuccess: string | null
@@ -15,6 +16,7 @@ const initialState: AuthState = {
   user: JSON.parse(localStorage.getItem('user') || 'null'),
   tokens: JSON.parse(localStorage.getItem('tokens') || 'null'),
   isAuthenticated: !!localStorage.getItem('tokens'),
+  initialized: false,
   loading: false,
   error: null,
   registerSuccess: null,
@@ -33,7 +35,11 @@ export const login = createAsyncThunk(
 )
 
 export const logout = createAsyncThunk('auth/logout', async () => {
-  await authApi.logout()
+  try {
+    await authApi.logout()
+  } catch {
+    // Even if backend logout fails, local session must be terminated.
+  }
 })
 
 export const register = createAsyncThunk(
@@ -46,6 +52,26 @@ export const register = createAsyncThunk(
       return rejectWithValue(
         err.response?.data?.message || err.response?.data?.error || 'Ошибка регистрации'
       )
+    }
+  }
+)
+
+export const initializeAuth = createAsyncThunk(
+  'auth/initializeAuth',
+  async (_, { rejectWithValue }) => {
+    const rawTokens = localStorage.getItem('tokens')
+    if (!rawTokens) {
+      return { isAuthenticated: false }
+    }
+
+    try {
+      const user = await authApi.me()
+      const tokens = JSON.parse(rawTokens) as AuthTokens
+      return { isAuthenticated: true, user, tokens }
+    } catch (err: any) {
+      localStorage.removeItem('tokens')
+      localStorage.removeItem('user')
+      return rejectWithValue('Session expired')
     }
   }
 )
@@ -78,6 +104,29 @@ const authSlice = createSlice({
         state.loading = false
         state.error = action.payload as string
       })
+      .addCase(initializeAuth.pending, (state) => {
+        state.loading = true
+      })
+      .addCase(initializeAuth.fulfilled, (state, action: PayloadAction<{ isAuthenticated: boolean; user?: User; tokens?: AuthTokens }>) => {
+        state.loading = false
+        state.initialized = true
+        if (action.payload.isAuthenticated) {
+          state.isAuthenticated = true
+          state.user = action.payload.user || null
+          state.tokens = action.payload.tokens || null
+        } else {
+          state.isAuthenticated = false
+          state.user = null
+          state.tokens = null
+        }
+      })
+      .addCase(initializeAuth.rejected, (state) => {
+        state.loading = false
+        state.initialized = true
+        state.isAuthenticated = false
+        state.user = null
+        state.tokens = null
+      })
       .addCase(register.pending, (state) => {
         state.loading = true
         state.error = null
@@ -92,6 +141,14 @@ const authSlice = createSlice({
         state.error = action.payload as string
       })
       .addCase(logout.fulfilled, (state) => {
+        state.user = null
+        state.tokens = null
+        state.isAuthenticated = false
+        state.registerSuccess = null
+        localStorage.removeItem('user')
+        localStorage.removeItem('tokens')
+      })
+      .addCase(logout.rejected, (state) => {
         state.user = null
         state.tokens = null
         state.isAuthenticated = false

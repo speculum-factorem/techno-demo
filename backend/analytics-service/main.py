@@ -89,6 +89,37 @@ class HistoricalYield(BaseModel):
     precipitation: float
     avgTemperature: float
 
+class WhatIfScenarioRequest(BaseModel):
+    fieldId: str
+    targetDate: str
+    cropType: Optional[str] = "wheat"
+    soilType: Optional[str] = "Чернозём"
+    area: Optional[float] = 50.0
+    expectedPricePerTon: Optional[float] = 13500.0
+    baseline: Optional[dict] = None
+    scenarios: List[dict]
+
+class WhatIfScenarioResult(BaseModel):
+    name: str
+    irrigationMultiplier: float
+    seedingMultiplier: float
+    expectedYield: float
+    expectedYieldDeltaPercent: float
+    expectedWaterM3: float
+    expectedWaterDeltaPercent: float
+    expectedRevenue: float
+    expectedCost: float
+    expectedProfit: float
+    roiPercent: float
+
+class WhatIfSimulationResponse(BaseModel):
+    fieldId: str
+    fieldName: str
+    baseline: WhatIfScenarioResult
+    scenarios: List[WhatIfScenarioResult]
+    recommendedScenario: str
+    generatedAt: str
+
 
 # ======================= ML MODEL =======================
 
@@ -985,6 +1016,89 @@ def get_model_metrics():
         'modelVersion': '1.2.0',
         'trainedAt': datetime.now().isoformat(),
     }
+
+@app.post("/scenario/what-if", response_model=WhatIfSimulationResponse)
+def simulate_what_if(request: WhatIfScenarioRequest):
+    """Simulate irrigation/seeding strategy scenarios with yield, water and ROI."""
+    if not request.scenarios:
+        raise HTTPException(status_code=400, detail="At least one scenario is required")
+
+    context = _resolve_field_context(
+        request.fieldId,
+        fallback_crop=request.cropType or "wheat",
+        fallback_soil=request.soilType or "Чернозём",
+        fallback_area=request.area or 50.0,
+    )
+    weather = context["weather"] or WeatherInput()
+    crop_type = request.cropType or context["cropType"] or "wheat"
+    soil_type = request.soilType or context["soilType"] or "Чернозём"
+    area = float(context["area"] or request.area or 50.0)
+    price_per_ton = float(request.expectedPricePerTon or 13500.0)
+
+    base_predict = yield_model.predict(weather, crop_type, soil_type)
+    base_yield = float(base_predict["predicted"])
+    base_water_m3 = max(80.0, (100 - weather.soil_moisture) * area * 0.9)
+    base_cost = area * 11850.0
+    base_revenue = base_yield * area * price_per_ton
+    base_profit = base_revenue - base_cost
+    base_roi = (base_profit / max(base_cost, 1.0)) * 100.0
+
+    baseline_result = WhatIfScenarioResult(
+        name="Базовый",
+        irrigationMultiplier=1.0,
+        seedingMultiplier=1.0,
+        expectedYield=round(base_yield, 2),
+        expectedYieldDeltaPercent=0.0,
+        expectedWaterM3=round(base_water_m3, 1),
+        expectedWaterDeltaPercent=0.0,
+        expectedRevenue=round(base_revenue, 2),
+        expectedCost=round(base_cost, 2),
+        expectedProfit=round(base_profit, 2),
+        roiPercent=round(base_roi, 2),
+    )
+
+    scenario_results = []
+    for s in request.scenarios:
+        irrigation_mult = float(s.get("irrigationMultiplier", 1.0))
+        seeding_mult = float(s.get("seedingMultiplier", 1.0))
+        name = str(s.get("name", f"Сценарий {len(scenario_results) + 1}"))
+
+        irrigation_effect = (irrigation_mult - 1.0) * 0.22
+        seeding_effect = (seeding_mult - 1.0) * 0.14
+        stress_penalty = -0.12 if irrigation_mult < 0.85 and weather.soil_moisture < 45 else 0.0
+        yield_factor = max(0.55, 1.0 + irrigation_effect + seeding_effect + stress_penalty)
+
+        scenario_yield = base_yield * yield_factor
+        scenario_water = base_water_m3 * irrigation_mult
+        scenario_cost = base_cost * (0.70 + irrigation_mult * 0.20 + seeding_mult * 0.10)
+        scenario_revenue = scenario_yield * area * price_per_ton
+        scenario_profit = scenario_revenue - scenario_cost
+        scenario_roi = (scenario_profit / max(scenario_cost, 1.0)) * 100.0
+
+        scenario_results.append(WhatIfScenarioResult(
+            name=name,
+            irrigationMultiplier=round(irrigation_mult, 2),
+            seedingMultiplier=round(seeding_mult, 2),
+            expectedYield=round(scenario_yield, 2),
+            expectedYieldDeltaPercent=round(((scenario_yield - base_yield) / max(base_yield, 0.1)) * 100.0, 2),
+            expectedWaterM3=round(scenario_water, 1),
+            expectedWaterDeltaPercent=round(((scenario_water - base_water_m3) / max(base_water_m3, 1.0)) * 100.0, 2),
+            expectedRevenue=round(scenario_revenue, 2),
+            expectedCost=round(scenario_cost, 2),
+            expectedProfit=round(scenario_profit, 2),
+            roiPercent=round(scenario_roi, 2),
+        ))
+
+    best = max(scenario_results, key=lambda x: x.roiPercent)
+
+    return WhatIfSimulationResponse(
+        fieldId=request.fieldId,
+        fieldName=context["fieldName"],
+        baseline=baseline_result,
+        scenarios=scenario_results,
+        recommendedScenario=best.name,
+        generatedAt=datetime.now().isoformat(),
+    )
 
 
 if __name__ == "__main__":

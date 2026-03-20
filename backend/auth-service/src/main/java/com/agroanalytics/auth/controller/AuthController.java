@@ -2,6 +2,7 @@ package com.agroanalytics.auth.controller;
 
 import com.agroanalytics.auth.dto.LoginRequest;
 import com.agroanalytics.auth.dto.LoginResponse;
+import com.agroanalytics.auth.dto.RefreshTokenRequest;
 import com.agroanalytics.auth.dto.RegisterRequest;
 import com.agroanalytics.auth.model.User;
 import com.agroanalytics.auth.service.AuthService;
@@ -53,6 +54,12 @@ public class AuthController {
             @RequestHeader(value = "Authorization", required = false) String authHeader) {
         // Stateless JWT - client is responsible for discarding the token
         return ResponseEntity.ok(Map.of("message", "Logged out successfully"));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<LoginResponse> refresh(@Valid @RequestBody RefreshTokenRequest request) {
+        LoginResponse response = authService.refresh(request);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")

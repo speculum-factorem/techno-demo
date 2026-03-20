@@ -1,4 +1,4 @@
-import axios, { AxiosInstance, AxiosRequestConfig } from 'axios'
+import axios, { AxiosInstance } from 'axios'
 
 const BASE_URL = import.meta.env.VITE_API_URL || '/api'
 
@@ -17,10 +17,73 @@ apiClient.interceptors.request.use((config) => {
   return config
 })
 
+let refreshInFlight: Promise<string | null> | null = null
+
+const getNewAccessToken = async (): Promise<string | null> => {
+  const raw = localStorage.getItem('tokens')
+  if (!raw) return null
+
+  let parsed: { refreshToken?: string } | null = null
+  try {
+    parsed = JSON.parse(raw)
+  } catch {
+    return null
+  }
+
+  if (!parsed?.refreshToken) return null
+
+  const { data } = await axios.post<{
+    accessToken: string
+    refreshToken: string
+    expiresIn: number
+    user: { id: number; username: string; email: string; fullName: string; role: string }
+  }>(`${BASE_URL}/auth/refresh`, { refreshToken: parsed.refreshToken })
+
+  const nextTokens = {
+    accessToken: data.accessToken,
+    refreshToken: data.refreshToken,
+    expiresIn: data.expiresIn,
+  }
+  const nextUser = {
+    id: String(data.user.id),
+    username: data.user.username,
+    email: data.user.email,
+    fullName: data.user.fullName,
+    role: data.user.role,
+  }
+  localStorage.setItem('tokens', JSON.stringify(nextTokens))
+  localStorage.setItem('user', JSON.stringify(nextUser))
+  return data.accessToken
+}
+
 apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
-    if (error.response?.status === 401) {
+    const status = error.response?.status
+    const originalRequest: any = error.config
+    const requestUrl = String(originalRequest?.url || '')
+
+    const isAuthEndpoint = requestUrl.includes('/auth/login')
+      || requestUrl.includes('/auth/register')
+      || requestUrl.includes('/auth/verify-email')
+      || requestUrl.includes('/auth/refresh')
+
+    if (status === 401 && !isAuthEndpoint && originalRequest && !originalRequest._retry) {
+      originalRequest._retry = true
+      try {
+        refreshInFlight ||= getNewAccessToken().finally(() => { refreshInFlight = null })
+        const nextAccess = await refreshInFlight
+        if (nextAccess) {
+          originalRequest.headers = originalRequest.headers || {}
+          originalRequest.headers.Authorization = `Bearer ${nextAccess}`
+          return apiClient(originalRequest)
+        }
+      } catch {
+        // fall through to logout behavior
+      }
+    }
+
+    if (status === 401) {
       localStorage.removeItem('tokens')
       localStorage.removeItem('user')
       window.location.href = '/auth/login'

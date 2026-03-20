@@ -1,6 +1,6 @@
 import apiClient from './ApiClient'
 import { USE_MOCK } from './config'
-import { Field, CreateFieldDto } from '@domain/entities/Field'
+import { Field, CreateFieldDto, FieldPassport, FieldSatellite, FieldFinance } from '@domain/entities/Field'
 import { mockFields } from './MockData'
 
 type FieldApiDto = {
@@ -116,5 +116,32 @@ export const fieldApi = {
       return
     }
     await apiClient.delete(`/fields/${id}`)
+  },
+
+  async getPassport(fieldId: string): Promise<FieldPassport> {
+    if (USE_MOCK) {
+      await new Promise(r => setTimeout(r, 350))
+      return {
+        fieldId,
+        fieldName: mockFields.find(f => f.id === fieldId)?.name || 'Поле',
+        operations: [],
+        fertilizers: [],
+        treatments: [],
+        results: [],
+        totals: { totalCost: 0, totalFertilizerKg: 0, totalWaterM3: 0, operationsCount: 0 },
+      }
+    }
+    const { data } = await apiClient.get<FieldPassport>(`/fields/${fieldId}/passport`)
+    return data
+  },
+
+  async getSatellite(fieldId: string, days = 14): Promise<FieldSatellite> {
+    const { data } = await apiClient.get<FieldSatellite>(`/fields/${fieldId}/satellite?days=${days}`)
+    return data
+  },
+
+  async getFinance(fieldId: string): Promise<FieldFinance> {
+    const { data } = await apiClient.get<FieldFinance>(`/fields/${fieldId}/finance`)
+    return data
   },
 }

@@ -9,34 +9,34 @@ spring:
     gateway:
       routes:
         - id: auth-service
-          uri: http://localhost:8081
+          uri: http://auth-service:8081
           predicates:
             - Path=/api/auth/**
 
         - id: field-service
-          uri: http://localhost:8082
+          uri: http://field-service:8082
           predicates:
             - Path=/api/fields/**
 
         - id: weather-service
-          uri: http://localhost:8083
+          uri: http://weather-service:8083
           predicates:
             - Path=/api/weather/**
 
         - id: analytics-service
-          uri: http://localhost:8000
+          uri: http://analytics-service:8000
           predicates:
             - Path=/api/analytics/**
           filters:
             - StripPrefix=2
 
         - id: irrigation-service
-          uri: http://localhost:8084
+          uri: http://irrigation-service:8084
           predicates:
             - Path=/api/irrigation/**
 
         - id: notification-service
-          uri: http://localhost:8085
+          uri: http://notification-service:8085
           predicates:
             - Path=/api/alerts/**
 

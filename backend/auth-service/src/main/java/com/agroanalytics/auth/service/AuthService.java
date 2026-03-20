@@ -2,6 +2,7 @@ package com.agroanalytics.auth.service;
 
 import com.agroanalytics.auth.dto.LoginRequest;
 import com.agroanalytics.auth.dto.LoginResponse;
+import com.agroanalytics.auth.dto.RefreshTokenRequest;
 import com.agroanalytics.auth.dto.RegisterRequest;
 import com.agroanalytics.auth.model.EmailVerificationToken;
 import com.agroanalytics.auth.model.OrganizationInviteCode;
@@ -164,6 +165,50 @@ public class AuthService {
         userRepository.save(user);
         verificationToken.setUsedAt(LocalDateTime.now());
         emailVerificationTokenRepository.save(verificationToken);
+    }
+
+    public LoginResponse refresh(RefreshTokenRequest request) {
+        String refreshToken = request.getRefreshToken();
+        String username;
+        try {
+            username = jwtService.extractUsername(refreshToken);
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid refresh token");
+        }
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "User not found"));
+
+        if (!jwtService.isTokenValid(refreshToken, username)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Refresh token expired or invalid");
+        }
+        if (!user.isEmailVerified()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Email is not verified");
+        }
+
+        Map<String, Object> claims = new HashMap<>();
+        claims.put("role", user.getRole().name());
+        claims.put("email", user.getEmail());
+        if (user.getOrganizationId() != null) {
+            claims.put("organizationId", user.getOrganizationId());
+        }
+
+        String accessToken = jwtService.generateToken(username, claims);
+        String nextRefreshToken = jwtService.generateRefreshToken(username);
+        LoginResponse.UserInfo userInfo = LoginResponse.UserInfo.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .role(user.getRole())
+                .build();
+
+        return LoginResponse.builder()
+                .accessToken(accessToken)
+                .refreshToken(nextRefreshToken)
+                .expiresIn(jwtService.getExpiration())
+                .user(userInfo)
+                .build();
     }
 
     public Optional<User> getUserFromToken(String token) {
