@@ -18,6 +18,14 @@ import AlertsPage from '@presentation/pages/Alerts/AlertsPage'
 import ModelMetricsPage from '@presentation/pages/ModelMetrics/ModelMetricsPage'
 import FieldInsightsPage from '@presentation/pages/FieldInsights/FieldInsightsPage'
 import ScenarioPlannerPage from '@presentation/pages/ScenarioPlanner/ScenarioPlannerPage'
+import WorkPlannerPage from '@presentation/pages/WorkPlanner/WorkPlannerPage'
+import SatelliteAnalyticsPage from '@presentation/pages/SatelliteAnalytics/SatelliteAnalyticsPage'
+import EquipmentPage from '@presentation/pages/EquipmentMonitor/EquipmentPage'
+import AuditLogPage from '@presentation/pages/AuditLog/AuditLogPage'
+import NotificationRulesPage from '@presentation/pages/NotificationRules/NotificationRulesPage'
+import ReportsPage from '@presentation/pages/Reports/ReportsPage'
+import RbacManagementPage from '@presentation/pages/RbacManagement/RbacManagementPage'
+import IntegrationsPage from '@presentation/pages/Integrations/IntegrationsPage'
 import '@presentation/styles/global.scss'
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -57,6 +65,15 @@ const AppRoutes: React.FC = () => {
           <Route path="model-metrics" element={<ModelMetricsPage />} />
           <Route path="field-insights" element={<FieldInsightsPage />} />
           <Route path="scenario-planner" element={<ScenarioPlannerPage />} />
+          {/* New modules */}
+          <Route path="work-planner" element={<WorkPlannerPage />} />
+          <Route path="satellite" element={<SatelliteAnalyticsPage />} />
+          <Route path="equipment" element={<EquipmentPage />} />
+          <Route path="audit" element={<AuditLogPage />} />
+          <Route path="notification-rules" element={<NotificationRulesPage />} />
+          <Route path="reports" element={<ReportsPage />} />
+          <Route path="rbac" element={<RbacManagementPage />} />
+          <Route path="integrations" element={<IntegrationsPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -68,6 +68,51 @@
   padding: 0 5px;
 }
 
+.group {
+  margin-bottom: 4px;
+}
+
+.groupHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 6px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: background 0.15s;
+
+  &:hover {
+    background: $surface-variant;
+  }
+}
+
+.groupTitle {
+  font-size: 10px;
+  font-weight: 800;
+  color: $text-tertiary;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.groupChevron {
+  font-size: 16px !important;
+  color: $text-tertiary;
+  transition: transform 0.2s;
+}
+
+.chevronCollapsed {
+  transform: rotate(-90deg);
+}
+
+.groupItems {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
 .footer {
   padding: 16px 16px 8px;
   border-top: 1px solid $outline;
