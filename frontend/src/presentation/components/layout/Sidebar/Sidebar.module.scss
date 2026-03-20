@@ -1,0 +1,81 @@
+@use '@presentation/styles/variables' as *;
+@use '@presentation/styles/mixins' as *;
+
+.sidebar {
+  position: fixed;
+  top: $header-height;
+  left: 0;
+  bottom: 0;
+  width: $sidebar-width;
+  background: $surface;
+  border-right: 1px solid $outline;
+  @include flex(column, stretch, space-between);
+  padding: 12px 0;
+  overflow-y: auto;
+  @include scrollbar;
+  z-index: 90;
+}
+
+.nav {
+  @include flex(column, stretch, flex-start, 2px);
+  padding: 0 12px;
+}
+
+.navItem {
+  @include flex(row, center, flex-start, 12px);
+  padding: 10px 16px;
+  border-radius: $radius-full;
+  color: $text-secondary;
+  text-decoration: none;
+  font-size: $font-size-base;
+  font-weight: 500;
+  transition: all $transition-fast;
+  position: relative;
+
+  &:hover {
+    background: $surface-variant;
+    color: $text-primary;
+    text-decoration: none;
+  }
+
+  &.active {
+    background: $primary-light;
+    color: $primary;
+
+    .icon { color: $primary; }
+  }
+}
+
+.icon {
+  font-size: 22px !important;
+  flex-shrink: 0;
+}
+
+.label {
+  flex: 1;
+  @include truncate;
+}
+
+.badge {
+  background: $danger;
+  color: white;
+  font-size: 11px;
+  font-weight: 700;
+  min-width: 20px;
+  height: 20px;
+  border-radius: $radius-full;
+  @include flex(row, center, center);
+  padding: 0 5px;
+}
+
+.footer {
+  padding: 16px 16px 8px;
+  border-top: 1px solid $outline;
+  margin-top: 8px;
+}
+
+.version {
+  font-size: $font-size-xs;
+  color: $text-tertiary;
+  text-align: center;
+}

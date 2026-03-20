@@ -1,0 +1,70 @@
+// Google-style design tokens
+$primary: #1a73e8;
+$primary-dark: #1557b0;
+$primary-light: #e8f0fe;
+$secondary: #34a853;
+$secondary-light: #e6f4ea;
+$warning: #fbbc04;
+$warning-light: #fef9e0;
+$danger: #ea4335;
+$danger-light: #fce8e6;
+$info: #1a73e8;
+$info-light: #e8f0fe;
+
+$surface: #ffffff;
+$surface-variant: #f8f9fa;
+$background: #f1f3f4;
+$outline: #dadce0;
+$outline-dark: #bdc1c6;
+
+$text-primary: #202124;
+$text-secondary: #5f6368;
+$text-tertiary: #9aa0a6;
+$text-on-primary: #ffffff;
+
+$font-family: 'Google Sans', 'Roboto', -apple-system, BlinkMacSystemFont, sans-serif;
+$font-size-xs: 11px;
+$font-size-sm: 12px;
+$font-size-base: 14px;
+$font-size-md: 16px;
+$font-size-lg: 20px;
+$font-size-xl: 24px;
+$font-size-2xl: 32px;
+
+$radius-sm: 4px;
+$radius-md: 8px;
+$radius-lg: 12px;
+$radius-xl: 16px;
+$radius-full: 9999px;
+
+$shadow-sm: 0 1px 2px rgba(0,0,0,0.1), 0 1px 3px rgba(0,0,0,0.06);
+$shadow-md: 0 1px 3px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.07);
+$shadow-lg: 0 4px 6px rgba(0,0,0,0.07), 0 10px 15px rgba(0,0,0,0.1);
+$shadow-xl: 0 8px 30px rgba(0,0,0,0.12);
+
+$sidebar-width: 256px;
+$header-height: 64px;
+
+$transition-fast: 0.15s ease;
+$transition-base: 0.25s ease;
+$transition-slow: 0.4s ease;
+
+// Crop colors
+$crop-wheat: #f59e0b;
+$crop-corn: #f97316;
+$crop-sunflower: #eab308;
+$crop-barley: #84cc16;
+$crop-soy: #22c55e;
+$crop-sugar-beet: #ec4899;
+
+// Status colors
+$status-active: #34a853;
+$status-idle: #9aa0a6;
+$status-harvested: #8b5cf6;
+$status-preparing: #1a73e8;
+
+// Priority colors
+$priority-critical: #ea4335;
+$priority-high: #fa8c16;
+$priority-medium: #fbbc04;
+$priority-low: #34a853;

@@ -1,0 +1,110 @@
+@use 'sass:color';
+@use '@presentation/styles/variables' as *;
+@use '@presentation/styles/mixins' as *;
+
+.page { @include flex(column, stretch, flex-start, 24px); }
+.header { @include flex(row, center, space-between, 16px); }
+.title { font-size: $font-size-xl; font-weight: 700; color: $text-primary; }
+.subtitle { font-size: $font-size-sm; color: $text-secondary; margin-top: 2px; }
+
+.statsRow {
+  @include flex(row, center, flex-start, 8px);
+  flex-wrap: wrap;
+}
+
+.statChip {
+  @include flex(row, center, flex-start, 6px);
+  padding: 6px 14px;
+  border-radius: $radius-full;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  .material-icons-round { font-size: 15px !important; }
+
+  &.danger { background: $danger-light; color: color.adjust($danger, $lightness: -10%); }
+  &.warning { background: $warning-light; color: #92400e; }
+  &.info { background: $primary-light; color: $primary-dark; }
+}
+
+.section { @include flex(column, stretch, flex-start, 10px); }
+
+.sectionTitle {
+  @include flex(row, center, flex-start, 6px);
+  font-size: $font-size-md;
+  font-weight: 600;
+  .material-icons-round { font-size: 18px !important; }
+
+  &.danger { color: $danger; }
+  &.warning { color: #d97706; }
+  &.info { color: $primary; }
+}
+
+.alertsList { @include flex(column, stretch, flex-start, 8px); }
+
+.alertCard {
+  @include flex(row, flex-start, flex-start, 16px);
+  padding: 16px !important;
+  border-left: 3px solid transparent;
+  transition: all $transition-fast;
+
+  &.unread { background: rgba($primary, 0.02); }
+  &.sev-critical { border-left-color: $danger; }
+  &.sev-warning { border-left-color: $warning; }
+  &.sev-info { border-left-color: $primary; }
+}
+
+.alertLeft { flex-shrink: 0; }
+
+.alertIcon {
+  font-size: 24px !important;
+  &.critical { color: $danger; }
+  &.warning { color: $warning; }
+  &.info { color: $primary; }
+}
+
+.alertMain { flex: 1; min-width: 0; @include flex(column, flex-start, flex-start, 6px); }
+
+.alertTop {
+  @include flex(row, center, space-between, 8px);
+  width: 100%;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.alertMeta {
+  @include flex(row, center, flex-start, 8px);
+  flex-wrap: wrap;
+}
+
+.alertType, .alertField {
+  @include flex(row, center, flex-start, 3px);
+  font-size: $font-size-xs;
+  color: $text-secondary;
+  .material-icons-round { font-size: 12px !important; }
+}
+
+.alertTime { font-size: $font-size-xs; color: $text-tertiary; white-space: nowrap; }
+.alertTitle { font-size: $font-size-base; font-weight: 600; color: $text-primary; }
+.alertMessage { font-size: $font-size-sm; color: $text-secondary; line-height: 1.5; }
+
+.readBtn {
+  @include button-base;
+  background: $surface-variant;
+  padding: 6px;
+  border-radius: $radius-full;
+  color: $secondary;
+  flex-shrink: 0;
+  font-size: 18px;
+
+  &:hover { background: $secondary-light; }
+}
+
+.emptyState {
+  @include flex(column, center, center, 8px);
+  padding: 48px !important;
+  text-align: center;
+  color: $text-tertiary;
+
+  .material-icons-round { font-size: 48px !important; }
+  h3 { font-size: $font-size-lg; color: $text-secondary; }
+  p { font-size: $font-size-sm; }
+}

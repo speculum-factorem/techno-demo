@@ -1,0 +1,12 @@
+/Users/maxim/Desktop/HackOff/backend/notification-service/src/main/java/com/agroanalytics/notification/config/SecurityConfig.java
+/Users/maxim/Desktop/HackOff/backend/notification-service/src/main/java/com/agroanalytics/notification/integration/TelegramNotificationService.java
+/Users/maxim/Desktop/HackOff/backend/notification-service/src/main/java/com/agroanalytics/notification/kafka/WeatherEventConsumer.java
+/Users/maxim/Desktop/HackOff/backend/notification-service/src/main/java/com/agroanalytics/notification/service/AlertService.java
+/Users/maxim/Desktop/HackOff/backend/notification-service/src/main/java/com/agroanalytics/notification/dto/WeatherEventDto.java
+/Users/maxim/Desktop/HackOff/backend/notification-service/src/main/java/com/agroanalytics/notification/model/Alert.java
+/Users/maxim/Desktop/HackOff/backend/notification-service/src/main/java/com/agroanalytics/notification/dto/IrrigationRecommendationDto.java
+/Users/maxim/Desktop/HackOff/backend/notification-service/src/main/java/com/agroanalytics/notification/repository/AlertRepository.java
+/Users/maxim/Desktop/HackOff/backend/notification-service/src/main/java/com/agroanalytics/notification/dto/AlertDto.java
+/Users/maxim/Desktop/HackOff/backend/notification-service/src/main/java/com/agroanalytics/notification/controller/AlertController.java
+/Users/maxim/Desktop/HackOff/backend/notification-service/src/main/java/com/agroanalytics/notification/NotificationServiceApplication.java
+/Users/maxim/Desktop/HackOff/backend/notification-service/src/main/java/com/agroanalytics/notification/kafka/IrrigationEventConsumer.java

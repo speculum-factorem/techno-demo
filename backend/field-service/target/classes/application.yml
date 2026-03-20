@@ -1,0 +1,29 @@
+server:
+  port: 8082
+spring:
+  application:
+    name: field-service
+  datasource:
+    url: jdbc:postgresql://postgres:5432/fielddb
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+  kafka:
+    bootstrap-servers: kafka:9092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+
+agro:
+  security:
+    # Same value must be sent by weather-service / analytics as X-Internal-Token
+    internal-api-token: ${INTERNAL_API_TOKEN:}

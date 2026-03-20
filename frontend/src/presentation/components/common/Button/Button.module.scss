@@ -1,0 +1,73 @@
+@use 'sass:color';
+@use '@presentation/styles/variables' as *;
+@use '@presentation/styles/mixins' as *;
+
+.btn {
+  @include button-base;
+
+  &:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    pointer-events: none;
+  }
+
+  .material-icons-round { font-size: 18px !important; }
+}
+
+// Sizes
+.sm { padding: 6px 14px; font-size: $font-size-sm; gap: 4px; .material-icons-round { font-size: 16px !important; } }
+.md { padding: 9px 20px; font-size: $font-size-base; }
+.lg { padding: 12px 28px; font-size: $font-size-md; .material-icons-round { font-size: 20px !important; } }
+
+// Variants
+.primary {
+  background: $primary;
+  color: white;
+
+  &:hover { background: $primary-dark; box-shadow: $shadow-sm; }
+  &:active { background: color.adjust($primary-dark, $lightness: -5%); }
+}
+
+.secondary {
+  background: $primary-light;
+  color: $primary;
+
+  &:hover { background: color.adjust($primary-light, $lightness: -3%); }
+}
+
+.outlined {
+  background: transparent;
+  color: $primary;
+  border: 1px solid $primary;
+
+  &:hover { background: $primary-light; }
+}
+
+.ghost {
+  background: transparent;
+  color: $text-secondary;
+
+  &:hover { background: $surface-variant; color: $text-primary; }
+}
+
+.danger {
+  background: $danger;
+  color: white;
+
+  &:hover { background: color.adjust($danger, $lightness: -8%); }
+}
+
+.fullWidth { width: 100%; }
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255,255,255,0.4);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

@@ -1,0 +1,33 @@
+@use 'sass:color';
+@use '@presentation/styles/variables' as *;
+@use '@presentation/styles/mixins' as *;
+
+.alert {
+  @include flex(row, flex-start, flex-start, 12px);
+  padding: 12px 16px;
+  border-radius: $radius-md;
+  border-left: 4px solid;
+}
+
+.icon { font-size: 20px !important; flex-shrink: 0; margin-top: 1px; }
+.content { flex: 1; }
+.title { font-size: $font-size-base; font-weight: 500; margin-bottom: 2px; }
+.message { font-size: $font-size-sm; line-height: 1.5; }
+
+.close {
+  @include button-base;
+  background: none;
+  padding: 2px;
+  border-radius: $radius-sm;
+  color: inherit;
+  opacity: 0.7;
+  flex-shrink: 0;
+  font-size: 18px;
+
+  &:hover { opacity: 1; background: rgba(0,0,0,0.05); }
+}
+
+.success { background: $secondary-light; border-color: $secondary; color: color.adjust($secondary, $lightness: -15%); }
+.warning { background: $warning-light; border-color: $warning; color: #92400e; }
+.error { background: $danger-light; border-color: $danger; color: color.adjust($danger, $lightness: -15%); }
+.info { background: $primary-light; border-color: $primary; color: $primary-dark; }

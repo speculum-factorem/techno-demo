@@ -1,0 +1,61 @@
+@use '@presentation/styles/variables' as *;
+@use '@presentation/styles/mixins' as *;
+
+.wrapper {
+  @include flex(column, stretch, flex-start, 4px);
+}
+
+.fullWidth { width: 100%; }
+
+.label {
+  font-size: $font-size-sm;
+  font-weight: 500;
+  color: $text-secondary;
+}
+
+.inputWrapper {
+  position: relative;
+  @include flex(row, center);
+
+  &.hasError .input { border-color: $danger; }
+  &.hasError .input:focus { border-color: $danger; box-shadow: 0 0 0 3px rgba($danger, 0.1); }
+  &.hasIcon .input { padding-left: 40px; }
+}
+
+.icon {
+  position: absolute;
+  left: 12px;
+  color: $text-secondary;
+  font-size: 18px !important;
+  pointer-events: none;
+}
+
+.input {
+  width: 100%;
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid $outline;
+  border-radius: $radius-md;
+  font-size: $font-size-base;
+  font-family: $font-family;
+  color: $text-primary;
+  background: $surface;
+  transition: border-color $transition-fast, box-shadow $transition-fast;
+  outline: none;
+
+  &::placeholder { color: $text-tertiary; }
+  &:hover { border-color: $outline-dark; }
+  &:focus {
+    border-color: $primary;
+    box-shadow: 0 0 0 3px rgba($primary, 0.1);
+  }
+
+  &:disabled {
+    background: $surface-variant;
+    color: $text-secondary;
+    cursor: not-allowed;
+  }
+}
+
+.error { font-size: $font-size-xs; color: $danger; }
+.hint { font-size: $font-size-xs; color: $text-tertiary; }

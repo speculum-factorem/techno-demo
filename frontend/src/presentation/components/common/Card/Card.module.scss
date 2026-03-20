@@ -1,0 +1,26 @@
+@use '@presentation/styles/variables' as *;
+@use '@presentation/styles/mixins' as *;
+
+.card {
+  @include card;
+  overflow: hidden;
+}
+
+.padding-none { padding: 0; }
+.padding-sm { padding: 12px; }
+.padding-md { padding: 20px; }
+.padding-lg { padding: 28px; }
+
+.hoverable {
+  cursor: pointer;
+  transition: box-shadow $transition-fast, transform $transition-fast;
+
+  &:hover {
+    box-shadow: $shadow-md;
+    transform: translateY(-1px);
+  }
+
+  &:active {
+    transform: translateY(0);
+  }
+}

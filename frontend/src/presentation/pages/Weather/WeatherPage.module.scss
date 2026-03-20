@@ -1,0 +1,124 @@
+@use '@presentation/styles/variables' as *;
+@use '@presentation/styles/mixins' as *;
+
+.page { @include flex(column, stretch, flex-start, 24px); }
+.header { @include flex(row, flex-end, space-between, 16px); }
+.title { font-size: $font-size-xl; font-weight: 700; color: $text-primary; }
+.subtitle { font-size: $font-size-sm; color: $text-secondary; margin-top: 2px; }
+
+.tabs {
+  @include flex(row, center, flex-start, 4px);
+  border-bottom: 1px solid $outline;
+  padding-bottom: 0;
+}
+
+.tab {
+  @include flex(row, center, flex-start, 6px);
+  @include button-base;
+  background: none;
+  padding: 10px 16px;
+  border-radius: $radius-md $radius-md 0 0;
+  color: $text-secondary;
+  font-size: $font-size-sm;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+
+  &:hover { background: $surface-variant; color: $text-primary; }
+  &.activeTab { color: $primary; border-bottom-color: $primary; background: transparent; }
+
+  .material-icons-round { font-size: 16px !important; }
+}
+
+.currentGrid {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 16px;
+  @media (max-width: 900px) { grid-template-columns: 1fr; }
+}
+
+.bigWeatherCard { }
+.bigWeatherTop {
+  @include flex(row, center, flex-start, 20px);
+  margin-bottom: 24px;
+}
+
+.bigTemp {
+  font-size: 64px;
+  font-weight: 300;
+  color: $text-primary;
+  line-height: 1;
+}
+
+.bigWeatherLabel { font-size: $font-size-base; font-weight: 500; color: $text-primary; }
+.bigWeatherSub { font-size: $font-size-sm; color: $text-secondary; margin-top: 2px; }
+
+.weatherMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.metric {
+  @include flex(column, flex-start, flex-start, 4px);
+  background: $surface-variant;
+  border-radius: $radius-md;
+  padding: 12px;
+}
+
+.metricIcon { color: $primary; font-size: 20px !important; }
+.metricValue { font-size: $font-size-md; font-weight: 600; color: $text-primary; }
+.metricLabel { font-size: $font-size-xs; color: $text-secondary; }
+
+.summaryStats { }
+.summaryCard { height: 100%; }
+.summaryTitle { font-size: $font-size-sm; font-weight: 600; color: $text-secondary; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 16px; }
+.summaryItems { @include flex(column, stretch, flex-start, 16px); }
+
+.summaryItem {
+  @include flex(row, center, flex-start, 12px);
+  .material-icons-round { color: $primary; font-size: 24px !important; }
+}
+
+.summaryValue { font-size: $font-size-lg; font-weight: 600; color: $text-primary; }
+.summaryLabel { font-size: $font-size-xs; color: $text-secondary; }
+
+.forecastGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  @media (max-width: 1100px) { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 768px) { grid-template-columns: repeat(2, 1fr); }
+}
+
+.forecastDayCard {
+  @include flex(column, center, flex-start, 6px);
+  text-align: center;
+  padding: 16px 12px !important;
+}
+
+.forecastDayName { font-size: $font-size-sm; font-weight: 600; color: $text-secondary; text-transform: capitalize; }
+.forecastDayIcon { font-size: 36px !important; color: $warning; margin: 4px 0; }
+.forecastDayDesc { font-size: $font-size-xs; color: $text-secondary; }
+
+.forecastDayTemp {
+  @include flex(row, center, center, 4px);
+  font-weight: 600;
+}
+
+.tempMax { font-size: $font-size-md; color: $text-primary; }
+.tempMin { font-size: $font-size-sm; color: $text-secondary; }
+
+.forecastDayDetails {
+  @include flex(column, flex-start, flex-start, 2px);
+  width: 100%;
+
+  span {
+    @include flex(row, center, flex-start, 4px);
+    font-size: $font-size-xs;
+    color: $text-secondary;
+    .material-icons-round { font-size: 12px !important; color: $primary; }
+  }
+}
+
+.historyCharts { @include flex(column, stretch, flex-start, 16px); }
+.chartTitle { font-size: $font-size-md; font-weight: 600; color: $text-primary; margin-bottom: 16px; }

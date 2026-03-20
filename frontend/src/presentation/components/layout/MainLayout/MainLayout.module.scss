@@ -1,0 +1,17 @@
+@use '@presentation/styles/variables' as *;
+
+.root {
+  min-height: 100vh;
+  background: $background;
+}
+
+.main {
+  margin-left: $sidebar-width;
+  margin-top: $header-height;
+  min-height: calc(100vh - #{$header-height});
+}
+
+.content {
+  padding: 24px;
+  max-width: 1440px;
+}

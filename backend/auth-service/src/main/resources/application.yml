@@ -1,0 +1,16 @@
+server:
+  port: 8081
+spring:
+  application:
+    name: auth-service
+  datasource:
+    url: jdbc:postgresql://postgres:5432/authdb
+    username: ${POSTGRES_USER:postgres}
+    password: ${POSTGRES_PASSWORD:postgres}
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+jwt:
+  secret: ${JWT_SECRET:agroanalytics-secret-key-for-jwt-token-signing-2024}
+  expiration: 86400000

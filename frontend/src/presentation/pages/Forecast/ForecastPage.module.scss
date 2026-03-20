@@ -1,0 +1,151 @@
+@use '@presentation/styles/variables' as *;
+@use '@presentation/styles/mixins' as *;
+
+.page { @include flex(column, stretch, flex-start, 24px); }
+
+.header {
+  @include flex(row, flex-end, space-between, 16px);
+  @media (max-width: 768px) { flex-direction: column; align-items: flex-start; }
+}
+
+.title { font-size: $font-size-xl; font-weight: 700; color: $text-primary; }
+.subtitle { font-size: $font-size-sm; color: $text-secondary; margin-top: 2px; }
+
+.forecastSummary {
+  display: grid;
+  grid-template-columns: 1fr 340px;
+  gap: 16px;
+  @media (max-width: 900px) { grid-template-columns: 1fr; }
+}
+
+.mainForecastCard { @include flex(column, stretch, flex-start, 16px); }
+
+.forecastHeader {
+  @include flex(row, flex-start, space-between, 12px);
+}
+
+.forecastTitle { font-size: $font-size-sm; font-weight: 500; color: $text-secondary; text-transform: uppercase; letter-spacing: 0.05em; }
+.forecastField { font-size: $font-size-lg; font-weight: 600; color: $text-primary; margin-top: 2px; }
+.forecastCrop { font-size: $font-size-sm; color: $text-secondary; }
+
+.yieldDisplay {
+  @include flex(column, flex-start, flex-start, 4px);
+}
+
+.yieldValue {
+  font-size: 52px;
+  font-weight: 700;
+  color: $primary;
+  line-height: 1;
+  @include flex(row, baseline, flex-start, 8px);
+}
+
+.yieldUnit { font-size: $font-size-lg; font-weight: 400; color: $text-secondary; }
+.yieldRange { font-size: $font-size-sm; color: $text-secondary; }
+
+.yieldDelta {
+  @include flex(row, center, flex-start, 4px);
+  font-size: $font-size-sm;
+  font-weight: 500;
+  margin-top: 4px;
+
+  .material-icons-round { font-size: 16px !important; }
+  &.positive { color: $secondary; }
+  &.negative { color: $danger; }
+}
+
+.yieldBar {
+  position: relative;
+  height: 8px;
+  background: $outline;
+  border-radius: $radius-full;
+  overflow: visible;
+}
+
+.yieldBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, $primary-light, $primary);
+  border-radius: $radius-full;
+  transition: width 0.8s ease;
+}
+
+.yieldBarMin, .yieldBarMax {
+  position: absolute;
+  top: -3px;
+  width: 2px;
+  height: 14px;
+  background: $text-secondary;
+  border-radius: 1px;
+  transform: translateX(-50%);
+}
+
+.yieldBarLabels {
+  @include flex(row, center, space-between);
+  font-size: $font-size-xs;
+  color: $text-tertiary;
+}
+
+.factorsCard { }
+.factorsTitle { font-size: $font-size-md; font-weight: 600; color: $text-primary; margin-bottom: 16px; }
+.factorsList { @include flex(column, stretch, flex-start, 14px); }
+
+.factorItem { }
+
+.factorTop {
+  @include flex(row, center, flex-start, 8px);
+  margin-bottom: 4px;
+}
+
+.factorIcon {
+  font-size: 16px !important;
+  &.impact-positive { color: $secondary; }
+  &.impact-negative { color: $danger; }
+  &.impact-neutral { color: $text-secondary; }
+}
+
+.factorName { flex: 1; font-size: $font-size-sm; font-weight: 500; color: $text-primary; }
+.factorWeight { font-size: $font-size-sm; font-weight: 600; color: $text-secondary; }
+
+.factorBar {
+  height: 4px;
+  background: $outline;
+  border-radius: $radius-full;
+  margin-bottom: 4px;
+}
+
+.factorBarFill {
+  height: 100%;
+  border-radius: $radius-full;
+  transition: width 0.6s ease;
+
+  &.impact-positive { background: $secondary; }
+  &.impact-negative { background: $danger; }
+  &.impact-neutral { background: $text-tertiary; }
+}
+
+.factorDesc { font-size: $font-size-xs; color: $text-secondary; }
+
+.sectionTitle { font-size: $font-size-md; font-weight: 600; color: $text-primary; margin-bottom: 16px; }
+.chart { height: 280px; }
+
+.modelInfo {
+  @include flex(row, center, flex-start, 6px);
+  font-size: $font-size-xs;
+  color: $text-tertiary;
+  padding: 8px 12px;
+  background: $surface-variant;
+  border-radius: $radius-md;
+
+  .material-icons-round { font-size: 14px !important; }
+}
+
+.tooltip {
+  background: $surface;
+  border: 1px solid $outline;
+  border-radius: $radius-md;
+  padding: 10px 14px;
+  box-shadow: $shadow-md;
+}
+
+.tooltipLabel { font-size: $font-size-sm; font-weight: 600; margin-bottom: 6px; }
+.tooltipRow { @include flex(row, center, flex-start, 6px); font-size: $font-size-sm; }

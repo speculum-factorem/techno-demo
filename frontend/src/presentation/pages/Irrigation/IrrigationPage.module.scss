@@ -1,0 +1,158 @@
+@use '@presentation/styles/variables' as *;
+@use '@presentation/styles/mixins' as *;
+
+.page { @include flex(column, stretch, flex-start, 24px); }
+.header { @include flex(row, center, space-between, 16px); }
+.title { font-size: $font-size-xl; font-weight: 700; color: $text-primary; }
+.subtitle { font-size: $font-size-sm; color: $text-secondary; margin-top: 2px; }
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  @media (max-width: 900px) { grid-template-columns: repeat(2, 1fr); }
+}
+
+.statCard {
+  @include flex(column, center, center, 8px);
+  text-align: center;
+  padding: 20px !important;
+}
+
+.statIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: $radius-lg;
+  @include flex(row, center, center);
+  .material-icons-round { font-size: 22px !important; }
+}
+
+.statValue { font-size: $font-size-2xl; font-weight: 700; color: $text-primary; }
+.statLabel { font-size: $font-size-sm; color: $text-secondary; }
+
+.filterRow {
+  @include flex(row, center, flex-start, 8px);
+  flex-wrap: wrap;
+}
+
+.filterBtn {
+  @include button-base;
+  padding: 7px 16px;
+  background: $surface;
+  color: $text-secondary;
+  border: 1px solid $outline;
+  border-radius: $radius-full;
+  font-size: $font-size-sm;
+  font-weight: 500;
+
+  &:hover { background: $surface-variant; color: $text-primary; }
+  &.active { background: $primary-light; color: $primary; border-color: $primary; }
+}
+
+.recsList { @include flex(column, stretch, flex-start, 12px); }
+
+.emptyCard {
+  @include flex(column, center, center, 8px);
+  padding: 32px !important;
+  color: $text-tertiary;
+  text-align: center;
+  .material-icons-round { font-size: 40px !important; }
+}
+
+.recCard {
+  border-left: 4px solid $outline;
+  @include flex(column, stretch, flex-start, 16px);
+  padding: 20px !important;
+
+  &.priority-critical { border-left-color: $danger; }
+  &.priority-high { border-left-color: $warning; }
+  &.priority-medium { border-left-color: $primary; }
+  &.priority-low { border-left-color: $secondary; }
+}
+
+.recHeader {
+  @include flex(row, center, space-between);
+}
+
+.recPriority { }
+
+.recDate {
+  @include flex(row, center, flex-start, 4px);
+  font-size: $font-size-sm;
+  color: $text-secondary;
+  font-weight: 500;
+  .material-icons-round { font-size: 14px !important; }
+}
+
+.recBody { @include flex(column, flex-start, flex-start, 6px); }
+
+.recField {
+  @include flex(row, center, flex-start, 6px);
+  font-size: $font-size-base;
+  font-weight: 600;
+  color: $text-primary;
+  .material-icons-round { font-size: 16px !important; color: $secondary; }
+}
+
+.recReason { font-size: $font-size-sm; color: $text-secondary; line-height: 1.5; }
+
+.recStats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  @media (max-width: 768px) { grid-template-columns: repeat(2, 1fr); }
+}
+
+.recStat {
+  @include flex(row, center, flex-start, 8px);
+  background: $surface-variant;
+  border-radius: $radius-md;
+  padding: 10px 12px;
+
+  .material-icons-round { font-size: 18px !important; color: $primary; }
+}
+
+.recStatValue { font-size: $font-size-base; font-weight: 600; color: $text-primary; }
+.recStatLabel { font-size: $font-size-xs; color: $text-secondary; }
+
+.moistureBar { @include flex(column, stretch, flex-start, 6px); }
+
+.moistureBarLabel {
+  @include flex(row, center, space-between);
+  font-size: $font-size-xs;
+  color: $text-secondary;
+}
+
+.moistureBarTrack {
+  position: relative;
+  height: 8px;
+  background: $outline;
+  border-radius: $radius-full;
+}
+
+.moistureBarFill {
+  height: 100%;
+  border-radius: $radius-full;
+  transition: width 0.6s ease;
+}
+
+.moistureBarOptimal {
+  position: absolute;
+  top: -2px;
+  width: 2px;
+  height: 12px;
+  background: $secondary;
+  border-radius: 1px;
+  transform: translateX(-50%);
+
+  &::after {
+    content: 'норма';
+    position: absolute;
+    top: -16px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 10px;
+    color: $secondary;
+    white-space: nowrap;
+  }
+}

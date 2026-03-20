@@ -1,0 +1,28 @@
+@use 'sass:color';
+@use '@presentation/styles/variables' as *;
+@use '@presentation/styles/mixins' as *;
+
+.badge {
+  @include flex(row, center, center, 4px);
+  display: inline-flex;
+  border-radius: $radius-full;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  width: fit-content;
+}
+
+.sm { font-size: $font-size-xs; padding: 2px 8px; }
+.md { font-size: $font-size-sm; padding: 3px 10px; }
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: $radius-full;
+  flex-shrink: 0;
+}
+
+.success { background: $secondary-light; color: color.adjust($secondary, $lightness: -10%); .dot { background: $secondary; } }
+.warning { background: $warning-light; color: #92400e; .dot { background: $warning; } }
+.danger { background: $danger-light; color: color.adjust($danger, $lightness: -10%); .dot { background: $danger; } }
+.info, .primary { background: $primary-light; color: $primary-dark; .dot { background: $primary; } }
+.neutral { background: $surface-variant; color: $text-secondary; .dot { background: $text-tertiary; } }

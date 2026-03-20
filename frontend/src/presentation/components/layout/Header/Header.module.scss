@@ -1,0 +1,171 @@
+@use '@presentation/styles/variables' as *;
+@use '@presentation/styles/mixins' as *;
+
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: $header-height;
+  background: $surface;
+  border-bottom: 1px solid $outline;
+  @include flex(row, center, space-between);
+  padding: 0 16px 0 24px;
+  z-index: 100;
+  box-shadow: $shadow-sm;
+}
+
+.left {
+  @include flex(row, center, flex-start, 16px);
+}
+
+.logo {
+  @include flex(row, center, flex-start, 10px);
+  text-decoration: none;
+  color: $text-primary;
+  padding: 6px 8px;
+  border-radius: $radius-md;
+  transition: background $transition-fast;
+
+  &:hover { background: $surface-variant; text-decoration: none; }
+}
+
+.logoIcon {
+  font-size: 28px !important;
+  color: $secondary;
+}
+
+.logoText {
+  @include flex(column, flex-start, center, 0);
+}
+
+.logoTitle {
+  font-size: $font-size-md;
+  font-weight: 700;
+  color: $text-primary;
+  line-height: 1.2;
+}
+
+.logoSub {
+  font-size: $font-size-xs;
+  color: $text-secondary;
+  font-weight: 400;
+}
+
+.right {
+  @include flex(row, center, flex-end, 8px);
+}
+
+.iconBtn {
+  position: relative;
+  @include flex(row, center, center);
+  width: 40px;
+  height: 40px;
+  border-radius: $radius-full;
+  color: $text-secondary;
+  text-decoration: none;
+  transition: background $transition-fast;
+  font-size: 22px;
+
+  &:hover { background: $surface-variant; color: $text-primary; }
+}
+
+.badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: $danger;
+  color: white;
+  font-size: 10px;
+  font-weight: 700;
+  min-width: 16px;
+  height: 16px;
+  border-radius: $radius-full;
+  @include flex(row, center, center);
+  padding: 0 3px;
+  border: 2px solid $surface;
+}
+
+.userMenu {
+  position: relative;
+}
+
+.avatarBtn {
+  @include button-base;
+  background: none;
+  padding: 0;
+  border-radius: $radius-full;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: $radius-full;
+  background: $primary;
+  color: white;
+  font-size: $font-size-base;
+  font-weight: 600;
+  @include flex(row, center, center);
+  cursor: pointer;
+  transition: opacity $transition-fast;
+
+  &:hover { opacity: 0.9; }
+}
+
+.dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: $surface;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-xl;
+  border: 1px solid $outline;
+  min-width: 260px;
+  overflow: hidden;
+  z-index: 200;
+  animation: fadeIn 0.15s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.dropdownHeader {
+  @include flex(row, center, flex-start, 12px);
+  padding: 16px;
+}
+
+.dropdownName {
+  font-size: $font-size-base;
+  font-weight: 500;
+  color: $text-primary;
+}
+
+.dropdownEmail {
+  font-size: $font-size-sm;
+  color: $text-secondary;
+}
+
+.dropdownDivider {
+  height: 1px;
+  background: $outline;
+  margin: 0;
+}
+
+.dropdownItem {
+  @include flex(row, center, flex-start, 12px);
+  width: 100%;
+  padding: 12px 16px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: $font-size-base;
+  color: $text-primary;
+  transition: background $transition-fast;
+  font-family: $font-family;
+
+  &:hover { background: $surface-variant; }
+
+  .material-icons-round { color: $text-secondary; font-size: 20px !important; }
+}
