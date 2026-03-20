@@ -19,7 +19,7 @@ const Header: React.FC = () => {
   return (
     <header className={styles.header}>
       <div className={styles.left}>
-        <Link to="/" className={styles.logo}>
+        <Link to="/app" className={styles.logo}>
           <span className={`material-icons-round ${styles.logoIcon}`}>eco</span>
           <div className={styles.logoText}>
             <span className={styles.logoTitle}>АгроАналитика</span>
@@ -29,7 +29,7 @@ const Header: React.FC = () => {
       </div>
 
       <div className={styles.right}>
-        <Link to="/alerts" className={styles.iconBtn} title="Уведомления">
+        <Link to="/app/alerts" className={styles.iconBtn} title="Уведомления">
           <span className="material-icons-round">notifications</span>
           {unreadCount > 0 && (
             <span className={styles.badge}>{unreadCount > 9 ? '9+' : unreadCount}</span>

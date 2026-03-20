@@ -1,0 +1,538 @@
+@use '@presentation/styles/variables' as *;
+@use '@presentation/styles/mixins' as *;
+
+// ─── PAGE ────────────────────────────────────────────────────
+.page {
+  min-height: 100vh;
+  background: #fff;
+  color: $text-primary;
+  font-family: $font-family;
+}
+
+// ─── NAVBAR ──────────────────────────────────────────────────
+.navbar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid $outline;
+}
+
+.navInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 24px;
+  height: 64px;
+  @include flex(row, center, space-between, 24px);
+}
+
+.brand {
+  @include flex(row, center, flex-start, 8px);
+  text-decoration: none;
+  color: inherit;
+}
+
+.brandIcon { font-size: 28px !important; color: $secondary; }
+.brandName { font-size: $font-size-md; font-weight: 700; color: $text-primary; }
+.brandSub {
+  font-size: $font-size-xs;
+  color: $text-tertiary;
+  border-left: 1px solid $outline;
+  padding-left: 8px;
+  margin-left: 4px;
+}
+
+.navLinks {
+  @include flex(row, center, flex-start, 4px);
+  @media (max-width: 768px) { display: none; }
+}
+
+.navLink {
+  padding: 8px 12px;
+  border-radius: $radius-md;
+  font-size: $font-size-base;
+  color: $text-secondary;
+  text-decoration: none;
+  font-weight: 500;
+  transition: all $transition-fast;
+  &:hover { background: $surface-variant; color: $text-primary; }
+}
+
+.navActions { @include flex(row, center, flex-end, 8px); }
+
+.btnOutline {
+  padding: 8px 18px;
+  border: 1.5px solid $outline;
+  border-radius: $radius-full;
+  font-size: $font-size-base;
+  font-weight: 600;
+  color: $text-primary;
+  text-decoration: none;
+  transition: all $transition-fast;
+  &:hover { border-color: $primary; color: $primary; }
+}
+
+.btnPrimary {
+  @include flex(row, center, flex-start, 6px);
+  padding: 8px 18px;
+  background: $primary;
+  border-radius: $radius-full;
+  font-size: $font-size-base;
+  font-weight: 600;
+  color: #fff;
+  text-decoration: none;
+  transition: all $transition-fast;
+  .material-icons-round { font-size: 16px !important; }
+  &:hover { background: $primary-dark; box-shadow: 0 2px 8px rgba(26,115,232,0.4); }
+}
+
+// ─── HERO ─────────────────────────────────────────────────────
+.hero {
+  min-height: calc(100vh - 64px);
+  background: linear-gradient(135deg, #f0f7ff 0%, #f0faf4 50%, #fffbf0 100%);
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 48px;
+  align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 60px 24px;
+  @media (max-width: 960px) { grid-template-columns: 1fr; }
+}
+
+.heroInner {
+  @include flex(column, flex-start, flex-start, 24px);
+}
+
+.heroBadge {
+  @include flex(row, center, flex-start, 6px);
+  background: $primary-light;
+  color: $primary;
+  border-radius: $radius-full;
+  padding: 6px 14px;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  .material-icons-round { font-size: 14px !important; }
+}
+
+.heroTitle {
+  font-size: clamp(36px, 5vw, 60px);
+  font-weight: 800;
+  line-height: 1.08;
+  color: $text-primary;
+  margin: 0;
+}
+
+.heroAccent { color: $secondary; }
+
+.heroDesc {
+  font-size: $font-size-md;
+  color: $text-secondary;
+  line-height: 1.6;
+  max-width: 520px;
+  margin: 0;
+}
+
+.heroCta { @include flex(row, center, flex-start, 12px); flex-wrap: wrap; }
+
+.ctaPrimary {
+  @include flex(row, center, flex-start, 8px);
+  background: $primary;
+  color: #fff;
+  padding: 14px 28px;
+  border-radius: $radius-full;
+  font-size: $font-size-base;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 4px 16px rgba(26,115,232,0.35);
+  transition: all $transition-fast;
+  .material-icons-round { font-size: 18px !important; }
+  &:hover { background: $primary-dark; box-shadow: 0 6px 20px rgba(26,115,232,0.45); transform: translateY(-1px); }
+}
+
+.ctaSecondary {
+  @include flex(row, center, flex-start, 8px);
+  background: #fff;
+  color: $text-primary;
+  padding: 14px 28px;
+  border-radius: $radius-full;
+  font-size: $font-size-base;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1.5px solid $outline;
+  transition: all $transition-fast;
+  .material-icons-round { font-size: 18px !important; color: $secondary; }
+  &:hover { border-color: $secondary; color: $secondary; }
+}
+
+.statsBar {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  background: #fff;
+  border: 1px solid $outline;
+  border-radius: $radius-xl;
+  padding: 20px;
+  box-shadow: $shadow-md;
+  @media (max-width: 600px) { grid-template-columns: repeat(2, 1fr); }
+}
+
+.statItem {
+  @include flex(row, center, flex-start, 10px);
+  .material-icons-round { font-size: 20px !important; color: $primary; }
+}
+
+.statValue { font-size: $font-size-lg; font-weight: 700; color: $text-primary; line-height: 1; }
+.statLabel { font-size: $font-size-xs; color: $text-tertiary; margin-top: 2px; }
+
+// ─── MOCK DASHBOARD ───────────────────────────────────────────
+.heroVisual {
+  @media (max-width: 960px) { display: none; }
+}
+
+.mockDashboard {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  overflow: hidden;
+  border: 1px solid $outline;
+}
+
+.mockHeader {
+  @include flex(row, center, flex-start, 10px);
+  background: $surface-variant;
+  padding: 12px 16px;
+  border-bottom: 1px solid $outline;
+}
+
+.mockDots {
+  @include flex(row, center, flex-start, 5px);
+  span {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    &:nth-child(1) { background: #ff5f57; }
+    &:nth-child(2) { background: #febc2e; }
+    &:nth-child(3) { background: #28c840; }
+  }
+}
+
+.mockTitle { font-size: $font-size-xs; color: $text-tertiary; }
+
+.mockBody { padding: 16px; @include flex(column, stretch, flex-start, 12px); }
+
+.mockCards {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+}
+
+.mockCard {
+  @include flex(row, center, flex-start, 8px);
+  border-left: 3px solid;
+  padding: 8px 10px;
+  background: $surface-variant;
+  border-radius: $radius-md;
+}
+
+.mockCardVal { font-size: $font-size-base; font-weight: 700; color: $text-primary; line-height: 1; }
+.mockCardLbl { font-size: 10px; color: $text-tertiary; }
+
+.mockChart {
+  background: $surface-variant;
+  border-radius: $radius-md;
+  padding: 12px;
+}
+
+.mockChartLabel { font-size: 10px; color: $text-tertiary; margin-bottom: 8px; }
+
+.mockBars {
+  @include flex(row, flex-end, space-around);
+  height: 60px;
+  gap: 8px;
+}
+
+.mockBarGroup {
+  @include flex(column, center, center, 4px);
+  flex: 1;
+}
+
+.mockBar {
+  width: 100%;
+  background: linear-gradient(180deg, $primary 0%, lighten($primary, 15%) 100%);
+  border-radius: 3px 3px 0 0;
+  transition: height 0.4s;
+}
+
+.mockBarLabel { font-size: 10px; color: $text-tertiary; }
+
+.mockAlerts { @include flex(column, stretch, flex-start, 4px); }
+
+.mockAlert {
+  @include flex(row, center, flex-start, 6px);
+  border: 1px solid;
+  border-radius: $radius-md;
+  padding: 6px 10px;
+  font-size: 11px;
+  color: $text-secondary;
+}
+
+// ─── SECTIONS COMMON ─────────────────────────────────────────
+.sectionInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 80px 24px;
+}
+
+.sectionMeta {
+  text-align: center;
+  margin-bottom: 48px;
+}
+
+.sectionTag {
+  display: inline-block;
+  background: $primary-light;
+  color: $primary;
+  border-radius: $radius-full;
+  padding: 4px 14px;
+  font-size: $font-size-sm;
+  font-weight: 600;
+  margin-bottom: 12px;
+}
+
+.sectionTitle {
+  font-size: clamp(24px, 3vw, 40px);
+  font-weight: 700;
+  color: $text-primary;
+  margin: 0 0 12px;
+}
+
+.sectionDesc {
+  font-size: $font-size-md;
+  color: $text-secondary;
+  max-width: 560px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+// ─── FEATURES ─────────────────────────────────────────────────
+.features { background: $surface-variant; }
+
+.featuresGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 20px;
+}
+
+.featureCard {
+  background: #fff;
+  border-radius: $radius-xl;
+  padding: 24px;
+  border: 1px solid $outline;
+  transition: all $transition-base;
+  @include flex(column, flex-start, flex-start, 10px);
+
+  &:hover {
+    transform: translateY(-4px);
+    box-shadow: $shadow-lg;
+    border-color: $primary;
+  }
+}
+
+.featureIcon {
+  width: 44px; height: 44px;
+  background: $primary-light;
+  border-radius: $radius-lg;
+  @include flex(row, center, center);
+  .material-icons-round { font-size: 22px !important; color: $primary; }
+}
+
+.featureTitle { font-size: $font-size-base; font-weight: 700; color: $text-primary; margin: 0; }
+.featureDesc { font-size: $font-size-sm; color: $text-secondary; line-height: 1.5; margin: 0; }
+
+// ─── HOW IT WORKS ─────────────────────────────────────────────
+.howItWorks { background: #fff; }
+
+.steps { max-width: 640px; margin: 0 auto; }
+
+.step {
+  @include flex(row, flex-start, flex-start, 20px);
+}
+
+.stepLeft {
+  @include flex(column, center, flex-start);
+  flex-shrink: 0;
+}
+
+.stepNum {
+  width: 36px; height: 36px;
+  background: $primary;
+  color: #fff;
+  border-radius: 50%;
+  @include flex(row, center, center);
+  font-weight: 700;
+  font-size: $font-size-base;
+  flex-shrink: 0;
+}
+
+.stepLine {
+  width: 2px;
+  flex: 1;
+  background: $outline;
+  margin: 4px auto;
+  min-height: 40px;
+}
+
+.stepContent {
+  @include flex(row, flex-start, flex-start, 16px);
+  padding-bottom: 32px;
+}
+
+.stepIcon {
+  width: 44px; height: 44px;
+  background: $secondary-light;
+  border-radius: $radius-lg;
+  @include flex(row, center, center);
+  flex-shrink: 0;
+  .material-icons-round { font-size: 20px !important; color: $secondary; }
+}
+
+.stepTitle { font-size: $font-size-base; font-weight: 700; margin: 0 0 4px; }
+.stepDesc { font-size: $font-size-sm; color: $text-secondary; line-height: 1.5; margin: 0; }
+
+// ─── TECH ─────────────────────────────────────────────────────
+.tech { background: $surface-variant; }
+
+.techGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+  margin-bottom: 48px;
+}
+
+.techCard {
+  @include flex(row, center, flex-start, 10px);
+  background: #fff;
+  border: 1px solid $outline;
+  border-radius: $radius-lg;
+  padding: 14px 18px;
+  .material-icons-round { font-size: 20px !important; }
+}
+
+.techName { font-size: $font-size-sm; font-weight: 600; color: $text-primary; }
+
+.archDiagram {
+  background: $text-primary;
+  border-radius: $radius-xl;
+  padding: 32px;
+  @include flex(column, center, center, 8px);
+  overflow-x: auto;
+}
+
+.archRow { @include flex(row, center, center, 8px); flex-wrap: wrap; }
+.archArrow { color: rgba(255,255,255,0.4); font-size: $font-size-sm; padding: 4px 0; }
+
+.archBox {
+  @include flex(column, center, center, 4px);
+  border-radius: $radius-md;
+  padding: 10px 14px;
+  min-width: 100px;
+  text-align: center;
+  font-size: $font-size-xs;
+  font-weight: 600;
+  .material-icons-round { font-size: 16px !important; }
+  span:not(.material-icons-round) { color: #fff; }
+  small { color: rgba(255,255,255,0.6); font-weight: 400; }
+}
+
+.archFront    { background: #1a73e8; }
+.archGateway  { background: #34a853; }
+.archService  { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.15); color: rgba(255,255,255,0.8); min-width: 80px; padding: 8px 10px; }
+.archAnalytics { background: #7c3aed; }
+.archDb       { background: #0f766e; }
+
+// ─── CTA ──────────────────────────────────────────────────────
+.cta {
+  background: linear-gradient(135deg, $primary 0%, #0d5dbf 100%);
+  padding: 0;
+}
+
+.ctaInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 80px 24px;
+  text-align: center;
+  @include flex(column, center, center, 20px);
+
+  h2 { font-size: clamp(28px, 4vw, 48px); font-weight: 800; color: #fff; margin: 0; }
+  p { font-size: $font-size-md; color: rgba(255,255,255,0.8); margin: 0; }
+}
+
+.ctaButtons { @include flex(row, center, center, 12px); flex-wrap: wrap; }
+
+.ctaBtnPrimary {
+  @include flex(row, center, flex-start, 8px);
+  background: #fff;
+  color: $primary;
+  padding: 14px 28px;
+  border-radius: $radius-full;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all $transition-fast;
+  .material-icons-round { font-size: 18px !important; }
+  &:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+}
+
+.ctaBtnOutline {
+  @include flex(row, center, flex-start, 8px);
+  background: transparent;
+  color: #fff;
+  padding: 14px 28px;
+  border-radius: $radius-full;
+  border: 2px solid rgba(255,255,255,0.6);
+  font-weight: 600;
+  text-decoration: none;
+  transition: all $transition-fast;
+  .material-icons-round { font-size: 18px !important; }
+  &:hover { background: rgba(255,255,255,0.1); border-color: #fff; }
+}
+
+.ctaHint {
+  font-size: $font-size-sm !important;
+  color: rgba(255,255,255,0.65) !important;
+  background: rgba(255,255,255,0.1);
+  border-radius: $radius-full;
+  padding: 8px 18px;
+  strong { color: rgba(255,255,255,0.9); }
+}
+
+// ─── FOOTER ───────────────────────────────────────────────────
+.footer {
+  background: $text-primary;
+  padding: 32px 24px;
+}
+
+.footerInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  @include flex(row, center, space-between, 16px);
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.footerBrand { @include flex(row, center, flex-start, 12px); }
+.footerIcon { font-size: 28px !important; color: $secondary; }
+.footerName { font-size: $font-size-base; font-weight: 700; color: #fff; }
+.footerSub { font-size: $font-size-xs; color: rgba(255,255,255,0.5); margin-top: 2px; }
+
+.footerLinks { @include flex(row, center, flex-end, 4px); }
+
+.footerLink {
+  padding: 6px 12px;
+  border-radius: $radius-md;
+  font-size: $font-size-sm;
+  color: rgba(255,255,255,0.6);
+  text-decoration: none;
+  transition: color $transition-fast;
+  &:hover { color: #fff; }
+}

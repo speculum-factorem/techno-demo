@@ -2,12 +2,15 @@ package com.agroanalytics.auth.controller;
 
 import com.agroanalytics.auth.dto.LoginRequest;
 import com.agroanalytics.auth.dto.LoginResponse;
+import com.agroanalytics.auth.dto.RegisterRequest;
 import com.agroanalytics.auth.model.User;
 import com.agroanalytics.auth.service.AuthService;
+import com.agroanalytics.auth.service.RegistrationRateLimiter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.Map;
 import java.util.Optional;
@@ -18,11 +21,31 @@ import java.util.Optional;
 public class AuthController {
 
     private final AuthService authService;
+    private final RegistrationRateLimiter registrationRateLimiter;
 
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
         LoginResponse response = authService.login(request);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<Map<String, String>> register(
+            @Valid @RequestBody RegisterRequest request,
+            HttpServletRequest httpRequest
+    ) {
+        String clientKey = httpRequest.getRemoteAddr();
+        registrationRateLimiter.checkLimit(clientKey == null ? "unknown" : clientKey);
+        authService.register(request);
+        return ResponseEntity.status(201).body(Map.of(
+                "message", "Registration successful. Check your email to verify your account."
+        ));
+    }
+
+    @GetMapping("/verify-email")
+    public ResponseEntity<Map<String, String>> verifyEmail(@RequestParam("token") String token) {
+        authService.verifyEmail(token);
+        return ResponseEntity.ok(Map.of("message", "Email verified successfully"));
     }
 
     @PostMapping("/logout")

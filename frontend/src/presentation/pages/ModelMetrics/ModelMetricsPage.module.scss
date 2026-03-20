@@ -1,0 +1,148 @@
+@use '@presentation/styles/variables' as *;
+@use '@presentation/styles/mixins' as *;
+
+.page { @include flex(column, stretch, flex-start, 24px); }
+
+.header {
+  @include flex(row, flex-end, space-between, 16px);
+  @media (max-width: 768px) { flex-direction: column; align-items: flex-start; }
+}
+
+.title { font-size: $font-size-xl; font-weight: 700; color: $text-primary; }
+.subtitle { font-size: $font-size-sm; color: $text-secondary; margin-top: 2px; }
+
+.updatedAt {
+  @include flex(row, center, flex-start, 4px);
+  font-size: $font-size-xs;
+  color: $text-tertiary;
+  white-space: nowrap;
+  .material-icons-round { font-size: 14px !important; }
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  @media (max-width: 900px) { grid-template-columns: repeat(2, 1fr); }
+}
+
+.metricCard {
+  @include flex(column, center, center, 8px);
+  text-align: center;
+  padding: 20px !important;
+}
+
+.metricIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: $radius-lg;
+  @include flex(row, center, center);
+  .material-icons-round { font-size: 22px !important; }
+}
+
+.metricValue {
+  font-size: $font-size-2xl;
+  font-weight: 700;
+  color: $text-primary;
+}
+
+.metricLabel { font-size: $font-size-sm; font-weight: 600; color: $text-secondary; }
+.metricDesc { font-size: $font-size-xs; color: $text-tertiary; }
+
+.testInfo {
+  @include flex(row, center, flex-start, 8px);
+  font-size: $font-size-sm;
+  color: $text-secondary;
+  padding: 10px 14px;
+  background: $surface-variant;
+  border-radius: $radius-md;
+
+  .material-icons-round { font-size: 16px !important; color: $primary; flex-shrink: 0; }
+  strong { color: $text-primary; }
+}
+
+.sectionTitle { font-size: $font-size-md; font-weight: 600; color: $text-primary; margin-bottom: 12px; }
+
+.chart { height: 280px; margin-bottom: 16px; }
+
+.cropTable {
+  overflow-x: auto;
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: $font-size-sm;
+  }
+
+  th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: $font-size-xs;
+    font-weight: 600;
+    color: $text-secondary;
+    background: $surface-variant;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  td {
+    padding: 8px 12px;
+    border-bottom: 1px solid $outline;
+    color: $text-primary;
+    &:first-child { font-weight: 500; }
+  }
+
+  tr:last-child td { border-bottom: none; }
+}
+
+.good { color: #34a853 !important; font-weight: 600 !important; }
+.ok   { color: #f59e0b !important; font-weight: 600 !important; }
+.bad  { color: #ea4335 !important; font-weight: 600 !important; }
+
+.scenariosDesc {
+  font-size: $font-size-sm;
+  color: $text-secondary;
+  margin: -4px 0 16px;
+}
+
+.scenarios { @include flex(column, stretch, flex-start, 12px); }
+
+.scenario {
+  border-radius: $radius-md;
+  border: 1.5px solid $outline;
+  padding: 14px 16px;
+  @include flex(column, stretch, flex-start, 8px);
+
+  &.pass { border-color: #34a853; background: rgba(52, 168, 83, 0.04); }
+  &.fail { border-color: #ea4335; background: rgba(234, 67, 53, 0.04); }
+}
+
+.scenarioHeader {
+  @include flex(row, center, flex-start, 8px);
+  strong { flex: 1; font-size: $font-size-sm; color: $text-primary; }
+}
+
+.scenarioIcon {
+  font-size: 18px !important;
+  .pass & { color: #34a853; }
+  .fail & { color: #ea4335; }
+}
+
+.pass .scenarioIcon { color: #34a853; }
+.fail .scenarioIcon { color: #ea4335; }
+
+.scenarioDesc {
+  font-size: $font-size-xs;
+  color: $text-secondary;
+  margin: 0;
+  padding-left: 26px;
+}
+
+.scenarioParams {
+  @include flex(row, center, flex-start, 16px);
+  flex-wrap: wrap;
+  padding-left: 26px;
+  font-size: $font-size-xs;
+  color: $text-secondary;
+  strong { color: $text-primary; }
+}

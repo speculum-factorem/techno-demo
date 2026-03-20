@@ -2,10 +2,12 @@ import React, { useEffect, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '@application/store/hooks'
 import { fetchFields } from '@application/store/slices/fieldsSlice'
 import { fetchIrrigationRecommendations } from '@application/store/slices/irrigationSlice'
+import { detectFieldAnomalies } from '@application/store/slices/anomalySlice'
 import Card from '@presentation/components/common/Card/Card'
 import Badge from '@presentation/components/common/Badge/Badge'
 import Loader from '@presentation/components/common/Loader/Loader'
 import { IrrigationRecommendation } from '@domain/entities/Irrigation'
+import { AnomalyResult } from '@domain/entities/Anomaly'
 import styles from './IrrigationPage.module.scss'
 
 const priorityConfig = {
@@ -19,6 +21,7 @@ const IrrigationPage: React.FC = () => {
   const dispatch = useAppDispatch()
   const { items: fields, loading: fieldsLoading } = useAppSelector(s => s.fields)
   const { recommendations } = useAppSelector(s => s.irrigation)
+  const anomalyResults = useAppSelector(s => s.anomaly.results)
   const [selectedFieldId, setSelectedFieldId] = useState<string | 'all'>('all')
 
   useEffect(() => {
@@ -26,7 +29,13 @@ const IrrigationPage: React.FC = () => {
   }, [dispatch])
 
   useEffect(() => {
-    fields.forEach(f => dispatch(fetchIrrigationRecommendations(f.id)))
+    fields.forEach(f => {
+      dispatch(fetchIrrigationRecommendations(f.id))
+      dispatch(detectFieldAnomalies({
+        fieldId: f.id,
+        sensorData: { soilMoisture: f.currentMoistureLevel ?? 60 },
+      }))
+    })
   }, [fields, dispatch])
 
   const allRecs = Object.values(recommendations).flat()
@@ -42,6 +51,14 @@ const IrrigationPage: React.FC = () => {
   const totalWater = filteredRecs.reduce((s, r) => s + r.waterAmount, 0)
   const criticalCount = filteredRecs.filter(r => r.priority === 'critical').length
   const highCount = filteredRecs.filter(r => r.priority === 'high').length
+
+  // Aggregate anomalies for visible fields
+  const anomalyFieldIds = Object.entries(anomalyResults)
+    .filter(([, r]) => r.hasAnomalies)
+    .map(([id]) => id)
+  const visibleAnomalyFields = selectedFieldId === 'all'
+    ? anomalyFieldIds
+    : anomalyFieldIds.filter(id => id === selectedFieldId)
 
   if (fieldsLoading && fields.length === 0) return <Loader text="Загрузка..." fullPage />
 
@@ -105,6 +122,27 @@ const IrrigationPage: React.FC = () => {
         ))}
       </div>
 
+      {/* Anomaly warnings */}
+      {visibleAnomalyFields.length > 0 && (
+        <div className={styles.anomalyBanner}>
+          <span className="material-icons-round">warning</span>
+          <div>
+            <strong>Обнаружены аномалии данных датчиков</strong>
+            <p>Рекомендации по поливу для следующих полей могут быть неточными — рекомендуется проверить оборудование перед применением.</p>
+            {visibleAnomalyFields.map(id => {
+              const fieldName = fields.find(f => f.id === id)?.name || `Поле ${id}`
+              const alerts = anomalyResults[id]?.alerts || []
+              return alerts.map((a, i) => (
+                <div key={`${id}-${i}`} className={styles.anomalyItem}>
+                  <span className="material-icons-round">sensors_off</span>
+                  <strong>{fieldName}:</strong> {a.message}
+                </div>
+              ))
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Recommendations */}
       <div className={styles.recsList}>
         {filteredRecs.length === 0 && (
@@ -114,14 +152,18 @@ const IrrigationPage: React.FC = () => {
           </Card>
         )}
         {filteredRecs.map(rec => (
-          <IrrigationCard key={rec.id} rec={rec} />
+          <IrrigationCard
+            key={rec.id}
+            rec={rec}
+            hasAnomaly={anomalyResults[rec.fieldId]?.hasAnomalies ?? false}
+          />
         ))}
       </div>
     </div>
   )
 }
 
-const IrrigationCard: React.FC<{ rec: IrrigationRecommendation }> = ({ rec }) => {
+const IrrigationCard: React.FC<{ rec: IrrigationRecommendation; hasAnomaly: boolean }> = ({ rec, hasAnomaly }) => {
   const cfg = priorityConfig[rec.priority]
 
   return (
@@ -132,6 +174,12 @@ const IrrigationCard: React.FC<{ rec: IrrigationRecommendation }> = ({ rec }) =>
             <span className="material-icons-round">{cfg.icon}</span>
             {cfg.label}
           </Badge>
+          {hasAnomaly && (
+            <Badge variant="warning">
+              <span className="material-icons-round" style={{ fontSize: 13 }}>sensors_off</span>
+              Низкая достоверность
+            </Badge>
+          )}
         </div>
         <div className={styles.recDate}>
           <span className="material-icons-round">calendar_today</span>

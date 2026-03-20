@@ -1,5 +1,5 @@
 import React from 'react'
-import { NavLink, useLocation } from 'react-router-dom'
+import { NavLink } from 'react-router-dom'
 import { useAppSelector } from '@application/store/hooks'
 import styles from './Sidebar.module.scss'
 
@@ -12,15 +12,14 @@ interface NavItem {
 
 const Sidebar: React.FC = () => {
   const { unreadCount } = useAppSelector(s => s.alerts)
-  const location = useLocation()
-
   const navItems: NavItem[] = [
-    { path: '/', icon: 'dashboard', label: 'Дашборд' },
-    { path: '/fields', icon: 'grass', label: 'Поля' },
-    { path: '/forecast', icon: 'trending_up', label: 'Прогноз урожая' },
-    { path: '/irrigation', icon: 'water_drop', label: 'Рекомендации полива' },
-    { path: '/weather', icon: 'cloud', label: 'Погода' },
-    { path: '/alerts', icon: 'notifications', label: 'Уведомления', badge: unreadCount },
+    { path: '/app', icon: 'dashboard', label: 'Дашборд' },
+    { path: '/app/fields', icon: 'grass', label: 'Поля' },
+    { path: '/app/forecast', icon: 'trending_up', label: 'Прогноз урожая' },
+    { path: '/app/irrigation', icon: 'water_drop', label: 'Рекомендации полива' },
+    { path: '/app/weather', icon: 'cloud', label: 'Погода' },
+    { path: '/app/alerts', icon: 'notifications', label: 'Уведомления', badge: unreadCount },
+    { path: '/app/model-metrics', icon: 'model_training', label: 'Метрики модели' },
   ]
 
   return (
@@ -30,7 +29,7 @@ const Sidebar: React.FC = () => {
           <NavLink
             key={item.path}
             to={item.path}
-            end={item.path === '/'}
+            end={item.path === '/app'}
             className={({ isActive }) =>
               `${styles.navItem} ${isActive ? styles.active : ''}`
             }

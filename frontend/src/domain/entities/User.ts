@@ -19,3 +19,13 @@ export interface LoginDto {
   username: string
   password: string
 }
+
+export interface RegisterDto {
+  username: string
+  email: string
+  fullName: string
+  password: string
+  confirmPassword: string
+  organizationId?: string
+  inviteCode?: string
+}

@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # ===================== INFRASTRUCTURE =====================
 
@@ -19,6 +17,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 20s
+    restart: unless-stopped
 
   zookeeper:
     image: confluentinc/cp-zookeeper:7.6.0
@@ -32,6 +32,7 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    restart: unless-stopped
 
   kafka:
     image: confluentinc/cp-kafka:7.6.0
@@ -52,10 +53,12 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1"]
       interval: 15s
-      timeout: 10s
-      retries: 10
+      timeout: 15s
+      retries: 15
+      start_period: 30s
+    restart: unless-stopped
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
@@ -66,6 +69,7 @@ services:
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+    restart: unless-stopped
 
   # ===================== MICROSERVICES =====================
 
@@ -81,6 +85,7 @@ services:
     environment:
       SPRING_PROFILES_ACTIVE: docker
       JWT_SECRET: ${JWT_SECRET:-agroanalytics-secret-key-for-jwt-token-signing-2024}
+    restart: unless-stopped
 
   auth-service:
     build: ./backend/auth-service
@@ -90,10 +95,20 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/authdb
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       JWT_SECRET: ${JWT_SECRET:-agroanalytics-secret-key-for-jwt-token-signing-2024}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
+      REGISTER_RATE_LIMIT_REQUESTS: ${REGISTER_RATE_LIMIT_REQUESTS:-5}
+      REGISTER_RATE_LIMIT_WINDOW_SECONDS: ${REGISTER_RATE_LIMIT_WINDOW_SECONDS:-900}
+      VERIFICATION_TTL_MINUTES: ${VERIFICATION_TTL_MINUTES:-1440}
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+    restart: unless-stopped
 
   field-service:
     build: ./backend/field-service
@@ -105,11 +120,13 @@ services:
       kafka:
         condition: service_healthy
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/fielddb
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-dev-internal-token}
+    restart: unless-stopped
 
   weather-service:
     build: ./backend/weather-service
@@ -123,12 +140,14 @@ services:
       field-service:
         condition: service_started
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/weatherdb
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       AGRO_FIELD_SERVICE_BASE_URL: http://field-service:8082
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:-dev-internal-token}
+    restart: unless-stopped
 
   analytics-service:
     build: ./backend/analytics-service
@@ -149,8 +168,9 @@ services:
       test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
       interval: 30s
       timeout: 10s
-      retries: 3
-      start_period: 60s
+      retries: 5
+      start_period: 120s
+    restart: unless-stopped
 
   irrigation-service:
     build: ./backend/irrigation-service
@@ -162,13 +182,15 @@ services:
       kafka:
         condition: service_healthy
       analytics-service:
-        condition: service_healthy
+        condition: service_started
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/irrigationdb
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
       SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
       ANALYTICS_SERVICE_URL: http://analytics-service:8000
+    restart: unless-stopped
 
   notification-service:
     build: ./backend/notification-service
@@ -180,6 +202,7 @@ services:
       kafka:
         condition: service_healthy
     environment:
+      SPRING_PROFILES_ACTIVE: docker
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/notificationdb
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-postgres}
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -187,6 +210,7 @@ services:
       TELEGRAM_ENABLED: ${TELEGRAM_ENABLED:-false}
       TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
+    restart: unless-stopped
 
   # ===================== FRONTEND =====================
 
@@ -196,6 +220,7 @@ services:
       - "3000:80"
     depends_on:
       - api-gateway
+    restart: unless-stopped
 
 volumes:
   postgres_data:

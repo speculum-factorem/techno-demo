@@ -59,3 +59,15 @@
   border-radius: $radius-md;
   padding: 10px 16px;
 }
+
+.switchAuth {
+  font-size: $font-size-sm;
+  color: $text-secondary;
+  text-align: center;
+}
+
+.link {
+  color: $primary;
+  font-weight: 600;
+  text-decoration: none;
+}

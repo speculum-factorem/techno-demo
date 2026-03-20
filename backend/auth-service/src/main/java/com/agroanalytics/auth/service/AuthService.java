@@ -2,18 +2,28 @@ package com.agroanalytics.auth.service;
 
 import com.agroanalytics.auth.dto.LoginRequest;
 import com.agroanalytics.auth.dto.LoginResponse;
+import com.agroanalytics.auth.dto.RegisterRequest;
+import com.agroanalytics.auth.model.EmailVerificationToken;
+import com.agroanalytics.auth.model.OrganizationInviteCode;
 import com.agroanalytics.auth.model.User;
+import com.agroanalytics.auth.repository.EmailVerificationTokenRepository;
+import com.agroanalytics.auth.repository.OrganizationInviteCodeRepository;
 import com.agroanalytics.auth.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -21,8 +31,14 @@ import java.util.Optional;
 public class AuthService {
 
     private final UserRepository userRepository;
+    private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final OrganizationInviteCodeRepository organizationInviteCodeRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+    private final VerificationEmailService verificationEmailService;
+
+    @Value("${app.auth.verification-ttl-minutes:1440}")
+    private long verificationTtlMinutes;
 
     @PostConstruct
     public void initDefaultUsers() {
@@ -33,6 +49,7 @@ public class AuthService {
                     .fullName("System Administrator")
                     .passwordHash(passwordEncoder.encode("admin"))
                     .role(User.Role.ADMIN)
+                    .emailVerified(true)
                     .build();
             userRepository.save(admin);
             log.info("Default admin user created: username=admin, password=admin");
@@ -45,9 +62,19 @@ public class AuthService {
                     .passwordHash(passwordEncoder.encode("agronomist"))
                     .role(User.Role.AGRONOMIST)
                     .organizationId(1L)
+                    .emailVerified(true)
                     .build();
             userRepository.save(agronomist);
             log.info("Default agronomist user: username=agronomist, password=agronomist, organizationId=1");
+        }
+        if (organizationInviteCodeRepository.findByCode("ORG1-INVITE-2026").isEmpty()) {
+            OrganizationInviteCode inviteCode = OrganizationInviteCode.builder()
+                    .code("ORG1-INVITE-2026")
+                    .organizationId(1L)
+                    .expiresAt(LocalDateTime.now().plusYears(1))
+                    .build();
+            organizationInviteCodeRepository.save(inviteCode);
+            log.info("Default invite code created for org 1: ORG1-INVITE-2026");
         }
     }
 
@@ -57,6 +84,9 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new BadCredentialsException("Invalid username or password");
+        }
+        if (!user.isEmailVerified()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Email is not verified");
         }
 
         Map<String, Object> claims = new HashMap<>();
@@ -85,6 +115,57 @@ public class AuthService {
                 .build();
     }
 
+    public void register(RegisterRequest request) {
+        String normalizedUsername = request.getUsername().trim();
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+        String normalizedFullName = request.getFullName().trim();
+
+        validatePasswordPolicy(request.getPassword());
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passwords do not match");
+        }
+
+        if (userRepository.findByUsername(normalizedUsername).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Username is already taken");
+        }
+        if (userRepository.findByEmail(normalizedEmail).isPresent()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already registered");
+        }
+
+        Long organizationId = validateAndResolveOrganization(request);
+
+        User user = User.builder()
+                .username(normalizedUsername)
+                .email(normalizedEmail)
+                .fullName(normalizedFullName)
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .role(User.Role.AGRONOMIST)
+                .organizationId(organizationId)
+                .emailVerified(false)
+                .build();
+
+        userRepository.save(user);
+        createAndSendVerificationToken(user);
+    }
+
+    public void verifyEmail(String token) {
+        EmailVerificationToken verificationToken = emailVerificationTokenRepository.findByToken(token)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid verification token"));
+
+        if (verificationToken.getUsedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Verification token is already used");
+        }
+        if (verificationToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Verification token has expired");
+        }
+
+        User user = verificationToken.getUser();
+        user.setEmailVerified(true);
+        userRepository.save(user);
+        verificationToken.setUsedAt(LocalDateTime.now());
+        emailVerificationTokenRepository.save(verificationToken);
+    }
+
     public Optional<User> getUserFromToken(String token) {
         try {
             String username = jwtService.extractUsername(token);
@@ -92,5 +173,59 @@ public class AuthService {
         } catch (Exception e) {
             return Optional.empty();
         }
+    }
+
+    private void createAndSendVerificationToken(User user) {
+        String token = UUID.randomUUID().toString() + UUID.randomUUID();
+        EmailVerificationToken entity = EmailVerificationToken.builder()
+                .token(token)
+                .user(user)
+                .expiresAt(LocalDateTime.now().plusMinutes(verificationTtlMinutes))
+                .build();
+        emailVerificationTokenRepository.save(entity);
+        verificationEmailService.sendVerificationEmail(user.getEmail(), token);
+    }
+
+    private void validatePasswordPolicy(String password) {
+        boolean hasUpper = password.chars().anyMatch(Character::isUpperCase);
+        boolean hasLower = password.chars().anyMatch(Character::isLowerCase);
+        boolean hasDigit = password.chars().anyMatch(Character::isDigit);
+        boolean hasSpecial = password.chars().anyMatch(c -> !Character.isLetterOrDigit(c));
+
+        if (!(hasUpper && hasLower && hasDigit && hasSpecial)) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Password must contain uppercase, lowercase, digit, and special character"
+            );
+        }
+    }
+
+    private Long validateAndResolveOrganization(RegisterRequest request) {
+        if (request.getOrganizationId() == null) {
+            return null;
+        }
+        if (request.getInviteCode() == null || request.getInviteCode().isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Invite code is required when organizationId is provided"
+            );
+        }
+
+        OrganizationInviteCode invite = organizationInviteCodeRepository.findByCode(request.getInviteCode().trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite code is invalid"));
+
+        if (invite.getUsedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite code is already used");
+        }
+        if (invite.getExpiresAt() != null && invite.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite code has expired");
+        }
+        if (!invite.getOrganizationId().equals(request.getOrganizationId())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite code does not match organizationId");
+        }
+
+        invite.setUsedAt(LocalDateTime.now());
+        organizationInviteCodeRepository.save(invite);
+        return invite.getOrganizationId();
     }
 }

@@ -2,7 +2,8 @@ import apiClient from './ApiClient'
 import { USE_MOCK } from './config'
 import { YieldForecast, ForecastRequest, HistoricalYield } from '@domain/entities/Forecast'
 import { IrrigationRecommendation, IrrigationSchedule } from '@domain/entities/Irrigation'
-import { mockYieldForecasts, mockHistoricalYields, mockIrrigationRecommendations } from './MockData'
+import { AnomalyResult, ModelMetrics } from '@domain/entities/Anomaly'
+import { mockYieldForecasts, mockHistoricalYields, mockIrrigationRecommendations, mockModelMetrics } from './MockData'
 
 type HistoricalYieldApiDto = {
   year: number
@@ -75,6 +76,33 @@ export const analyticsApi = {
       }
     }
     const { data } = await apiClient.get<IrrigationSchedule>(`/analytics/irrigation/schedule/${fieldId}`)
+    return data
+  },
+
+  async detectAnomalies(sensorData: Record<string, number>): Promise<AnomalyResult> {
+    if (USE_MOCK) {
+      await new Promise(r => setTimeout(r, 200))
+      const moisture = sensorData.soilMoisture ?? 60
+      const temp = sensorData.temperature ?? 22
+      const humidity = sensorData.humidity ?? 60
+      const alerts = []
+      if (moisture > 95) alerts.push({ type: 'sensor_anomaly', severity: 'high' as const, message: `Аномальное значение влажности почвы: ${moisture}% — вероятна неисправность датчика`, field: 'soilMoisture', value: moisture, confidence: 0.97 })
+      else if (moisture < 5 && moisture >= 0) alerts.push({ type: 'sensor_anomaly', severity: 'medium' as const, message: `Критически низкая влажность: ${moisture}% — возможен сбой датчика`, field: 'soilMoisture', value: moisture, confidence: 0.85 })
+      else if (moisture < 0) alerts.push({ type: 'sensor_anomaly', severity: 'high' as const, message: `Отрицательная влажность: ${moisture}% — ошибка датчика`, field: 'soilMoisture', value: moisture, confidence: 0.99 })
+      if (temp > 45) alerts.push({ type: 'sensor_anomaly', severity: 'high' as const, message: `Аномальная температура: ${temp}°C — проверьте датчик`, field: 'temperature', value: temp, confidence: 0.95 })
+      if (humidity > 100 || humidity < 0) alerts.push({ type: 'sensor_anomaly', severity: 'high' as const, message: `Невозможное значение влажности воздуха: ${humidity}%`, field: 'humidity', value: humidity, confidence: 0.99 })
+      return { hasAnomalies: alerts.length > 0, alerts, lowConfidence: alerts.length > 0 }
+    }
+    const { data } = await apiClient.post<AnomalyResult>('/analytics/anomaly/detect', sensorData)
+    return data
+  },
+
+  async getModelMetrics(): Promise<ModelMetrics> {
+    if (USE_MOCK) {
+      await new Promise(r => setTimeout(r, 800))
+      return mockModelMetrics
+    }
+    const { data } = await apiClient.get<ModelMetrics>('/analytics/model/metrics')
     return data
   },
 }

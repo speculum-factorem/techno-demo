@@ -1,0 +1,16 @@
+/Users/maxim/Desktop/HackOnOff/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/dto/LoginResponse.java
+/Users/maxim/Desktop/HackOnOff/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/service/JwtService.java
+/Users/maxim/Desktop/HackOnOff/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/model/EmailVerificationToken.java
+/Users/maxim/Desktop/HackOnOff/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/model/OrganizationInviteCode.java
+/Users/maxim/Desktop/HackOnOff/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/service/VerificationEmailService.java
+/Users/maxim/Desktop/HackOnOff/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/AuthServiceApplication.java
+/Users/maxim/Desktop/HackOnOff/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/dto/LoginRequest.java
+/Users/maxim/Desktop/HackOnOff/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/service/RegistrationRateLimiter.java
+/Users/maxim/Desktop/HackOnOff/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/repository/UserRepository.java
+/Users/maxim/Desktop/HackOnOff/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/repository/EmailVerificationTokenRepository.java
+/Users/maxim/Desktop/HackOnOff/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/controller/AuthController.java
+/Users/maxim/Desktop/HackOnOff/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/service/AuthService.java
+/Users/maxim/Desktop/HackOnOff/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/dto/RegisterRequest.java
+/Users/maxim/Desktop/HackOnOff/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/config/SecurityConfig.java
+/Users/maxim/Desktop/HackOnOff/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/model/User.java
+/Users/maxim/Desktop/HackOnOff/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/repository/OrganizationInviteCodeRepository.java

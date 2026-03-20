@@ -49,6 +49,32 @@
   &.active { background: $primary-light; color: $primary; border-color: $primary; }
 }
 
+.anomalyBanner {
+  @include flex(row, flex-start, flex-start, 12px);
+  background: #fff8e1;
+  border: 1.5px solid #f59e0b;
+  border-radius: $radius-md;
+  padding: 14px 16px;
+  color: #92400e;
+
+  > .material-icons-round { color: #f59e0b; font-size: 22px !important; flex-shrink: 0; margin-top: 2px; }
+
+  > div {
+    @include flex(column, flex-start, flex-start, 6px);
+    strong { font-size: $font-size-sm; font-weight: 600; }
+    p { font-size: $font-size-xs; margin: 0; opacity: 0.85; }
+  }
+}
+
+.anomalyItem {
+  @include flex(row, center, flex-start, 6px);
+  font-size: $font-size-xs;
+  background: rgba(245, 158, 11, 0.12);
+  border-radius: $radius-sm;
+  padding: 4px 8px;
+  .material-icons-round { font-size: 14px !important; }
+}
+
 .recsList { @include flex(column, stretch, flex-start, 12px); }
 
 .emptyCard {
@@ -74,7 +100,7 @@
   @include flex(row, center, space-between);
 }
 
-.recPriority { }
+.recPriority { @include flex(row, center, flex-start, 6px); flex-wrap: wrap; }
 
 .recDate {
   @include flex(row, center, flex-start, 4px);

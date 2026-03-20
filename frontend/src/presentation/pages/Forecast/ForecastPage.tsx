@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '@application/store/hooks'
 import { fetchFields } from '@application/store/slices/fieldsSlice'
 import { fetchYieldForecast, fetchHistoricalYield } from '@application/store/slices/forecastSlice'
+import { detectFieldAnomalies } from '@application/store/slices/anomalySlice'
 import Card from '@presentation/components/common/Card/Card'
 import Badge from '@presentation/components/common/Badge/Badge'
 import Button from '@presentation/components/common/Button/Button'
@@ -46,6 +47,7 @@ const ForecastPage: React.FC = () => {
   const dispatch = useAppDispatch()
   const { items: fields, loading: fieldsLoading } = useAppSelector(s => s.fields)
   const { currentForecast, historicalYields, loading } = useAppSelector(s => s.forecast)
+  const anomalyResults = useAppSelector(s => s.anomaly.results)
   const [selectedFieldId, setSelectedFieldId] = useState('')
 
   useEffect(() => {
@@ -62,6 +64,16 @@ const ForecastPage: React.FC = () => {
     if (selectedFieldId) {
       dispatch(fetchYieldForecast({ fieldId: selectedFieldId, targetDate: new Date().toISOString().split('T')[0] }))
       dispatch(fetchHistoricalYield(selectedFieldId))
+      const field = fields.find(f => f.id === selectedFieldId)
+      if (field) {
+        dispatch(detectFieldAnomalies({
+          fieldId: selectedFieldId,
+          sensorData: {
+            soilMoisture: field.currentMoistureLevel ?? 60,
+            temperature: 22,
+          },
+        }))
+      }
     }
   }, [selectedFieldId, dispatch])
 
@@ -78,6 +90,10 @@ const ForecastPage: React.FC = () => {
   }))
 
   const selectedField = fields.find(f => f.id === selectedFieldId)
+  const anomalyResult = anomalyResults[selectedFieldId]
+  const hasAnomalies = anomalyResult?.hasAnomalies ?? false
+
+  const effectiveConfidence = hasAnomalies ? 'LOW' : currentForecast?.confidence
 
   return (
     <div className={styles.page}>
@@ -94,6 +110,23 @@ const ForecastPage: React.FC = () => {
         />
       </div>
 
+      {/* Anomaly warning banner */}
+      {hasAnomalies && (
+        <div className={styles.anomalyBanner}>
+          <span className="material-icons-round">warning</span>
+          <div className={styles.anomalyBannerContent}>
+            <strong>Внимание: обнаружены аномалии данных датчика</strong>
+            <p>Прогноз помечен как «Низкая достоверность». Рекомендуется проверить оборудование или внести корректировки вручную перед применением рекомендаций.</p>
+            {anomalyResult.alerts.map((a, i) => (
+              <div key={i} className={styles.anomalyAlert}>
+                <span className="material-icons-round">sensors_off</span>
+                {a.message}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {(loading || fieldsLoading) && !currentForecast && (
         <Loader text="Расчёт прогноза..." />
       )}
@@ -109,9 +142,17 @@ const ForecastPage: React.FC = () => {
                   <div className={styles.forecastField}>{currentForecast.fieldName}</div>
                   <div className={styles.forecastCrop}>{currentForecast.cropType}</div>
                 </div>
-                <Badge variant={confidenceLabels[currentForecast.confidence].variant}>
-                  Достоверность: {confidenceLabels[currentForecast.confidence].label}
-                </Badge>
+                <div className={styles.confidenceBadgeGroup}>
+                  <Badge variant={confidenceLabels[effectiveConfidence!].variant}>
+                    Достоверность: {confidenceLabels[effectiveConfidence!].label}
+                  </Badge>
+                  {hasAnomalies && (
+                    <Badge variant="danger">
+                      <span className="material-icons-round" style={{ fontSize: 14 }}>sensors_off</span>
+                      Аномалия датчика
+                    </Badge>
+                  )}
+                </div>
               </div>
 
               <div className={styles.yieldDisplay}>

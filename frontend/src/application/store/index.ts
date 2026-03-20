@@ -5,6 +5,7 @@ import weatherReducer from './slices/weatherSlice'
 import forecastReducer from './slices/forecastSlice'
 import irrigationReducer from './slices/irrigationSlice'
 import alertsReducer from './slices/alertsSlice'
+import anomalyReducer from './slices/anomalySlice'
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     forecast: forecastReducer,
     irrigation: irrigationReducer,
     alerts: alertsReducer,
+    anomaly: anomalyReducer,
   },
 })
 

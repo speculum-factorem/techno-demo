@@ -4,6 +4,7 @@ import { YieldForecast, HistoricalYield } from '@domain/entities/Forecast'
 import { IrrigationRecommendation, IrrigationSchedule } from '@domain/entities/Irrigation'
 import { Alert } from '@domain/entities/Alert'
 import { User } from '@domain/entities/User'
+import { ModelMetrics } from '@domain/entities/Anomaly'
 
 export const mockFields: Field[] = [
   {
@@ -326,4 +327,31 @@ export const mockUser: User = {
   email: 'agronomist@centroinvest.ru',
   fullName: 'Иванов Алексей Николаевич',
   role: 'AGRONOMIST',
+}
+
+export const mockModelMetrics: ModelMetrics = {
+  overall: {
+    mae: 0.312,
+    rmse: 0.481,
+    r2: 0.874,
+    accuracy: 81.5,
+    testSamples: 200,
+  },
+  byCrop: {
+    wheat:      { mae: 0.28, rmse: 0.41, r2: 0.89, samples: 286 },
+    corn:       { mae: 0.35, rmse: 0.52, r2: 0.86, samples: 285 },
+    sunflower:  { mae: 0.19, rmse: 0.29, r2: 0.91, samples: 287 },
+    barley:     { mae: 0.31, rmse: 0.47, r2: 0.85, samples: 284 },
+    soy:        { mae: 0.22, rmse: 0.33, r2: 0.88, samples: 286 },
+    sugar_beet: { mae: 2.10, rmse: 3.15, r2: 0.92, samples: 286 },
+    other:      { mae: 0.34, rmse: 0.51, r2: 0.83, samples: 286 },
+  },
+  scenarios: [
+    { name: 'Аномалия датчика (98% влажность)', description: 'Сценарий из кейса: агроном вводит влажность 98% из-за сбоя датчика', inputMoisture: 98, inputTemp: 22, expectedConfidence: 'LOW', actualConfidence: 'LOW', status: 'pass' },
+    { name: 'Оптимальные условия (пшеница)',     description: 'Влажность 65%, температура 22°C, осадки 18 мм/нед',               inputMoisture: 65, inputTemp: 22, expectedConfidence: 'HIGH', actualConfidence: 'HIGH', status: 'pass' },
+    { name: 'Засушливые условия',                description: 'Влажность 30%, температура 35°C, осадки 2 мм/нед',               inputMoisture: 30, inputTemp: 35, expectedConfidence: 'MEDIUM', actualConfidence: 'MEDIUM', status: 'pass' },
+    { name: 'Критическая засуха',                description: 'Влажность 15%, температура 38°C, нет осадков',                   inputMoisture: 15, inputTemp: 38, expectedConfidence: 'LOW', actualConfidence: 'LOW', status: 'pass' },
+  ],
+  modelVersion: '1.2.0',
+  trainedAt: new Date().toISOString(),
 }

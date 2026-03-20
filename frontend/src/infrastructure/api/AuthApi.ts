@@ -1,6 +1,6 @@
 import apiClient from './ApiClient'
 import { USE_MOCK } from './config'
-import { User, LoginDto, AuthTokens } from '@domain/entities/User'
+import { User, LoginDto, RegisterDto, AuthTokens } from '@domain/entities/User'
 import { mockUser } from './MockData'
 
 export const authApi = {
@@ -29,6 +29,23 @@ export const authApi = {
       },
       tokens: { accessToken: data.accessToken, refreshToken: data.refreshToken, expiresIn: data.expiresIn },
     }
+  },
+
+  async register(dto: RegisterDto): Promise<{ message: string }> {
+    if (USE_MOCK) {
+      await new Promise(r => setTimeout(r, 800))
+      return { message: 'Registration successful. Check your email to verify your account.' }
+    }
+    const { data } = await apiClient.post<{ message: string }>('/auth/register', {
+      ...dto,
+      organizationId: dto.organizationId ? Number(dto.organizationId) : undefined,
+    })
+    return data
+  },
+
+  async verifyEmail(token: string): Promise<{ message: string }> {
+    const { data } = await apiClient.get<{ message: string }>(`/auth/verify-email?token=${encodeURIComponent(token)}`)
+    return data
   },
 
   async logout(): Promise<void> {

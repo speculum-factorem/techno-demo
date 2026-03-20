@@ -38,6 +38,10 @@ public class User {
     @Column(name = "organization_id")
     private Long organizationId;
 
+    @Column(name = "email_verified", nullable = false)
+    @Builder.Default
+    private boolean emailVerified = false;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

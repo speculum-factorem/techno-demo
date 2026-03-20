@@ -1,0 +1,429 @@
+.page {
+  display: flex;
+  min-height: 100vh;
+  background: #f8f9fa;
+}
+
+/* ===================== LEFT PANEL ===================== */
+
+.leftPanel {
+  display: none;
+  width: 420px;
+  min-width: 380px;
+  background: linear-gradient(160deg, #1a73e8 0%, #0d5bba 60%, #34a853 100%);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  flex-shrink: 0;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -80px;
+    right: -80px;
+    width: 300px;
+    height: 300px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.07);
+    pointer-events: none;
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: -100px;
+    left: -60px;
+    width: 360px;
+    height: 360px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    pointer-events: none;
+  }
+
+  @media (min-width: 900px) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+.panelContent {
+  padding: 48px 40px;
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.panelLogo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: -0.3px;
+
+  .material-icons-round {
+    font-size: 28px;
+    color: #a8f0b2;
+  }
+}
+
+.panelTitle {
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1.35;
+  margin: 0;
+  opacity: 0.97;
+}
+
+.panelFeatures {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 0.95rem;
+    opacity: 0.92;
+
+    .material-icons-round {
+      font-size: 20px;
+      color: #a8f0b2;
+      flex-shrink: 0;
+    }
+  }
+}
+
+.panelStats {
+  display: flex;
+  gap: 20px;
+  padding: 18px 20px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+
+  > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+
+    strong {
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: #a8f0b2;
+      line-height: 1;
+    }
+
+    span {
+      font-size: 0.72rem;
+      opacity: 0.8;
+      margin-top: 4px;
+      text-align: center;
+    }
+  }
+}
+
+.panelNote {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.9rem;
+  opacity: 0.85;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 12px 16px;
+
+  .material-icons-round {
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+}
+
+.panelNoteLink {
+  color: #a8f0b2;
+  font-weight: 600;
+  text-decoration: none;
+  margin-left: 4px;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
+
+/* Steps panel for register */
+.registerStepsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.registerStepItem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 0.93rem;
+  opacity: 0.55;
+  transition: opacity 0.2s;
+
+  span:last-child {
+    font-weight: 500;
+  }
+}
+
+.registerStepActive {
+  opacity: 1;
+
+  .registerStepNum {
+    background: #a8f0b2;
+    color: #1a73e8;
+  }
+}
+
+.registerStepNum {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  flex-shrink: 0;
+  transition: background 0.2s, color 0.2s;
+}
+
+/* ===================== RIGHT PANEL ===================== */
+
+.rightPanel {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 20px;
+  min-height: 100vh;
+}
+
+.formCard {
+  background: #fff;
+  border-radius: 20px;
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+  padding: 40px 36px;
+  width: 100%;
+  max-width: 440px;
+
+  @media (max-width: 480px) {
+    padding: 28px 20px;
+    border-radius: 16px;
+  }
+}
+
+.formHeader {
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.formIcon {
+  font-size: 42px !important;
+  color: #1a73e8;
+  display: block;
+  margin-bottom: 10px;
+}
+
+.formTitle {
+  font-size: 1.55rem;
+  font-weight: 800;
+  color: #202124;
+  margin: 0 0 6px;
+  letter-spacing: -0.4px;
+}
+
+.formSub {
+  font-size: 0.9rem;
+  color: #5f6368;
+  margin: 0;
+}
+
+/* Progress bar */
+.progressBar {
+  height: 4px;
+  background: #e8f0fe;
+  border-radius: 2px;
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #1a73e8, #34a853);
+  border-radius: 2px;
+  transition: width 0.35s ease;
+}
+
+/* ===================== DEMO QUICK ACCESS ===================== */
+
+.demoSection {
+  margin-bottom: 16px;
+}
+
+.demoLabel {
+  font-size: 0.78rem;
+  color: #9aa0a6;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+
+.demoBtns {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.demoBtn {
+  flex: 1;
+  min-width: 140px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  background: #fff;
+  border: 1.5px solid #e8eaed;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+  text-align: left;
+
+  &:hover {
+    background: #f8f9fa;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  }
+
+  .material-icons-round {
+    flex-shrink: 0;
+  }
+}
+
+.demoBtnLabel {
+  font-size: 0.82rem;
+  font-weight: 700;
+  line-height: 1;
+  margin-bottom: 2px;
+}
+
+.demoBtnCred {
+  font-size: 0.73rem;
+  color: #9aa0a6;
+  font-family: 'Roboto Mono', monospace;
+}
+
+/* ===================== DIVIDER ===================== */
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 16px 0;
+  color: #9aa0a6;
+  font-size: 0.8rem;
+
+  &::before,
+  &::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: #e8eaed;
+  }
+
+  span {
+    white-space: nowrap;
+    padding: 0 4px;
+  }
+}
+
+/* ===================== FORM ===================== */
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.formActions {
+  display: flex;
+  gap: 10px;
+  margin-top: 4px;
+
+  > * {
+    flex: 1;
+  }
+}
+
+/* ===================== PASSWORD STRENGTH ===================== */
+
+.passwordStrength {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+  padding: 0 2px;
+}
+
+.strengthBar {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  transition: background 0.25s;
+}
+
+/* ===================== BOTTOM LINKS ===================== */
+
+.switchAuth {
+  text-align: center;
+  font-size: 0.88rem;
+  color: #5f6368;
+  margin: 18px 0 6px;
+}
+
+.backLink {
+  text-align: center;
+  font-size: 0.85rem;
+  margin: 0;
+
+  a {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #9aa0a6;
+    text-decoration: none;
+    transition: color 0.15s;
+
+    &:hover {
+      color: #5f6368;
+    }
+
+    .material-icons-round {
+      font-size: 15px;
+    }
+  }
+}
+
+.link {
+  color: #1a73e8;
+  text-decoration: none;
+  font-weight: 600;
+
+  &:hover {
+    text-decoration: underline;
+  }
+}
