@@ -6,8 +6,8 @@ spring:
     name: notification-service
   datasource:
     url: jdbc:postgresql://postgres:5432/notificationdb
-    username: postgres
-    password: postgres
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: update
@@ -24,6 +24,18 @@ spring:
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
         spring.json.trusted.packages: "*"
+  mail:
+    host: ${MAIL_HOST:smtp.yandex.ru}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
 
 management:
   endpoints:
@@ -40,20 +52,6 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
-spring:
-  mail:
-    host: ${MAIL_HOST:smtp.yandex.ru}
-    port: ${MAIL_PORT:587}
-    username: ${MAIL_USERNAME:}
-    password: ${MAIL_PASSWORD:}
-    properties:
-      mail:
-        smtp:
-          auth: true
-          starttls:
-            enable: true
-            required: true
-
 notifications:
   telegram:
     enabled: ${TELEGRAM_ENABLED:false}
@@ -63,3 +61,7 @@ notifications:
     enabled: ${NOTIFICATION_EMAIL_ENABLED:false}
     from: ${MAIL_USERNAME:}
     to: ${NOTIFICATION_EMAIL_TO:}
+
+agro:
+  security:
+    internal-api-token: ${INTERNAL_API_TOKEN:}

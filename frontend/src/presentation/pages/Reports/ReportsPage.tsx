@@ -1,5 +1,6 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import styles from './ReportsPage.module.scss'
+import { opsApi, ReportHistoryItem } from '@infrastructure/api/OpsApi'
 
 interface ReportTemplate {
   id: string
@@ -53,15 +54,22 @@ const ReportsPage: React.FC = () => {
   const [filterCat, setFilterCat] = useState<string>('all')
   const [generating, setGenerating] = useState<string | null>(null)
   const [showSchedule, setShowSchedule] = useState(false)
+  const [history, setHistory] = useState<ReportHistoryItem[]>([])
+
+  useEffect(() => {
+    opsApi.getReportsHistory().then(setHistory).catch(() => undefined)
+  }, [])
 
   const filtered = TEMPLATES.filter(t => filterCat === 'all' || t.category === filterCat)
 
   const generate = (id: string, format: string) => {
     setGenerating(id)
-    setTimeout(() => {
+    const template = TEMPLATES.find(t => t.id === id)
+    opsApi.generateReport(template?.name || 'Отчёт', format as 'pdf' | 'excel').finally(() => {
+      opsApi.getReportsHistory().then(setHistory).catch(() => undefined)
       setGenerating(null)
-      alert(`✅ Отчёт "${TEMPLATES.find(t => t.id === id)?.name}" (${format.toUpperCase()}) сгенерирован и готов к скачиванию`)
-    }, 1800)
+      alert(`✅ Отчёт "${template?.name}" (${format.toUpperCase()}) сгенерирован и готов к скачиванию`)
+    })
   }
 
   return (
@@ -187,14 +195,8 @@ const ReportsPage: React.FC = () => {
 
       {activeTab === 'history' && (
         <div className={styles.historyList}>
-          {[
-            { name: 'Недельный дайджест 13-19 марта', format: 'pdf', date: '2026-03-20 11:47', size: '4.2 МБ', user: 'admin' },
-            { name: 'Финансовая сводка Февраль', format: 'excel', date: '2026-03-19 18:04', size: '1.8 МБ', user: 'agronomist1' },
-            { name: 'Прогноз урожая Q1 2026', format: 'pdf', date: '2026-03-15 09:30', size: '6.1 МБ', user: 'admin' },
-            { name: 'Отчёт по поливу 1-15 марта', format: 'pdf', date: '2026-03-15 09:28', size: '2.4 МБ', user: 'agronomist1' },
-            { name: 'Недельный дайджест 6-12 марта', format: 'pdf', date: '2026-03-13 11:00', size: '3.9 МБ', user: 'admin' },
-          ].map((h, i) => (
-            <div key={i} className={styles.historyItem}>
+          {history.map((h) => (
+            <div key={h.id} className={styles.historyItem}>
               <span className="material-icons-round" style={{ color: h.format === 'pdf' ? '#ea4335' : '#34a853', fontSize: 22 }}>
                 {h.format === 'pdf' ? 'picture_as_pdf' : 'table_chart'}
               </span>

@@ -83,10 +83,43 @@ public class FieldService {
                         .description("Фунгицидная обработка").amount(18.0).unit("л").cost(8700.0).build()
         );
 
+        double cropArea = field.getArea() != null ? field.getArea() : 10.0;
+        String cropKey = field.getCropType() != null ? field.getCropType().toLowerCase() : "wheat";
+        double yieldBase = switch (cropKey) {
+            case "corn"       -> 6.8;
+            case "sunflower"  -> 2.0;
+            case "barley"     -> 3.5;
+            case "soy"        -> 1.8;
+            case "sugar_beet" -> 30.0;
+            default           -> 4.3;
+        };
+        double pricePerTon = switch (cropKey) {
+            case "corn"       -> 11000.0;
+            case "sunflower"  -> 28000.0;
+            case "barley"     -> 10500.0;
+            case "soy"        -> 34000.0;
+            case "sugar_beet" -> 3200.0;
+            default           -> 13500.0;
+        };
+        double costBase = cropArea * 11850.0;
+
         List<FieldPassportDto.ResultRecord> results = List.of(
-                FieldPassportDto.ResultRecord.builder().metric("Прогноз урожайности").value(4.8).unit("т/га").period("Текущий сезон").build(),
-                FieldPassportDto.ResultRecord.builder().metric("Отклонение от плана").value(-3.2).unit("%").period("Текущий сезон").build(),
-                FieldPassportDto.ResultRecord.builder().metric("Средняя влажность").value(field.getCurrentMoistureLevel() != null ? field.getCurrentMoistureLevel() : 41.0).unit("%").period("7 дней").build()
+                FieldPassportDto.ResultRecord.builder()
+                        .season("2024/2025")
+                        .cropType(field.getCropType())
+                        .yieldActual(round2(yieldBase * 1.05))
+                        .yieldPlan(round2(yieldBase))
+                        .revenueActual(round2(cropArea * yieldBase * 1.05 * pricePerTon))
+                        .costActual(round2(costBase * 0.94))
+                        .build(),
+                FieldPassportDto.ResultRecord.builder()
+                        .season("2023/2024")
+                        .cropType(field.getCropType())
+                        .yieldActual(round2(yieldBase * 0.96))
+                        .yieldPlan(round2(yieldBase))
+                        .revenueActual(round2(cropArea * yieldBase * 0.96 * pricePerTon))
+                        .costActual(round2(costBase * 0.92))
+                        .build()
         );
 
         double totalCost = concatCosts(operations, fertilizers, treatments);
@@ -145,7 +178,7 @@ public class FieldService {
                 .latestNdvi(latest.getNdvi())
                 .latestNdmi(latest.getNdmi())
                 .stressLevel(stressLevel)
-                .mapPreviewUrl("https://tiles.example.local/ndvi/" + field.getId())
+                .mapPreviewUrl(null)
                 .alerts(alerts)
                 .recommendations(recommendations)
                 .build();
@@ -157,9 +190,40 @@ public class FieldService {
         assertCanAccess(field, actor);
 
         double area = field.getArea() != null ? field.getArea() : 1.0;
-        double planCost = round2(area * 11850.0);
+
+        // Yield baseline per crop type (t/ha) — used when no ML forecast is available
+        double yieldPerHa = switch (field.getCropType() != null ? field.getCropType().toLowerCase() : "") {
+            case "corn"        -> 6.8;
+            case "sunflower"   -> 2.0;
+            case "barley"      -> 3.5;
+            case "soy"         -> 1.8;
+            case "sugar_beet"  -> 30.0;
+            default            -> 4.3; // wheat / other
+        };
+
+        // Cost per hectare varies by crop (seed + inputs differ significantly)
+        double costPerHa = switch (field.getCropType() != null ? field.getCropType().toLowerCase() : "") {
+            case "corn"        -> 16500.0;
+            case "sugar_beet"  -> 28000.0;
+            case "soy"         -> 12000.0;
+            case "sunflower"   -> 10500.0;
+            case "barley"      -> 9800.0;
+            default            -> 11850.0;
+        };
+
+        // Price per ton varies by crop
+        double pricePerTon = switch (field.getCropType() != null ? field.getCropType().toLowerCase() : "") {
+            case "corn"        -> 11000.0;
+            case "sunflower"   -> 28000.0;
+            case "barley"      -> 10500.0;
+            case "soy"         -> 34000.0;
+            case "sugar_beet"  -> 3200.0;
+            default            -> 13500.0;
+        };
+
+        double planCost = round2(area * costPerHa);
         double actualCost = round2(planCost * 0.94);
-        double revenue = round2(area * 4.8 * 13500.0);
+        double revenue = round2(area * yieldPerHa * pricePerTon);
         double margin = round2(revenue - actualCost);
         double marginPct = round2((margin / Math.max(revenue, 1.0)) * 100.0);
 

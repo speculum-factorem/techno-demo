@@ -39,10 +39,12 @@ public class FieldPassportDto {
     @AllArgsConstructor
     @Builder
     public static class ResultRecord {
-        private String metric;
-        private Double value;
-        private String unit;
-        private String period;
+        private String season;
+        private String cropType;
+        private Double yieldActual;
+        private Double yieldPlan;
+        private Double revenueActual;
+        private Double costActual;
     }
 
     @Data

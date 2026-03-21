@@ -1,5 +1,7 @@
 package com.agroanalytics.auth.controller;
 
+import com.agroanalytics.auth.dto.ChangePasswordRequest;
+import com.agroanalytics.auth.dto.ForgotPasswordRequest;
 import com.agroanalytics.auth.dto.LoginRequest;
 import com.agroanalytics.auth.dto.LoginResponse;
 import com.agroanalytics.auth.dto.LoginChallengeResponse;
@@ -7,6 +9,7 @@ import com.agroanalytics.auth.dto.RefreshTokenRequest;
 import com.agroanalytics.auth.dto.ResendEmailCodeRequest;
 import com.agroanalytics.auth.dto.ResendLoginCodeRequest;
 import com.agroanalytics.auth.dto.RegisterRequest;
+import com.agroanalytics.auth.dto.ResetPasswordRequest;
 import com.agroanalytics.auth.dto.VerifyEmailCodeRequest;
 import com.agroanalytics.auth.dto.VerifyLoginCodeRequest;
 import com.agroanalytics.auth.model.User;
@@ -68,7 +71,8 @@ public class AuthController {
         long expiresInSeconds = authService.register(request);
         return ResponseEntity.status(201).body(Map.of(
                 "message", "Регистрация успешна. На почту отправлен код подтверждения (6 цифр) и ссылка.",
-                "expiresInSeconds", expiresInSeconds
+                "expiresInSeconds", expiresInSeconds,
+                "emailConfigured", authService.isMailConfigured()
         ));
     }
 
@@ -134,6 +138,42 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok(userInfo);
+    }
+
+    @Operation(summary = "Запрос сброса пароля", description = "Отправляет письмо со ссылкой для сброса пароля")
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, Object>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.requestPasswordReset(request);
+        // Always return 200 to avoid email enumeration
+        return ResponseEntity.ok(Map.of(
+                "message", "Если указанный email зарегистрирован, на него отправлена ссылка для сброса пароля.",
+                "emailConfigured", authService.isMailConfigured()
+        ));
+    }
+
+    @Operation(summary = "Сброс пароля", description = "Устанавливает новый пароль по токену из письма")
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request);
+        return ResponseEntity.ok(Map.of("message", "Пароль успешно изменён. Войдите с новым паролем."));
+    }
+
+    @Operation(summary = "Смена пароля", description = "Смена пароля для авторизованного пользователя")
+    @PostMapping("/change-password")
+    public ResponseEntity<Map<String, String>> changePassword(
+            @RequestHeader(value = "Authorization", required = false) String authHeader,
+            @Valid @RequestBody ChangePasswordRequest request
+    ) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            return ResponseEntity.status(401).body(Map.of("error", "No token provided"));
+        }
+        String token = authHeader.substring(7);
+        Optional<com.agroanalytics.auth.model.User> userOpt = authService.getUserFromToken(token);
+        if (userOpt.isEmpty()) {
+            return ResponseEntity.status(401).body(Map.of("error", "Invalid or expired token"));
+        }
+        authService.changePassword(userOpt.get().getUsername(), request);
+        return ResponseEntity.ok(Map.of("message", "Пароль успешно изменён."));
     }
 
     @ExceptionHandler(BadCredentialsException.class)

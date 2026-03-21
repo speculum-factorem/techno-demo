@@ -6,13 +6,18 @@ import com.agroanalytics.auth.dto.LoginChallengeResponse;
 import com.agroanalytics.auth.dto.RefreshTokenRequest;
 import com.agroanalytics.auth.dto.RegisterRequest;
 import com.agroanalytics.auth.dto.VerifyLoginCodeRequest;
+import com.agroanalytics.auth.dto.ChangePasswordRequest;
+import com.agroanalytics.auth.dto.ForgotPasswordRequest;
+import com.agroanalytics.auth.dto.ResetPasswordRequest;
 import com.agroanalytics.auth.model.EmailVerificationToken;
 import com.agroanalytics.auth.model.LoginVerificationCode;
 import com.agroanalytics.auth.model.OrganizationInviteCode;
+import com.agroanalytics.auth.model.PasswordResetToken;
 import com.agroanalytics.auth.model.User;
 import com.agroanalytics.auth.repository.EmailVerificationTokenRepository;
 import com.agroanalytics.auth.repository.LoginVerificationCodeRepository;
 import com.agroanalytics.auth.repository.OrganizationInviteCodeRepository;
+import com.agroanalytics.auth.repository.PasswordResetTokenRepository;
 import com.agroanalytics.auth.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -44,6 +49,7 @@ public class AuthService {
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
     private final LoginVerificationCodeRepository loginVerificationCodeRepository;
     private final OrganizationInviteCodeRepository organizationInviteCodeRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final VerificationEmailService verificationEmailService;
@@ -70,6 +76,12 @@ public class AuthService {
     private int emailResendRateLimitWindowSeconds;
     @Value("${app.bootstrap.default-users:false}")
     private boolean bootstrapDefaultUsers;
+    @Value("${app.bootstrap.admin-password:admin}")
+    private String bootstrapAdminPassword;
+    @Value("${app.bootstrap.agronomist-password:agronomist}")
+    private String bootstrapAgronomistPassword;
+    @Value("${app.bootstrap.invite-code:ORG1-INVITE-2026}")
+    private String bootstrapInviteCode;
     private final Map<String, Deque<Long>> resendAttemptsByKey = new ConcurrentHashMap<>();
 
     @PostConstruct
@@ -83,34 +95,34 @@ public class AuthService {
                     .username("admin")
                     .email("admin@agroanalytics.com")
                     .fullName("System Administrator")
-                    .passwordHash(passwordEncoder.encode("admin"))
+                    .passwordHash(passwordEncoder.encode(bootstrapAdminPassword))
                     .role(User.Role.ADMIN)
                     .emailVerified(true)
                     .build();
             userRepository.save(admin);
-            log.info("Default admin user created: username=admin, password=admin");
+            log.info("Default admin user created: username=admin (password set from bootstrap config)");
         }
         if (userRepository.findByUsername("agronomist").isEmpty()) {
             User agronomist = User.builder()
                     .username("agronomist")
                     .email("agronomist@agroanalytics.com")
                     .fullName("Агроном (демо)")
-                    .passwordHash(passwordEncoder.encode("agronomist"))
+                    .passwordHash(passwordEncoder.encode(bootstrapAgronomistPassword))
                     .role(User.Role.AGRONOMIST)
                     .organizationId(1L)
                     .emailVerified(true)
                     .build();
             userRepository.save(agronomist);
-            log.info("Default agronomist user: username=agronomist, password=agronomist, organizationId=1");
+            log.info("Default agronomist user created: username=agronomist, organizationId=1");
         }
-        if (organizationInviteCodeRepository.findByCode("ORG1-INVITE-2026").isEmpty()) {
+        if (organizationInviteCodeRepository.findByCode(bootstrapInviteCode).isEmpty()) {
             OrganizationInviteCode inviteCode = OrganizationInviteCode.builder()
-                    .code("ORG1-INVITE-2026")
+                    .code(bootstrapInviteCode)
                     .organizationId(1L)
                     .expiresAt(LocalDateTime.now().plusYears(1))
                     .build();
             organizationInviteCodeRepository.save(inviteCode);
-            log.info("Default invite code created for org 1: ORG1-INVITE-2026");
+            log.info("Default invite code created for org 1: {}", bootstrapInviteCode);
         }
     }
 
@@ -176,7 +188,8 @@ public class AuthService {
                 loginResendRateLimitWindowSeconds
         );
         LoginVerificationCode next = createAndSendLoginCode(current.getUser());
-        current.setUsedAt(LocalDateTime.now());
+        // Invalidate the old code so it cannot be used after a resend
+        current.setExpiresAt(LocalDateTime.now());
         loginVerificationCodeRepository.save(current);
         return buildLoginChallengeResponse(next);
     }
@@ -432,6 +445,82 @@ public class AuthService {
     private String generateSixDigitCode() {
         int n = 100_000 + SECURE_RANDOM.nextInt(900_000);
         return String.valueOf(n);
+    }
+
+    public boolean isMailConfigured() {
+        return verificationEmailService.isMailConfigured();
+    }
+
+    /**
+     * Initiate password reset: generate token, send email.
+     * Always returns success to avoid email enumeration attacks.
+     */
+    public void requestPasswordReset(ForgotPasswordRequest request) {
+        String normalizedEmail = request.getEmail().trim().toLowerCase();
+        userRepository.findByEmail(normalizedEmail).ifPresent(user -> {
+            // Invalidate any existing reset tokens
+            passwordResetTokenRepository.deleteByUserId(user.getId());
+
+            String token = UUID.randomUUID().toString() + UUID.randomUUID();
+            PasswordResetToken resetToken = PasswordResetToken.builder()
+                    .token(token)
+                    .user(user)
+                    .expiresAt(LocalDateTime.now().plusMinutes(30))
+                    .build();
+            passwordResetTokenRepository.save(resetToken);
+            verificationEmailService.sendPasswordResetEmail(normalizedEmail, token);
+        });
+    }
+
+    /**
+     * Complete password reset using the token from the email link.
+     */
+    public void resetPassword(ResetPasswordRequest request) {
+        PasswordResetToken resetToken = passwordResetTokenRepository.findByToken(request.getToken())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid or expired reset token"));
+
+        if (resetToken.getUsedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reset token is already used");
+        }
+        if (resetToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Reset token has expired");
+        }
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passwords do not match");
+        }
+
+        validatePasswordPolicy(request.getNewPassword());
+
+        User user = resetToken.getUser();
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        resetToken.setUsedAt(LocalDateTime.now());
+        passwordResetTokenRepository.save(resetToken);
+
+        log.info("Password successfully reset for user: {}", user.getUsername());
+    }
+
+    /**
+     * Change password for an already-authenticated user.
+     */
+    public void changePassword(String username, ChangePasswordRequest request) {
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "User not found"));
+
+        if (!passwordEncoder.matches(request.getCurrentPassword(), user.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Current password is incorrect");
+        }
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passwords do not match");
+        }
+
+        validatePasswordPolicy(request.getNewPassword());
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        userRepository.save(user);
+
+        log.info("Password changed for user: {}", username);
     }
 
     private void validatePasswordPolicy(String password) {

@@ -115,8 +115,8 @@ const AlertsPage: React.FC = () => {
 }
 
 const AlertCard: React.FC<{ alert: Alert; onRead: () => void }> = ({ alert, onRead }) => {
-  const sev = severityConfig[alert.severity]
-  const type = typeConfig[alert.type]
+  const sev = severityConfig[alert.severity] ?? severityConfig.info
+  const type = typeConfig[alert.type] ?? { label: alert.type, icon: 'notifications' }
 
   return (
     <Card className={`${styles.alertCard} ${!alert.isRead ? styles.unread : ''} ${styles[`sev-${alert.severity}`]}`}>

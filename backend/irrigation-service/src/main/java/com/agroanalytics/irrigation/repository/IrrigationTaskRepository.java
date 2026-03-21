@@ -9,4 +9,5 @@ import java.util.UUID;
 public interface IrrigationTaskRepository extends JpaRepository<IrrigationTask, UUID> {
     List<IrrigationTask> findByFieldIdOrderByScheduledDateAsc(UUID fieldId);
     List<IrrigationTask> findByStatusOrderByScheduledDateAsc(IrrigationTask.Status status);
+    boolean existsByFieldIdAndScheduledDateAndStatusIn(UUID fieldId, java.time.LocalDate date, List<IrrigationTask.Status> statuses);
 }

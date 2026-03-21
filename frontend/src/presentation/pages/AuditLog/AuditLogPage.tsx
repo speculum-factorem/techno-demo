@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import styles from './AuditLogPage.module.scss'
 import { AuditEntry, AuditAction } from '@domain/entities/AuditLog'
+import { opsApi } from '@infrastructure/api/OpsApi'
 
 const MOCK_LOG: AuditEntry[] = [
   { id: 'a1', timestamp: '2026-03-20T14:18:32Z', userId: 'u1', userName: 'admin', userRole: 'Супер-администратор', action: 'recommendation_accept', entityType: 'Рекомендация', entityId: 'r12', entityName: 'Полив Поле А-1', details: 'Принята рекомендация полива 35 мм', ipAddress: '192.168.1.10', result: 'success' },
@@ -42,13 +43,18 @@ const ACTION_LABELS: Record<AuditAction, string> = {
 }
 
 const AuditLogPage: React.FC = () => {
+  const [entries, setEntries] = useState<AuditEntry[]>([])
   const [search, setSearch] = useState('')
   const [filterUser, setFilterUser] = useState('all')
   const [filterResult, setFilterResult] = useState<'all' | 'success' | 'failure'>('all')
 
-  const users = [...new Set(MOCK_LOG.map(e => e.userName))]
+  useEffect(() => {
+    opsApi.getAuditLog().then(setEntries).catch(() => setEntries(MOCK_LOG))
+  }, [])
 
-  const filtered = MOCK_LOG.filter(e => {
+  const users = [...new Set(entries.map(e => e.userName))]
+
+  const filtered = entries.filter(e => {
     if (filterUser !== 'all' && e.userName !== filterUser) return false
     if (filterResult !== 'all' && e.result !== filterResult) return false
     if (search && !`${e.userName} ${ACTION_LABELS[e.action]} ${e.entityName} ${e.details}`.toLowerCase().includes(search.toLowerCase())) return false
@@ -67,9 +73,9 @@ const AuditLogPage: React.FC = () => {
 
       {/* Stats */}
       <div className={styles.statsRow}>
-        <div className={styles.statCard}><span className="material-icons-round" style={{ color: '#1a73e8' }}>receipt_long</span><strong>{MOCK_LOG.length}</strong><span>Всего событий</span></div>
-        <div className={styles.statCard}><span className="material-icons-round" style={{ color: '#34a853' }}>check_circle</span><strong>{MOCK_LOG.filter(e => e.result === 'success').length}</strong><span>Успешных</span></div>
-        <div className={styles.statCard}><span className="material-icons-round" style={{ color: '#ea4335' }}>cancel</span><strong>{MOCK_LOG.filter(e => e.result === 'failure').length}</strong><span>Отказов</span></div>
+        <div className={styles.statCard}><span className="material-icons-round" style={{ color: '#1a73e8' }}>receipt_long</span><strong>{entries.length}</strong><span>Всего событий</span></div>
+        <div className={styles.statCard}><span className="material-icons-round" style={{ color: '#34a853' }}>check_circle</span><strong>{entries.filter(e => e.result === 'success').length}</strong><span>Успешных</span></div>
+        <div className={styles.statCard}><span className="material-icons-round" style={{ color: '#ea4335' }}>cancel</span><strong>{entries.filter(e => e.result === 'failure').length}</strong><span>Отказов</span></div>
         <div className={styles.statCard}><span className="material-icons-round" style={{ color: '#f9ab00' }}>people</span><strong>{users.length}</strong><span>Пользователей</span></div>
       </div>
 

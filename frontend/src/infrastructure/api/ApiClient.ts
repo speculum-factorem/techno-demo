@@ -78,8 +78,8 @@ apiClient.interceptors.response.use(
           originalRequest.headers.Authorization = `Bearer ${nextAccess}`
           return apiClient(originalRequest)
         }
-      } catch {
-        // fall through to logout behavior
+      } catch (refreshError) {
+        console.warn('Token refresh failed, redirecting to login:', refreshError)
       }
     }
 

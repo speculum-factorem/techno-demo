@@ -176,6 +176,9 @@ const LoginPage: React.FC = () => {
           </form>
 
           <p className={styles.switchAuth}>
+            <Link to="/auth/forgot-password" className={styles.link}>Забыли пароль?</Link>
+          </p>
+          <p className={styles.switchAuth}>
             Нет аккаунта? <Link to="/auth/register" className={styles.link}>Зарегистрироваться</Link>
           </p>
           <p className={styles.backLink}>

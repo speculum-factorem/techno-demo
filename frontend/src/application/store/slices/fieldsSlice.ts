@@ -94,17 +94,29 @@ const fieldsSlice = createSlice({
       .addCase(fetchFieldById.fulfilled, (state, action) => {
         state.selected = action.payload
       })
+      .addCase(fetchFieldById.rejected, (state, action) => {
+        state.error = action.payload as string
+      })
       .addCase(createField.fulfilled, (state, action) => {
         state.items.push(action.payload)
+      })
+      .addCase(createField.rejected, (state, action) => {
+        state.error = action.payload as string
       })
       .addCase(updateField.fulfilled, (state, action) => {
         const idx = state.items.findIndex(f => f.id === action.payload.id)
         if (idx !== -1) state.items[idx] = action.payload
         if (state.selected?.id === action.payload.id) state.selected = action.payload
       })
+      .addCase(updateField.rejected, (state, action) => {
+        state.error = action.payload as string
+      })
       .addCase(deleteField.fulfilled, (state, action) => {
         state.items = state.items.filter(f => f.id !== action.payload)
         if (state.selected?.id === action.payload) state.selected = null
+      })
+      .addCase(deleteField.rejected, (state, action) => {
+        state.error = action.payload as string
       })
   },
 })

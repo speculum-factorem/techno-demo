@@ -22,6 +22,10 @@ public class IrrigationEventConsumer {
     public void consumeIrrigationRecommendations(Object message) {
         try {
             Map<String, Object> event = objectMapper.convertValue(message, Map.class);
+            if (event == null) {
+                log.warn("Received null irrigation-recommendations event, skipping");
+                return;
+            }
             processIrrigationRecommendation(event);
         } catch (Exception e) {
             log.error("Error processing irrigation-recommendations event: {}", e.getMessage(), e);
@@ -30,7 +34,8 @@ public class IrrigationEventConsumer {
 
     private void processIrrigationRecommendation(Map<String, Object> event) {
         UUID fieldId = parseUuid(event.get("fieldId"));
-        String fieldName = event.getOrDefault("fieldName", "Unknown Field").toString();
+        Object fieldNameObj = event.get("fieldName");
+        String fieldName = (fieldNameObj != null) ? fieldNameObj.toString() : "Unknown Field";
         String recommendation = event.getOrDefault("recommendation", "").toString();
         String priority = event.getOrDefault("priority", "MEDIUM").toString();
         Object waterAmount = event.get("recommendedWaterAmount");
@@ -39,21 +44,21 @@ public class IrrigationEventConsumer {
         String severity = mapPriorityToSeverity(priority);
 
         String waterAmountStr = waterAmount != null
-                ? String.format("%.1f mm", Double.parseDouble(waterAmount.toString()))
-                : "unspecified amount";
+                ? String.format("%.1f мм", Double.parseDouble(waterAmount.toString()))
+                : "не указано";
 
         String message = String.format(
-                "Irrigation recommendation for field '%s': %s. Recommended water: %s.%s",
+                "Рекомендация для поля '%s': %s. Объём воды: %s.%s",
                 fieldName,
                 recommendation,
                 waterAmountStr,
-                reasoning.isEmpty() ? "" : " Reason: " + reasoning
+                reasoning.isEmpty() ? "" : " Причина: " + reasoning
         );
 
         alertService.createAlert(
-                "IRRIGATION_RECOMMENDATION",
+                "irrigation",
                 severity,
-                "Irrigation Recommendation: " + recommendation,
+                "Рекомендация по поливу: " + recommendation,
                 message,
                 fieldId,
                 fieldName
@@ -63,11 +68,11 @@ public class IrrigationEventConsumer {
     }
 
     private String mapPriorityToSeverity(String priority) {
-        if (priority == null) return "INFO";
+        if (priority == null) return "info";
         return switch (priority.toUpperCase()) {
-            case "HIGH", "URGENT" -> "CRITICAL";
-            case "MEDIUM" -> "WARNING";
-            default -> "INFO";
+            case "HIGH", "URGENT", "CRITICAL" -> "critical";
+            case "MEDIUM" -> "warning";
+            default -> "info";
         };
     }
 

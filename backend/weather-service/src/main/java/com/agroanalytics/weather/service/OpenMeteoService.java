@@ -212,7 +212,7 @@ public class OpenMeteoService {
                             .queryParam("end_date", endDate.toString())
                             .queryParam("timezone", "auto")
                             .queryParam("wind_speed_unit", "ms")
-                            .queryParam("daily", "temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max")
+                            .queryParam("daily", "temperature_2m_max,temperature_2m_min,precipitation_sum,wind_speed_10m_max,relative_humidity_2m_mean,shortwave_radiation_sum")
                             .build())
                     .retrieve()
                     .bodyToMono(Map.class)
@@ -232,6 +232,8 @@ public class OpenMeteoService {
             List<Number> tMin = (List<Number>) daily.get("temperature_2m_min");
             List<Number> precip = (List<Number>) daily.get("precipitation_sum");
             List<Number> wind = (List<Number>) daily.get("wind_speed_10m_max");
+            List<Number> humidity = (List<Number>) daily.get("relative_humidity_2m_mean");
+            List<Number> solar = (List<Number>) daily.get("shortwave_radiation_sum");
 
             if (times == null || times.isEmpty()) {
                 return Collections.emptyList();
@@ -247,17 +249,20 @@ public class OpenMeteoService {
                         .atStartOfDay(ZoneOffset.UTC)
                         .toInstant();
 
+                // shortwave_radiation_sum is in MJ/m² per day; convert to avg W/m² (÷ 0.0864)
+                double solarWm2 = solar != null ? getDoubleValue(solar, i, 0.0) / 0.0864 : 0.0;
+
                 rows.add(WeatherDataDto.builder()
                         .id(UUID.randomUUID())
                         .fieldId(fieldId)
                         .timestamp(dayInstant)
                         .temperature(temp)
-                        .humidity(60.0)
+                        .humidity(getDoubleValue(humidity, i, 60.0))
                         .precipitation(getDoubleValue(precip, i, 0.0))
                         .windSpeed(getDoubleValue(wind, i, 0.0))
                         .windDirection(0.0)
                         .pressure(1013.25)
-                        .solarRadiation(0.0)
+                        .solarRadiation(solarWm2)
                         .soilMoisture(null)
                         .soilTemperature(null)
                         .source("open-meteo-archive")

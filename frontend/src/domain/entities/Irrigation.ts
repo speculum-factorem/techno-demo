@@ -32,3 +32,19 @@ export interface IrrigationEntry {
   status: IrrigationStatus
   priority: IrrigationPriority
 }
+
+// Task created by Java irrigation-service (triggered via Kafka from weather events)
+export interface IrrigationTask {
+  id: string
+  fieldId: string
+  fieldName: string
+  scheduledDate: string   // ISO date string, e.g. "2026-03-21"
+  waterAmount: number     // mm
+  duration: number        // minutes
+  priority: IrrigationPriority
+  reason: string
+  moistureDeficit: number // %
+  confidence: number      // 0–100
+  status: IrrigationStatus
+  createdAt: string
+}

@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import styles from './WorkPlannerPage.module.scss'
 import { WorkTask, TaskStatus, TaskPriority, TaskCategory } from '@domain/entities/WorkTask'
+import { opsApi } from '@infrastructure/api/OpsApi'
 
 const MOCK_TASKS: WorkTask[] = [
   {
@@ -80,12 +81,16 @@ const CATEGORY_ICONS: Record<TaskCategory, string> = {
 }
 
 const WorkPlannerPage: React.FC = () => {
-  const [tasks, setTasks] = useState<WorkTask[]>(MOCK_TASKS)
+  const [tasks, setTasks] = useState<WorkTask[]>([])
   const [filter, setFilter] = useState<'all' | 'today' | 'overdue' | TaskStatus>('all')
   const [selectedTask, setSelectedTask] = useState<WorkTask | null>(null)
   const [showModal, setShowModal] = useState(false)
 
   const today = new Date().toISOString().slice(0, 10)
+
+  useEffect(() => {
+    opsApi.getWorkTasks().then(setTasks).catch(() => setTasks(MOCK_TASKS))
+  }, [])
 
   const filtered = tasks.filter(t => {
     if (filter === 'all') return true
@@ -103,11 +108,16 @@ const WorkPlannerPage: React.FC = () => {
   }
 
   const toggleCheckItem = (taskId: string, itemId: string) => {
-    setTasks(prev => prev.map(t =>
+    const nextTasks = tasks.map(t =>
       t.id === taskId ? {
         ...t, checklist: t.checklist.map(c => c.id === itemId ? { ...c, done: !c.done } : c)
       } : t
-    ))
+    )
+    setTasks(nextTasks)
+    const changed = nextTasks.find(t => t.id === taskId)
+    if (changed) {
+      opsApi.updateWorkTask(taskId, { checklist: changed.checklist }).catch(() => undefined)
+    }
     if (selectedTask?.id === taskId) {
       setSelectedTask(prev => prev ? {
         ...prev, checklist: prev.checklist.map(c => c.id === itemId ? { ...c, done: !c.done } : c)
@@ -318,7 +328,29 @@ const WorkPlannerPage: React.FC = () => {
               </div>
               <div className={styles.modalActions}>
                 <button className={styles.cancelBtn} onClick={() => setShowModal(false)}>Отмена</button>
-                <button className={styles.saveBtn} onClick={() => setShowModal(false)}>
+                <button
+                  className={styles.saveBtn}
+                  onClick={async () => {
+                    const draft: Partial<WorkTask> = {
+                      title: 'Новая задача',
+                      description: 'Создано из планировщика',
+                      category: 'other',
+                      priority: 'medium',
+                      status: 'todo',
+                      fieldId: 'f1',
+                      fieldName: 'Поле А-1',
+                      assignee: 'Не назначен',
+                      assigneeRole: 'operator',
+                      deadline: today,
+                      checklist: [],
+                      estimatedHours: 1,
+                    }
+                    await opsApi.createWorkTask(draft)
+                    const refreshed = await opsApi.getWorkTasks()
+                    setTasks(refreshed)
+                    setShowModal(false)
+                  }}
+                >
                   <span className="material-icons-round">save</span> Создать задачу
                 </button>
               </div>

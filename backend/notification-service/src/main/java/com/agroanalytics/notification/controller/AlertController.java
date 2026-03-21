@@ -15,7 +15,6 @@ import java.util.UUID;
 @RequestMapping("/api/alerts")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class AlertController {
 
     private final AlertService alertService;
@@ -47,13 +46,28 @@ public class AlertController {
 
     @PostMapping
     public ResponseEntity<AlertDto> createAlert(@RequestBody Map<String, String> body) {
+        String severity = body.getOrDefault("severity", "info").toLowerCase();
+        if (!java.util.Set.of("critical", "warning", "info").contains(severity)) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        UUID fieldId = null;
+        String rawFieldId = body.get("fieldId");
+        if (rawFieldId != null && !rawFieldId.isBlank()) {
+            try {
+                fieldId = UUID.fromString(rawFieldId);
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().build();
+            }
+        }
+
         AlertDto created = alertService.createAlert(
-                body.getOrDefault("type", "MANUAL"),
-                body.getOrDefault("severity", "INFO"),
-                body.getOrDefault("title", "Manual Alert"),
+                body.getOrDefault("type", "system"),
+                severity,
+                body.getOrDefault("title", "Ручной алерт"),
                 body.getOrDefault("message", ""),
-                body.containsKey("fieldId") ? UUID.fromString(body.get("fieldId")) : null,
-                body.get("fieldName")
+                fieldId,
+                body.getOrDefault("fieldName", "")
         );
         return ResponseEntity.ok(created);
     }

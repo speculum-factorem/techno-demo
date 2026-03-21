@@ -44,7 +44,7 @@ class IrrigationControllerTest {
     }
 
     @Test
-    void createTask_returns200() throws Exception {
+    void createTask_returns201() throws Exception {
         IrrigationTask task = new IrrigationTask();
         task.setFieldId(UUID.randomUUID());
         IrrigationTaskDto dto = new IrrigationTaskDto();
@@ -55,7 +55,7 @@ class IrrigationControllerTest {
         mockMvc.perform(post("/api/irrigation/tasks")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(task)))
-                .andExpect(status().isOk());
+                .andExpect(status().isCreated());
     }
 
     @Test

@@ -1,0 +1,14 @@
+com/agroanalytics/irrigation/config/SecurityConfig.class
+com/agroanalytics/irrigation/config/WebClientConfig.class
+com/agroanalytics/irrigation/repository/IrrigationTaskRepository.class
+com/agroanalytics/irrigation/config/SecurityConfig$GatewayOrInternalAuthFilter.class
+com/agroanalytics/irrigation/model/IrrigationTask$Status.class
+com/agroanalytics/irrigation/controller/IrrigationController.class
+com/agroanalytics/irrigation/dto/IrrigationTaskDto.class
+com/agroanalytics/irrigation/kafka/WeatherEventConsumer.class
+com/agroanalytics/irrigation/IrrigationServiceApplication.class
+com/agroanalytics/irrigation/model/IrrigationTask.class
+com/agroanalytics/irrigation/service/IrrigationService.class
+com/agroanalytics/irrigation/dto/IrrigationTaskDto$IrrigationTaskDtoBuilder.class
+com/agroanalytics/irrigation/model/IrrigationTask$IrrigationTaskBuilder.class
+com/agroanalytics/irrigation/model/IrrigationTask$Priority.class

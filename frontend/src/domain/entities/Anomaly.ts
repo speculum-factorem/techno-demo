@@ -5,11 +5,14 @@ export interface AnomalyAlert {
   field: string
   value: number
   confidence: number
+  method?: 'physical_limit' | 'z_score'
+  z_score?: number
 }
 
 export interface AnomalyResult {
   hasAnomalies: boolean
   alerts: AnomalyAlert[]
+  anomalyCount: number
   lowConfidence: boolean
 }
 

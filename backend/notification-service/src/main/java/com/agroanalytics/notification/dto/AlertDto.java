@@ -1,5 +1,6 @@
 package com.agroanalytics.notification.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
 import java.time.Instant;
@@ -18,6 +19,7 @@ public class AlertDto {
     private String message;
     private UUID fieldId;
     private String fieldName;
+    @JsonProperty("isRead")
     private boolean isRead;
     private Instant createdAt;
     private Instant resolvedAt;

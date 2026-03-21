@@ -43,9 +43,13 @@ spring:
       globalcors:
         corsConfigurations:
           '[/**]':
-            allowedOrigins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://localhost:8080}
+            allowedOrigins: ${APP_CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173}
             allowedHeaders:
-              - "*"
+              - "Authorization"
+              - "Content-Type"
+              - "X-Requested-With"
+              - "Accept"
+              - "Origin"
             allowedMethods:
               - GET
               - POST
@@ -74,7 +78,6 @@ management:
   endpoint:
     prometheus:
       enabled: true
-  endpoint:
     health:
       show-details: always
 

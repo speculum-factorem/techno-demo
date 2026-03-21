@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import styles from './EquipmentPage.module.scss'
 import { Device, DeviceStatus, DeviceType } from '@domain/entities/Equipment'
+import { opsApi } from '@infrastructure/api/OpsApi'
 
 const MOCK_DEVICES: Device[] = [
   {
@@ -86,22 +87,28 @@ const EquipmentPage: React.FC = () => {
   const [filterType, setFilterType] = useState<DeviceType | 'all'>('all')
   const [selected, setSelected] = useState<Device | null>(null)
 
-  const filtered = MOCK_DEVICES.filter(d => {
+  const [devices, setDevices] = useState<Device[]>([])
+
+  useEffect(() => {
+    opsApi.getEquipment().then(setDevices).catch(() => setDevices(MOCK_DEVICES))
+  }, [])
+
+  const filtered = devices.filter(d => {
     if (filterStatus !== 'all' && d.status !== filterStatus) return false
     if (filterType !== 'all' && d.type !== filterType) return false
     return true
   })
 
   const stats = {
-    total: MOCK_DEVICES.length,
-    online: MOCK_DEVICES.filter(d => d.status === 'online').length,
-    warning: MOCK_DEVICES.filter(d => d.status === 'warning').length,
-    error: MOCK_DEVICES.filter(d => d.status === 'error').length,
-    offline: MOCK_DEVICES.filter(d => d.status === 'offline').length,
+    total: devices.length,
+    online: devices.filter(d => d.status === 'online').length,
+    warning: devices.filter(d => d.status === 'warning').length,
+    error: devices.filter(d => d.status === 'error').length,
+    offline: devices.filter(d => d.status === 'offline').length,
   }
 
-  const avgUptime = (MOCK_DEVICES.reduce((s, d) => s + d.sla.uptime, 0) / MOCK_DEVICES.length).toFixed(1)
-  const avgQuality = (MOCK_DEVICES.reduce((s, d) => s + d.sla.dataQuality, 0) / MOCK_DEVICES.length).toFixed(1)
+  const avgUptime = devices.length ? (devices.reduce((s, d) => s + d.sla.uptime, 0) / devices.length).toFixed(1) : '0.0'
+  const avgQuality = devices.length ? (devices.reduce((s, d) => s + d.sla.dataQuality, 0) / devices.length).toFixed(1) : '0.0'
 
   return (
     <div className={styles.page}>

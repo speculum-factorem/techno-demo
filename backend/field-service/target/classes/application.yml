@@ -9,6 +9,10 @@ spring:
     url: jdbc:postgresql://postgres:5432/fielddb
     username: ${POSTGRES_USER}
     password: ${POSTGRES_PASSWORD}
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+    date-format: yyyy-MM-dd
   jpa:
     hibernate:
       ddl-auto: update

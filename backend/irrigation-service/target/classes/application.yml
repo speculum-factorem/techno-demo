@@ -6,8 +6,8 @@ spring:
     name: irrigation-service
   datasource:
     url: jdbc:postgresql://postgres:5432/irrigationdb
-    username: postgres
-    password: postgres
+    username: ${POSTGRES_USER}
+    password: ${POSTGRES_PASSWORD}
   jpa:
     hibernate:
       ddl-auto: update
@@ -28,6 +28,10 @@ spring:
 analytics:
   service:
     url: http://analytics-service:8000
+
+agro:
+  security:
+    internal-api-token: ${INTERNAL_API_TOKEN:}
 
 management:
   endpoints:

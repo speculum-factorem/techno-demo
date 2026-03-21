@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import styles from './NotificationRulesPage.module.scss'
 import { NotificationRule, RuleConditionField, RuleOperator, RuleChannel } from '@domain/entities/NotificationRule'
+import { opsApi } from '@infrastructure/api/OpsApi'
 
 const MOCK_RULES: NotificationRule[] = [
   {
@@ -57,7 +58,7 @@ const CHANNEL_LABELS: Record<RuleChannel, string> = {
 }
 
 const NotificationRulesPage: React.FC = () => {
-  const [rules, setRules] = useState<NotificationRule[]>(MOCK_RULES)
+  const [rules, setRules] = useState<NotificationRule[]>([])
   const [showBuilder, setShowBuilder] = useState(false)
   const [editRule, setEditRule] = useState<NotificationRule | null>(null)
 
@@ -70,12 +71,21 @@ const NotificationRulesPage: React.FC = () => {
   const [newChannels, setNewChannels] = useState<RuleChannel[]>(['app'])
   const [newLogic, setNewLogic] = useState<'AND' | 'OR'>('AND')
 
+  useEffect(() => {
+    opsApi.getRules().then(setRules).catch(() => setRules(MOCK_RULES))
+  }, [])
+
   const toggleRule = (id: string) => {
     setRules(prev => prev.map(r => r.id === id ? { ...r, enabled: !r.enabled } : r))
+    const changed = rules.find(r => r.id === id)
+    if (changed) {
+      opsApi.updateRule(id, { enabled: !changed.enabled }).catch(() => undefined)
+    }
   }
 
   const deleteRule = (id: string) => {
     setRules(prev => prev.filter(r => r.id !== id))
+    opsApi.deleteRule(id).catch(() => undefined)
   }
 
   const toggleChannel = (ch: RuleChannel) => {
@@ -91,6 +101,7 @@ const NotificationRulesPage: React.FC = () => {
       fieldIds: ['f1', 'f2', 'f3', 'f4'], cooldownMinutes: 60, createdBy: 'admin', createdAt: new Date().toISOString().slice(0, 10), triggerCount: 0,
     }
     setRules(prev => [rule, ...prev])
+    opsApi.createRule(rule).catch(() => undefined)
     setShowBuilder(false)
     setNewName(''); setNewDesc(''); setNewValue(20)
   }

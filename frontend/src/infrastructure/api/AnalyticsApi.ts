@@ -55,10 +55,19 @@ export const analyticsApi = {
       return mockIrrigationRecommendations[fieldId] || []
     }
     const { data } = await apiClient.get<IrrigationRecommendation[]>(`/analytics/irrigation/recommendations/${fieldId}`)
-    return data
+    // Normalize priority and status to lowercase to handle backend casing differences (e.g. "High" -> "high")
+    return data.map(r => ({
+      ...r,
+      priority: (r.priority as string)?.toLowerCase() as IrrigationRecommendation['priority'],
+      status: (r.status as string)?.toLowerCase() as IrrigationRecommendation['status'],
+    }))
   },
 
-  async getIrrigationSchedule(fieldId: string): Promise<IrrigationSchedule> {
+  async getIrrigationSchedule(
+    fieldId: string,
+    cropType?: string,
+    currentMoisture?: number,
+  ): Promise<IrrigationSchedule> {
     if (USE_MOCK) {
       await new Promise(r => setTimeout(r, 500))
       const recs = mockIrrigationRecommendations[fieldId] || []
@@ -76,8 +85,22 @@ export const analyticsApi = {
         nextIrrigationDate: recs[0]?.recommendedDate || '',
       }
     }
-    const { data } = await apiClient.get<IrrigationSchedule>(`/analytics/irrigation/schedule/${fieldId}`)
-    return data
+    const params = new URLSearchParams()
+    if (cropType) params.set('crop_type', cropType)
+    if (currentMoisture !== undefined) params.set('current_moisture', String(currentMoisture))
+    const query = params.toString() ? `?${params.toString()}` : ''
+    const { data } = await apiClient.get<IrrigationSchedule>(
+      `/analytics/irrigation/schedule/${fieldId}${query}`
+    )
+    // Normalize priority and status casing in schedule entries
+    return {
+      ...data,
+      entries: (data.entries || []).map(e => ({
+        ...e,
+        priority: (e.priority as string)?.toLowerCase() as IrrigationSchedule['entries'][number]['priority'],
+        status: (e.status as string)?.toLowerCase() as IrrigationSchedule['entries'][number]['status'],
+      })),
+    }
   },
 
   async detectAnomalies(sensorData: Record<string, number>): Promise<AnomalyResult> {
@@ -86,13 +109,53 @@ export const analyticsApi = {
       const moisture = sensorData.soilMoisture ?? 60
       const temp = sensorData.temperature ?? 22
       const humidity = sensorData.humidity ?? 60
-      const alerts = []
-      if (moisture > 95) alerts.push({ type: 'sensor_anomaly', severity: 'high' as const, message: `Аномальное значение влажности почвы: ${moisture}% — вероятна неисправность датчика`, field: 'soilMoisture', value: moisture, confidence: 0.97 })
-      else if (moisture < 5 && moisture >= 0) alerts.push({ type: 'sensor_anomaly', severity: 'medium' as const, message: `Критически низкая влажность: ${moisture}% — возможен сбой датчика`, field: 'soilMoisture', value: moisture, confidence: 0.85 })
-      else if (moisture < 0) alerts.push({ type: 'sensor_anomaly', severity: 'high' as const, message: `Отрицательная влажность: ${moisture}% — ошибка датчика`, field: 'soilMoisture', value: moisture, confidence: 0.99 })
-      if (temp > 45) alerts.push({ type: 'sensor_anomaly', severity: 'high' as const, message: `Аномальная температура: ${temp}°C — проверьте датчик`, field: 'temperature', value: temp, confidence: 0.95 })
-      if (humidity > 100 || humidity < 0) alerts.push({ type: 'sensor_anomaly', severity: 'high' as const, message: `Невозможное значение влажности воздуха: ${humidity}%`, field: 'humidity', value: humidity, confidence: 0.99 })
-      return { hasAnomalies: alerts.length > 0, alerts, lowConfidence: alerts.length > 0 }
+      const wind = sensorData.windSpeed ?? 5
+      const precipitation = sensorData.precipitation ?? 5
+      const alerts: AnomalyResult['alerts'] = []
+
+      // Physical limit checks (mirrors backend)
+      if (moisture > 95) alerts.push({ type: 'sensor_anomaly', severity: 'high', message: `Аномальное значение влажности почвы: ${moisture}% — вероятна неисправность датчика`, field: 'soilMoisture', value: moisture, confidence: 0.97, method: 'physical_limit' })
+      else if (moisture < 0) alerts.push({ type: 'sensor_anomaly', severity: 'high', message: `Отрицательная влажность: ${moisture}% — ошибка датчика`, field: 'soilMoisture', value: moisture, confidence: 0.99, method: 'physical_limit' })
+      else if (moisture < 5) alerts.push({ type: 'sensor_anomaly', severity: 'medium', message: `Критически низкая влажность: ${moisture}% — возможен сбой датчика`, field: 'soilMoisture', value: moisture, confidence: 0.85, method: 'physical_limit' })
+      if (temp > 45) alerts.push({ type: 'sensor_anomaly', severity: 'high', message: `Аномальная температура: ${temp}°C — проверьте датчик`, field: 'temperature', value: temp, confidence: 0.95, method: 'physical_limit' })
+      if (temp < -20) alerts.push({ type: 'sensor_anomaly', severity: 'high', message: `Аномально низкая температура: ${temp}°C — вероятен сбой датчика`, field: 'temperature', value: temp, confidence: 0.92, method: 'physical_limit' })
+      if (humidity > 100 || humidity < 0) alerts.push({ type: 'sensor_anomaly', severity: 'high', message: `Невозможное значение влажности воздуха: ${humidity}%`, field: 'humidity', value: humidity, confidence: 0.99, method: 'physical_limit' })
+      if (wind < 0) alerts.push({ type: 'sensor_anomaly', severity: 'high', message: `Отрицательная скорость ветра: ${wind} м/с — ошибка датчика`, field: 'windSpeed', value: wind, confidence: 0.99, method: 'physical_limit' })
+      if (wind > 50) alerts.push({ type: 'sensor_anomaly', severity: 'high', message: `Нереальная скорость ветра: ${wind} м/с — вероятен сбой датчика`, field: 'windSpeed', value: wind, confidence: 0.93, method: 'physical_limit' })
+      if (precipitation < 0) alerts.push({ type: 'sensor_anomaly', severity: 'high', message: `Отрицательное значение осадков: ${precipitation} мм — ошибка датчика`, field: 'precipitation', value: precipitation, confidence: 0.99, method: 'physical_limit' })
+
+      // Z-score checks (mirrors backend FIELD_STATS)
+      const fieldStats: Record<string, { mean: number; std: number }> = {
+        temperature: { mean: 22.5, std: 9.0 },
+        soilMoisture: { mean: 52.0, std: 18.0 },
+        humidity: { mean: 61.0, std: 20.0 },
+        windSpeed: { mean: 7.0, std: 3.8 },
+        precipitation: { mean: 12.0, std: 7.0 },
+      }
+      for (const [key, stats] of Object.entries(fieldStats)) {
+        const val = sensorData[key]
+        if (val === undefined) continue
+        const z = Math.abs((val - stats.mean) / stats.std)
+        if (z > 3.0 && !alerts.some(a => a.field === key)) {
+          alerts.push({
+            type: 'statistical_anomaly',
+            severity: z < 4.5 ? 'medium' : 'high',
+            message: `Статистическая аномалия в поле ${key}: значение ${val} отклоняется на ${z.toFixed(1)}σ от нормы`,
+            field: key,
+            value: val,
+            confidence: Math.min(0.99, 0.70 + (z - 3.0) * 0.08),
+            method: 'z_score',
+            z_score: Math.round(z * 100) / 100,
+          })
+        }
+      }
+
+      return {
+        hasAnomalies: alerts.length > 0,
+        alerts,
+        anomalyCount: alerts.length,
+        lowConfidence: alerts.some(a => a.confidence < 0.80),
+      }
     }
     const { data } = await apiClient.post<AnomalyResult>('/analytics/anomaly/detect', sensorData)
     return data

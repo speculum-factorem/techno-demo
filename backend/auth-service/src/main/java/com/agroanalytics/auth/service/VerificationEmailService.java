@@ -51,6 +51,38 @@ public class VerificationEmailService {
         log.info("Email verification for {} — code: {} — link: {}", toEmail, verificationCode, verifyLink);
     }
 
+    public boolean isMailConfigured() {
+        return mailSender.isPresent();
+    }
+
+    public void sendPasswordResetEmail(String toEmail, String token) {
+        String resetLink = frontendUrl + "/auth/reset-password?token=" + token;
+        String subject = "Сброс пароля AgroAnalytics";
+        String body = "Здравствуйте!\n\n"
+                + "Получен запрос на сброс пароля вашего аккаунта AgroAnalytics.\n\n"
+                + "Перейдите по ссылке для установки нового пароля:\n"
+                + resetLink + "\n\n"
+                + "Ссылка действительна в течение 30 минут.\n\n"
+                + "Если вы не запрашивали сброс пароля, проигнорируйте это письмо.";
+
+        if (mailSender.isPresent()) {
+            try {
+                SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom(mailFrom);
+                message.setTo(toEmail);
+                message.setSubject(subject);
+                message.setText(body);
+                mailSender.get().send(message);
+                return;
+            } catch (MailException ex) {
+                log.warn("Failed to send password reset email to {} via SMTP, fallback to logs: {}", toEmail, ex.getMessage());
+            }
+        }
+
+        // Dev/local fallback so flow remains testable without SMTP.
+        log.info("Password reset for {} — link: {}", toEmail, resetLink);
+    }
+
     public void sendLoginCodeEmail(String toEmail, String verificationCode) {
         String subject = "Код входа в AgroAnalytics";
         String body = "Здравствуйте!\n\n"

@@ -35,6 +35,7 @@ const RegisterPage: React.FC = () => {
   const [codeExpiresInSeconds, setCodeExpiresInSeconds] = useState<number | null>(null)
   const [resendError, setResendError] = useState('')
   const [resendLoading, setResendLoading] = useState(false)
+  const [emailConfigured, setEmailConfigured] = useState<boolean | undefined>(undefined)
 
   useEffect(() => {
     if (isAuthenticated) navigate('/app', { replace: true })
@@ -113,9 +114,11 @@ const RegisterPage: React.FC = () => {
       personalDataConsent: true,
     }))
     if (register.fulfilled.match(result)) {
+      const payload = result.payload as { expiresInSeconds?: number; emailConfigured?: boolean }
       setCodeError('')
       setResendError('')
-      setCodeExpiresInSeconds((result.payload as { expiresInSeconds?: number }).expiresInSeconds ?? null)
+      setCodeExpiresInSeconds(payload.expiresInSeconds ?? null)
+      setEmailConfigured(payload.emailConfigured)
       setCodeModalOpen(true)
     }
   }
@@ -297,7 +300,11 @@ const RegisterPage: React.FC = () => {
       <EmailCodeModal
         open={codeModalOpen}
         title="Подтверждение регистрации"
-        description={`Мы отправили 6-значный код на ${email}. Введите его, чтобы завершить регистрацию.`}
+        description={
+          emailConfigured === false
+            ? `SMTP не настроен — письмо не отправлено. Код можно найти в логах сервера (email: ${email}).`
+            : `Мы отправили 6-значный код на ${email}. Введите его, чтобы завершить регистрацию.`
+        }
         emailHint={email.trim()}
         submitLabel="Подтвердить регистрацию"
         loading={loading}

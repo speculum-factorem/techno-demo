@@ -71,11 +71,23 @@ const forecastSlice = createSlice({
         state.loading = false
         state.error = action.payload as string
       })
+      .addCase(fetchYieldForecastsByField.pending, (state) => { state.loading = true })
       .addCase(fetchYieldForecastsByField.fulfilled, (state, action) => {
+        state.loading = false
         state.forecasts[action.payload.fieldId] = action.payload.data
       })
+      .addCase(fetchYieldForecastsByField.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload as string
+      })
+      .addCase(fetchHistoricalYield.pending, (state) => { state.loading = true })
       .addCase(fetchHistoricalYield.fulfilled, (state, action) => {
+        state.loading = false
         state.historicalYields[action.payload.fieldId] = action.payload.data
+      })
+      .addCase(fetchHistoricalYield.rejected, (state, action) => {
+        state.loading = false
+        state.error = action.payload as string
       })
   },
 })

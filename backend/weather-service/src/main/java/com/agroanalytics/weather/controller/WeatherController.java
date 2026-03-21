@@ -17,7 +17,6 @@ import java.util.UUID;
 @RequestMapping("/api/weather/fields")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class WeatherController {
 
     private final WeatherService weatherService;

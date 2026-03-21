@@ -12,6 +12,8 @@ import DocumentationPage from '@presentation/pages/Landing/DocumentationPage'
 import LoginPage from '@presentation/pages/Auth/LoginPage'
 import RegisterPage from '@presentation/pages/Auth/RegisterPage'
 import VerifyEmailPage from '@presentation/pages/Auth/VerifyEmailPage'
+import ForgotPasswordPage from '@presentation/pages/Auth/ForgotPasswordPage'
+import ResetPasswordPage from '@presentation/pages/Auth/ResetPasswordPage'
 import Dashboard from '@presentation/pages/Dashboard/Dashboard'
 import FieldsPage from '@presentation/pages/Fields/FieldsPage'
 import ForecastPage from '@presentation/pages/Forecast/ForecastPage'
@@ -55,6 +57,8 @@ const AppRoutes: React.FC = () => {
         <Route path="/auth/login" element={<LoginPage />} />
         <Route path="/auth/register" element={<RegisterPage />} />
         <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/auth/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/auth/reset-password" element={<ResetPasswordPage />} />
         <Route path="/privacy" element={<PrivacyPolicyPage />} />
         <Route
           path="/app"

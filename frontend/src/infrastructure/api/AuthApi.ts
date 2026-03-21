@@ -19,6 +19,7 @@ type LoginChallengeResponse = {
 type EmailCodeResponse = {
   message: string
   expiresInSeconds: number
+  emailConfigured?: boolean
 }
 
 const mapAuthResponse = (data: AuthResponse): { user: User; tokens: AuthTokens } => ({
@@ -105,6 +106,33 @@ export const authApi = {
       return { message: 'Новый код отправлен на email', expiresInSeconds: 86400 }
     }
     const { data } = await apiClient.post<EmailCodeResponse>('/auth/verify-email-code/resend', { email })
+    return data
+  },
+
+  async forgotPassword(email: string): Promise<{ message: string; emailConfigured?: boolean }> {
+    if (USE_MOCK) {
+      await new Promise(r => setTimeout(r, 800))
+      return { message: 'Если указанный email зарегистрирован, на него отправлена ссылка для сброса пароля.', emailConfigured: false }
+    }
+    const { data } = await apiClient.post<{ message: string; emailConfigured?: boolean }>('/auth/forgot-password', { email })
+    return data
+  },
+
+  async resetPassword(token: string, newPassword: string, confirmPassword: string): Promise<{ message: string }> {
+    if (USE_MOCK) {
+      await new Promise(r => setTimeout(r, 800))
+      return { message: 'Пароль успешно изменён. Войдите с новым паролем.' }
+    }
+    const { data } = await apiClient.post<{ message: string }>('/auth/reset-password', { token, newPassword, confirmPassword })
+    return data
+  },
+
+  async changePassword(currentPassword: string, newPassword: string, confirmPassword: string): Promise<{ message: string }> {
+    if (USE_MOCK) {
+      await new Promise(r => setTimeout(r, 800))
+      return { message: 'Пароль успешно изменён.' }
+    }
+    const { data } = await apiClient.post<{ message: string }>('/auth/change-password', { currentPassword, newPassword, confirmPassword })
     return data
   },
 

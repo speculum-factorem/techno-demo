@@ -8,7 +8,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -41,22 +43,38 @@ public class IrrigationService {
     }
 
     public IrrigationTaskDto updateStatus(UUID id, IrrigationTask.Status status) {
+        if (status == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Status must not be null");
+        }
         return taskRepository.findById(id).map(task -> {
             task.setStatus(status);
             if (status == IrrigationTask.Status.active) {
                 task.setExecutedAt(Instant.now());
             }
             return toDto(taskRepository.save(task));
-        }).orElseThrow(() -> new RuntimeException("Task not found: " + id));
+        }).orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Task not found: " + id));
     }
 
     @Scheduled(fixedDelay = 3600000) // every hour
     public void checkPendingTasks() {
         List<IrrigationTask> scheduled = taskRepository.findByStatusOrderByScheduledDateAsc(IrrigationTask.Status.scheduled);
         scheduled.forEach(task -> {
-            if (task.getScheduledDate() != null && !task.getScheduledDate().isAfter(LocalDate.now())) {
-                log.info("Irrigation task due for field {}: {} mm water", task.getFieldId(), task.getWaterAmount());
+            if (task.getScheduledDate() == null) return;
+            LocalDate today = LocalDate.now();
+            if (task.getScheduledDate().isBefore(today)) {
+                // Overdue — mark as skipped so it doesn't re-trigger every hour
+                task.setStatus(IrrigationTask.Status.skipped);
+                taskRepository.save(task);
+                log.info("Irrigation task {} for field {} was overdue ({}), marked skipped",
+                        task.getId(), task.getFieldId(), task.getScheduledDate());
+            } else if (task.getScheduledDate().isEqual(today)) {
+                // Due today — activate and publish
+                task.setStatus(IrrigationTask.Status.active);
+                task.setExecutedAt(Instant.now());
+                taskRepository.save(task);
                 publishIrrigationEvent(task);
+                log.info("Activated irrigation task {} for field {}: {} mm water",
+                        task.getId(), task.getFieldId(), task.getWaterAmount());
             }
         });
     }

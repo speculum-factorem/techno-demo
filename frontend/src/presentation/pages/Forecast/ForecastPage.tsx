@@ -46,7 +46,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 const ForecastPage: React.FC = () => {
   const dispatch = useAppDispatch()
   const { items: fields, loading: fieldsLoading } = useAppSelector(s => s.fields)
-  const { currentForecast, historicalYields, loading } = useAppSelector(s => s.forecast)
+  const { currentForecast, historicalYields, loading, error } = useAppSelector(s => s.forecast)
   const anomalyResults = useAppSelector(s => s.anomaly.results)
   const [selectedFieldId, setSelectedFieldId] = useState('')
 
@@ -93,7 +93,8 @@ const ForecastPage: React.FC = () => {
   const anomalyResult = anomalyResults[selectedFieldId]
   const hasAnomalies = anomalyResult?.hasAnomalies ?? false
 
-  const effectiveConfidence = hasAnomalies ? 'LOW' : currentForecast?.confidence
+  const effectiveConfidence: 'HIGH' | 'MEDIUM' | 'LOW' =
+    hasAnomalies ? 'LOW' : ((currentForecast?.confidence as 'HIGH' | 'MEDIUM' | 'LOW') ?? 'MEDIUM')
 
   return (
     <div className={styles.page}>
@@ -127,7 +128,14 @@ const ForecastPage: React.FC = () => {
         </div>
       )}
 
-      {(loading || fieldsLoading) && !currentForecast && (
+      {error && (
+        <div className={styles.errorBanner}>
+          <span className="material-icons-round">error_outline</span>
+          {error}
+        </div>
+      )}
+
+      {(loading || fieldsLoading) && !currentForecast && !error && (
         <Loader text="Расчёт прогноза..." />
       )}
 

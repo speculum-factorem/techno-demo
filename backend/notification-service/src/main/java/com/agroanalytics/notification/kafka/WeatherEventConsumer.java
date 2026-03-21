@@ -51,21 +51,21 @@ public class WeatherEventConsumer {
         if (soilMoisture != null) {
             if (soilMoisture < 40.0) {
                 alertService.createAlert(
-                        "SOIL_MOISTURE",
-                        "CRITICAL",
-                        "Critical Soil Moisture Level",
-                        String.format("Soil moisture is critically low at %.1f%% for field '%s'. Immediate irrigation required.",
-                                soilMoisture, fieldName),
+                        "weather",
+                        "critical",
+                        "Критически низкая влажность почвы",
+                        String.format("Влажность почвы на поле '%s' критически низкая: %.1f%%. Требуется немедленный полив.",
+                                fieldName, soilMoisture),
                         fieldId,
                         fieldName
                 );
             } else if (soilMoisture < 55.0) {
                 alertService.createAlert(
-                        "SOIL_MOISTURE",
-                        "WARNING",
-                        "Low Soil Moisture Warning",
-                        String.format("Soil moisture is below optimal at %.1f%% for field '%s'. Consider irrigation soon.",
-                                soilMoisture, fieldName),
+                        "weather",
+                        "warning",
+                        "Низкая влажность почвы",
+                        String.format("Влажность почвы на поле '%s' ниже оптимальной: %.1f%%. Рекомендуется полив.",
+                                fieldName, soilMoisture),
                         fieldId,
                         fieldName
                 );
@@ -75,10 +75,10 @@ public class WeatherEventConsumer {
         // Additional weather-based alerts
         if (temperature > 38.0) {
             alertService.createAlert(
-                    "HIGH_TEMPERATURE",
-                    "WARNING",
-                    "High Temperature Alert",
-                    String.format("Temperature is %.1f°C for field '%s'. Heat stress risk for crops.", temperature, fieldName),
+                    "weather",
+                    "warning",
+                    "Высокая температура",
+                    String.format("Температура на поле '%s': %.1f°C. Возможен тепловой стресс культур.", fieldName, temperature),
                     fieldId,
                     fieldName
             );
@@ -86,10 +86,10 @@ public class WeatherEventConsumer {
 
         if (precipitation > 50.0) {
             alertService.createAlert(
-                    "HEAVY_RAIN",
-                    "WARNING",
-                    "Heavy Precipitation Alert",
-                    String.format("High precipitation of %.1fmm detected for field '%s'. Check drainage.", precipitation, fieldName),
+                    "weather",
+                    "warning",
+                    "Сильные осадки",
+                    String.format("На поле '%s' зафиксированы сильные осадки: %.1f мм. Проверьте дренаж.", fieldName, precipitation),
                     fieldId,
                     fieldName
             );
@@ -99,16 +99,33 @@ public class WeatherEventConsumer {
     private void processForecastEvent(Map<String, Object> event) {
         UUID fieldId = parseUuid(event.get("fieldId"));
         String fieldName = event.getOrDefault("fieldName", "Unknown Field").toString();
-        String forecastSummary = event.getOrDefault("summary", "Forecast update available").toString();
+        String confidence = event.getOrDefault("confidence", "HIGH").toString();
+        double predictedYield = parseDoubleOrDefault(event.get("predictedYield"), -1.0);
 
-        alertService.createAlert(
-                "FORECAST_UPDATE",
-                "INFO",
-                "Weather Forecast Updated",
-                String.format("New weather forecast available for field '%s': %s", fieldName, forecastSummary),
-                fieldId,
-                fieldName
-        );
+        // Only create an alert when the model signals LOW confidence or yield is critically low.
+        // Routine HIGH/MEDIUM forecasts are not stored as alerts to avoid DB spam.
+        if ("LOW".equalsIgnoreCase(confidence)) {
+            alertService.createAlert(
+                    "forecast",
+                    "warning",
+                    "Прогноз урожайности с низкой достоверностью",
+                    String.format("Прогноз для поля '%s': %.2f т/га, достоверность LOW. " +
+                            "Возможны аномальные входные данные — рекомендуется проверить датчики.", fieldName, predictedYield),
+                    fieldId,
+                    fieldName
+            );
+        } else if (predictedYield >= 0 && predictedYield < 1.5) {
+            alertService.createAlert(
+                    "forecast",
+                    "critical",
+                    "Критически низкий прогноз урожайности",
+                    String.format("Прогноз для поля '%s': %.2f т/га — значительно ниже нормы. Требуется вмешательство агронома.", fieldName, predictedYield),
+                    fieldId,
+                    fieldName
+            );
+        } else {
+            log.debug("Routine forecast for field {} (confidence={}, yield={}): no alert created", fieldId, confidence, predictedYield);
+        }
     }
 
     private UUID parseUuid(Object obj) {
