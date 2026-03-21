@@ -25,6 +25,11 @@ from uuid import uuid4
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+class ModelNotReady(RuntimeError):
+    """Raised when ML training has not finished yet (HTTP 503 / skip Kafka message)."""
+    pass
+
 KAFKA_BOOTSTRAP_SERVERS = os.getenv('KAFKA_BOOTSTRAP_SERVERS', 'localhost:9092')
 DATABASE_URL = os.getenv('DATABASE_URL', '')
 FIELD_SERVICE_URL = os.getenv('FIELD_SERVICE_URL', 'http://field-service:8082')
@@ -274,7 +279,26 @@ class YieldPredictionModel:
     def __init__(self):
         self.model = self._build_model()
         self.is_trained = False
-        self._train_with_synthetic_data()
+        # Синхронное обучение при импорте блокирует Uvicorn до конца fit() → Docker healthcheck падает.
+        # Обучение запускается из lifespan (фоновый поток) после create_all.
+        self._training_ready = threading.Event()
+
+    def start_training_background(self) -> None:
+        def _run() -> None:
+            try:
+                self._train_with_synthetic_data()
+            except Exception:
+                logger.exception("ML background training failed")
+            finally:
+                self._training_ready.set()
+
+        threading.Thread(target=_run, daemon=True, name="ml-train").start()
+
+    def wait_until_trained(self, timeout: float = 240.0) -> bool:
+        if self.is_trained:
+            return True
+        self._training_ready.wait(timeout=timeout)
+        return self.is_trained
 
     def _build_model(self):
         return Pipeline([
@@ -478,6 +502,9 @@ class YieldPredictionModel:
             return None
 
     def predict(self, weather: WeatherInput, crop_type: str, soil_type: str) -> dict:
+        if not self.wait_until_trained(240.0):
+            raise ModelNotReady("ML model is still training or failed to train")
+
         crops = ['wheat', 'corn', 'sunflower', 'barley', 'soy', 'sugar_beet', 'other']
         soils = ['Чернозём', 'Суглинок', 'Песчаник', 'Глинистый', 'Торфяной']
 
@@ -963,7 +990,11 @@ def _run_kafka_consumer():
             crop_type = event.get('cropType', 'wheat')
             soil_type = event.get('soilType', 'Чернозём')
 
-            result = yield_model.predict(weather, crop_type, soil_type)
+            try:
+                result = yield_model.predict(weather, crop_type, soil_type)
+            except ModelNotReady:
+                logger.debug("Skip Kafka forecast: model still training")
+                continue
             factors = yield_model.get_factors(weather, crop_type)
 
             forecast_event = {
@@ -999,10 +1030,14 @@ def _run_kafka_consumer():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as exc:
+        logger.error("create_all failed (DB may be unavailable): %s", exc)
+    yield_model.start_training_background()
     thread = threading.Thread(target=_run_kafka_consumer, daemon=True, name="kafka-consumer")
     thread.start()
-    logger.info("🚀 Kafka consumer thread started")
+    logger.info("🚀 ML training (background) + Kafka consumer thread started")
     yield
     logger.info("🛑 Analytics service shutting down")
 
@@ -1068,6 +1103,8 @@ def get_yield_forecast(request: ForecastRequest):
             modelVersion="1.2.0",
             createdAt=datetime.now().isoformat(),
         )
+    except ModelNotReady as e:
+        raise HTTPException(status_code=503, detail=str(e))
     except Exception as e:
         logger.error(f"Forecast error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -1291,6 +1328,9 @@ def get_model_metrics():
     from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
     from sklearn.model_selection import train_test_split
 
+    if not yield_model.wait_until_trained(300.0):
+        raise HTTPException(status_code=503, detail="ML model is still training")
+
     df = yield_model._generate_training_data(n_samples=1000)
     features = ['temperature', 'humidity', 'precipitation_7d', 'avg_temperature_7d',
                 'soil_moisture', 'solar_radiation', 'wind_speed', 'crop_code', 'soil_code']
@@ -1412,6 +1452,9 @@ def simulate_what_if(request: WhatIfScenarioRequest):
     """Simulate irrigation/seeding strategy scenarios with yield, water and ROI."""
     if not request.scenarios:
         raise HTTPException(status_code=400, detail="At least one scenario is required")
+
+    if not yield_model.wait_until_trained(300.0):
+        raise HTTPException(status_code=503, detail="ML model is still training")
 
     context = _resolve_field_context(
         request.fieldId,

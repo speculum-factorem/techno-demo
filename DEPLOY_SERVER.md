@@ -121,3 +121,29 @@ docker run --rm -v techno-demo_postgres_data:/volume -v $(pwd):/backup alpine \
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
    ```
 
+5. **`analytics-service` unhealthy**  
+   Раньше Uvicorn не открывал порт, пока не завершалось обучение ML при старте. В актуальной версии обучение идёт в фоне, `/health` отвечает сразу. Обновите код и пересоберите:
+   ```bash
+   git pull
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build analytics-service
+   ```
+
+6. **`InconsistentClusterIdException` в логах Kafka**  
+   Текст вида: *Cluster ID ... doesn't match stored clusterId ... in meta.properties* — том Kafka содержит данные от **старого** кластера, а Zookeeper уже **новый** (или наоборот после `docker compose down`/пересоздания контейнеров).
+
+   **Исправление (демо/без сохранения очередей):** снести том Kafka и поднять стек заново:
+   ```bash
+   cd ~/techno-demo
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+   docker volume rm techno-demo_kafka_data
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+   ```
+   Имя тома проверьте: `docker volume ls | grep kafka`.
+
+   Если ошибка останется — сбросить и Zookeeper (полностью «чистый» брокер; **потеряются** только данные Kafka/ZK, не Postgres):
+   ```bash
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+   docker volume rm techno-demo_kafka_data techno-demo_zookeeper_data
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+   ```
+
