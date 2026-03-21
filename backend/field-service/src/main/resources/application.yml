@@ -64,8 +64,11 @@ spring:
   config:
     activate:
       on-profile: docker
-# Сводный /actuator/health учитывает Kafka/БД и может долго отдавать 503 — Docker помечает контейнер unhealthy
+# Kafka health в Docker часто даёт DOWN (таймауты metadata) → 503 на /actuator/health; для оркестрации отключаем.
 management:
+  health:
+    kafka:
+      enabled: false
   endpoint:
     health:
       probes:

@@ -75,6 +75,11 @@ spring:
     activate:
       on-profile: docker
 management:
+  health:
+    kafka:
+      enabled: false
+    mail:
+      enabled: false
   endpoint:
     health:
       probes:
