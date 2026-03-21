@@ -12,12 +12,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 
 import java.util.List;
 import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/fields")
+@Tag(name = "Fields", description = "CRUD полей и связанные отчёты")
 public class FieldController {
 
     private final FieldService fieldService;
@@ -30,6 +33,7 @@ public class FieldController {
         this.internalApiToken = internalApiToken;
     }
 
+    @Operation(summary = "Список полей")
     @GetMapping
     public ResponseEntity<List<FieldDto>> getAllFields(
             @RequestHeader(value = "X-Organization-Id", required = false) String orgIdHeader,
@@ -39,6 +43,7 @@ public class FieldController {
         return ResponseEntity.ok(fieldService.getAllFields(actor));
     }
 
+    @Operation(summary = "Получить поле по ID")
     @GetMapping("/{id}")
     public ResponseEntity<FieldDto> getFieldById(
             @PathVariable UUID id,
@@ -80,6 +85,7 @@ public class FieldController {
         return ResponseEntity.ok(fieldService.getFieldFinance(id, actor));
     }
 
+    @Operation(summary = "Создать поле")
     @PostMapping
     public ResponseEntity<FieldDto> createField(
             @Valid @RequestBody CreateFieldDto dto,

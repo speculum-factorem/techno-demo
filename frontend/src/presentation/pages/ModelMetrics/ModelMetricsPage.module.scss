@@ -146,3 +146,60 @@
   color: $text-secondary;
   strong { color: $text-primary; }
 }
+
+.tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border: 1.5px solid #dadce0;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #5f6368;
+  cursor: pointer;
+  transition: all 0.15s;
+  .material-icons-round { font-size: 18px !important; }
+  &:hover { background: #f8f9fa; border-color: #1a73e8; color: #1a73e8; }
+}
+
+.tabActive {
+  background: #e8f0fe;
+  border-color: #1a73e8;
+  color: #1a73e8;
+  font-weight: 600;
+}
+
+.grid2col {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  @media (max-width: 768px) { grid-template-columns: 1fr; }
+}
+
+.fieldGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.fieldChip {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: #e8f0fe;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: #1a73e8;
+  .material-icons-round { font-size: 14px !important; color: #34a853; }
+  code { font-family: 'Roboto Mono', monospace; font-size: 0.78rem; }
+}

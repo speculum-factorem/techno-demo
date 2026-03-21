@@ -3,6 +3,8 @@ package com.agroanalytics.irrigation.controller;
 import com.agroanalytics.irrigation.dto.IrrigationTaskDto;
 import com.agroanalytics.irrigation.model.IrrigationTask;
 import com.agroanalytics.irrigation.service.IrrigationService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,21 +15,24 @@ import java.util.UUID;
 @RestController
 @RequestMapping("/api/irrigation")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
+@Tag(name = "Irrigation", description = "Задачи полива и рекомендации")
 public class IrrigationController {
 
     private final IrrigationService irrigationService;
 
+    @Operation(summary = "Задачи полива по полю")
     @GetMapping("/fields/{fieldId}/tasks")
     public ResponseEntity<List<IrrigationTaskDto>> getTasksByField(@PathVariable UUID fieldId) {
         return ResponseEntity.ok(irrigationService.getRecommendationsByField(fieldId));
     }
 
+    @Operation(summary = "Создать задачу полива")
     @PostMapping("/tasks")
     public ResponseEntity<IrrigationTaskDto> createTask(@RequestBody IrrigationTask task) {
         return ResponseEntity.ok(irrigationService.createTask(task));
     }
 
+    @Operation(summary = "Обновить статус задачи")
     @PatchMapping("/tasks/{id}/status")
     public ResponseEntity<IrrigationTaskDto> updateStatus(
             @PathVariable UUID id,

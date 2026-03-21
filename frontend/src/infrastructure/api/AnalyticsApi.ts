@@ -107,6 +107,63 @@ export const analyticsApi = {
     return data
   },
 
+  async getDatasetEda(nSamples = 2000): Promise<any> {
+    if (USE_MOCK) {
+      await new Promise(r => setTimeout(r, 600))
+      return {
+        dataset_info: {
+          n_rows: nSamples, n_cols: 13,
+          mandatory_fields: ['field_id','date','timestamp','temperature','humidity_air','precipitation','wind_speed','soil_moisture','crop_type','yield_actual','irrigation_volume','irrigation_recommended','is_anomaly'],
+          date_range: { from: '2024-04-01', to: '2025-03-31' },
+          unique_fields: 20, unique_crops: 7,
+        },
+        descriptive_stats: {
+          temperature: { count: nSamples, mean: 22.4, std: 7.1, min: 5.0, q25: 16.8, median: 22.5, q75: 28.2, max: 44.0, missing: 0 },
+          humidity_air: { count: nSamples, mean: 60.3, std: 18.4, min: 25.1, q25: 46.2, median: 61.0, q75: 75.8, max: 97.9, missing: 0 },
+          precipitation: { count: nSamples, mean: 5.8, std: 5.3, min: 0.0, q25: 1.1, median: 4.5, q75: 9.4, max: 24.9, missing: 0 },
+          wind_speed: { count: nSamples, mean: 4.6, std: 3.1, min: 0.3, q25: 2.2, median: 4.0, q75: 6.7, max: 13.9, missing: 0 },
+          soil_moisture: { count: nSamples, mean: 42.8, std: 19.7, min: 2.0, q25: 27.4, median: 42.0, q75: 58.5, max: 97.3, missing: 0 },
+          yield_actual: { count: nSamples, mean: 0.62, std: 0.18, min: 0.05, q25: 0.49, median: 0.63, q75: 0.76, max: 0.99, missing: 0 },
+          irrigation_volume: { count: nSamples, mean: 3.8, std: 2.9, min: 0.0, q25: 1.2, median: 3.4, q75: 6.1, max: 14.8, missing: 0 },
+          irrigation_recommended: { count: nSamples, mean: 3.3, std: 2.5, min: 0.0, q25: 1.0, median: 3.0, q75: 5.3, max: 15.0, missing: 0 },
+        },
+        anomaly_analysis: {
+          total_anomalies: Math.round(nSamples * 0.031),
+          anomaly_rate_pct: 3.1,
+          anomaly_by_crop: { wheat: 9, corn: 8, sunflower: 6, barley: 7, soy: 5, sugar_beet: 9, other: 8 },
+        },
+        crop_distribution: { wheat: Math.round(nSamples*0.21), corn: Math.round(nSamples*0.18), sunflower: Math.round(nSamples*0.14), barley: Math.round(nSamples*0.16), soy: Math.round(nSamples*0.12), sugar_beet: Math.round(nSamples*0.10), other: Math.round(nSamples*0.09) },
+        yield_by_crop: { wheat: 0.59, corn: 0.65, sunflower: 0.57, barley: 0.55, soy: 0.60, sugar_beet: 0.72, other: 0.52 },
+        outliers: {
+          temperature: { iqr_outliers: Math.round(nSamples*0.018), outlier_rate_pct: 1.8 },
+          humidity_air: { iqr_outliers: Math.round(nSamples*0.009), outlier_rate_pct: 0.9 },
+          soil_moisture: { iqr_outliers: Math.round(nSamples*0.024), outlier_rate_pct: 2.4 },
+          precipitation: { iqr_outliers: Math.round(nSamples*0.031), outlier_rate_pct: 3.1 },
+          yield_actual: { iqr_outliers: Math.round(nSamples*0.011), outlier_rate_pct: 1.1 },
+          wind_speed: { iqr_outliers: Math.round(nSamples*0.016), outlier_rate_pct: 1.6 },
+          irrigation_volume: { iqr_outliers: Math.round(nSamples*0.022), outlier_rate_pct: 2.2 },
+          irrigation_recommended: { iqr_outliers: Math.round(nSamples*0.019), outlier_rate_pct: 1.9 },
+        },
+        correlation_matrix: {
+          soil_moisture: { temperature: -0.32, humidity_air: 0.61, precipitation: 0.48, soil_moisture: 1.0, yield_actual: 0.58, irrigation_volume: -0.44 },
+          temperature: { temperature: 1.0, humidity_air: -0.28, precipitation: -0.15, soil_moisture: -0.32, yield_actual: -0.21, irrigation_volume: 0.31 },
+          yield_actual: { temperature: -0.21, humidity_air: 0.35, precipitation: 0.40, soil_moisture: 0.58, yield_actual: 1.0, irrigation_volume: 0.27 },
+        },
+      }
+    }
+    const { data } = await apiClient.get(`/analytics/dataset/eda?n_samples=${nSamples}`)
+    return data
+  },
+
+  async generateDataset(nSamples = 1000): Promise<any> {
+    if (USE_MOCK) {
+      await new Promise(r => setTimeout(r, 400))
+      return { n_rows: nSamples, fields: ['field_id','date','timestamp','temperature','humidity_air','precipitation','wind_speed','soil_moisture','crop_type','yield_actual','irrigation_volume','irrigation_recommended','is_anomaly'], data: [] }
+    }
+    const { data } = await apiClient.get(`/analytics/dataset/generate?n_samples=${nSamples}`)
+    return data
+  },
+
   async simulateWhatIf(request: WhatIfSimulationRequest): Promise<WhatIfSimulationResponse> {
     if (USE_MOCK) {
       await new Promise(r => setTimeout(r, 700))

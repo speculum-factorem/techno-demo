@@ -162,61 +162,118 @@ class YieldPredictionModel:
         ])
 
     def _generate_training_data(self, n_samples=2000):
-        """Generate synthetic training data based on agronomical knowledge"""
+        """Generate synthetic training data based on agronomical knowledge.
+
+        All mandatory fields from the dataset specification are included:
+        field_id, date, timestamp, temperature, humidity_air, precipitation,
+        wind_speed, soil_moisture, crop_type, yield_actual (0-1 normalised),
+        irrigation_volume, irrigation_recommended, is_anomaly.
+        """
         np.random.seed(42)
+        rng = np.random.default_rng(42)
         data = []
 
-        for _ in range(n_samples):
-            temp = np.random.uniform(15, 35)
-            humidity = np.random.uniform(30, 90)
-            precip_7d = np.random.uniform(0, 80)
-            avg_temp = temp + np.random.uniform(-3, 3)
-            soil_moisture = max(10, min(95, humidity * 0.7 + precip_7d * 0.3 + np.random.uniform(-15, 15)))
-            solar_rad = np.random.uniform(200, 700)
-            wind_speed = np.random.uniform(0.5, 12)
-            crop_code = np.random.randint(0, 7)
-            soil_code = np.random.randint(0, 5)
+        crops = ['wheat', 'corn', 'sunflower', 'barley', 'soy', 'sugar_beet', 'other']
+        soils = ['Чернозём', 'Суглинок', 'Песчаник', 'Глинистый', 'Торфяной']
+        field_ids = [f'field_{i:03d}' for i in range(1, 21)]
 
-            crops = ['wheat', 'corn', 'sunflower', 'barley', 'soy', 'sugar_beet', 'other']
-            soils = ['Чернозём', 'Суглинок', 'Песчаник', 'Глинистый', 'Торфяной']
+        # Yield max per crop for 0-1 normalisation
+        yield_max = {'wheat': 8.0, 'corn': 12.0, 'sunflower': 4.0,
+                     'barley': 7.0, 'soy': 4.5, 'sugar_beet': 60.0, 'other': 6.0}
+
+        base_date = datetime(2024, 4, 1)
+
+        for i in range(n_samples):
+            temp = float(rng.uniform(5, 40))
+            humidity_air = float(rng.uniform(25, 98))
+            precipitation = float(rng.uniform(0, 25))   # daily mm
+            precip_7d = precipitation * 7 * rng.uniform(0.5, 1.5)
+            avg_temp = temp + float(rng.uniform(-3, 3))
+            soil_moisture = float(np.clip(
+                humidity_air * 0.65 + precipitation * 1.2 + rng.normal(0, 8), 5, 98
+            ))
+            solar_rad = float(rng.uniform(150, 750))
+            wind_speed = float(rng.uniform(0.3, 14))
+            crop_code = int(rng.integers(0, 7))
+            soil_code = int(rng.integers(0, 5))
+
             crop = crops[crop_code]
             soil = soils[soil_code]
+            field_id = field_ids[i % len(field_ids)]
+            obs_date = base_date + timedelta(days=int(i * 365 / n_samples))
 
             base = self.CROP_YIELD_BASELINES.get(crop, 3.0)
             soil_mult = self.SOIL_MULTIPLIERS.get(soil, 1.0)
 
-            temp_factor = 1.0
-            if 18 <= temp <= 28:
-                temp_factor = 1.1
-            elif temp > 32 or temp < 10:
-                temp_factor = 0.8
-
-            moisture_factor = 1.0
-            if soil_moisture < 35:
-                moisture_factor = 0.6 + soil_moisture / 100
-            elif soil_moisture > 85:
-                moisture_factor = 0.9
-            else:
-                moisture_factor = 0.85 + (soil_moisture - 35) * 0.003
-
+            temp_factor = 1.1 if 18 <= temp <= 28 else (0.8 if temp > 32 or temp < 10 else 0.95)
+            moisture_factor = (
+                0.6 + soil_moisture / 100 if soil_moisture < 35 else
+                0.9 if soil_moisture > 85 else
+                0.85 + (soil_moisture - 35) * 0.003
+            )
             precip_factor = min(1.2, 0.8 + precip_7d / 60)
             radiation_factor = min(1.1, 0.8 + solar_rad / 1200)
             wind_factor = 1.0 if wind_speed < 8 else 0.9
 
-            yield_val = base * soil_mult * temp_factor * moisture_factor * precip_factor * radiation_factor * wind_factor
-            yield_val *= (0.85 + np.random.random() * 0.3)
+            yield_abs = base * soil_mult * temp_factor * moisture_factor * precip_factor * radiation_factor * wind_factor
+            yield_abs *= float(0.85 + rng.random() * 0.30)
+            yield_abs = max(0.3, yield_abs)
+
+            # 0-1 normalised target variable (yield_actual)
+            yield_norm = round(float(np.clip(yield_abs / yield_max.get(crop, 6.0), 0.0, 1.0)), 4)
+
+            # Irrigation volumes (l/m²)
+            optimal_min = {'wheat': 55, 'corn': 65, 'sunflower': 60,
+                           'barley': 50, 'soy': 65, 'sugar_beet': 70}.get(crop, 60)
+            moisture_deficit = max(0.0, optimal_min - soil_moisture)
+            irr_recommended = round(float(np.clip(moisture_deficit * 0.35, 0, 15)), 2)
+            irr_volume = round(float(irr_recommended * rng.uniform(0.7, 1.3)), 2)
+
+            # Anomaly flag: physically impossible sensor readings
+            is_anomaly = bool(
+                soil_moisture > 97 or soil_moisture < 2
+                or temp > 44 or temp < -18
+                or humidity_air > 100 or humidity_air < 1
+                or wind_speed > 30
+            )
+
+            # Inject synthetic anomalies in ~3 % of records
+            if not is_anomaly and rng.random() < 0.03:
+                anomaly_type = rng.integers(0, 4)
+                if anomaly_type == 0:
+                    soil_moisture = float(rng.uniform(98, 105))
+                elif anomaly_type == 1:
+                    temp = float(rng.uniform(50, 70))
+                elif anomaly_type == 2:
+                    humidity_air = float(rng.uniform(105, 120))
+                else:
+                    soil_moisture = float(rng.uniform(-5, -0.1))
+                is_anomaly = True
 
             data.append({
-                'temperature': temp,
-                'humidity': humidity,
-                'precipitation_7d': precip_7d,
-                'avg_temperature_7d': avg_temp,
-                'soil_moisture': soil_moisture,
-                'solar_radiation': solar_rad,
-                'wind_speed': wind_speed,
+                # ---- Mandatory fields from specification ----
+                'field_id': field_id,
+                'date': obs_date.strftime('%Y-%m-%d'),
+                'timestamp': obs_date.strftime('%Y-%m-%dT%H:%M:%S'),
+                'temperature': round(temp, 2),
+                'humidity_air': round(humidity_air, 2),
+                'precipitation': round(precipitation, 2),
+                'wind_speed': round(wind_speed, 2),
+                'soil_moisture': round(soil_moisture, 2),
+                'crop_type': crop,
+                'yield_actual': yield_norm,
+                'irrigation_volume': irr_volume,
+                'irrigation_recommended': irr_recommended,
+                'is_anomaly': is_anomaly,
+                # ---- Additional fields for model training ----
+                'humidity': round(humidity_air, 2),          # alias kept for model compat
+                'precipitation_7d': round(precip_7d, 2),
+                'avg_temperature_7d': round(avg_temp, 2),
+                'solar_radiation': round(solar_rad, 2),
                 'crop_code': crop_code,
                 'soil_code': soil_code,
-                'yield': max(0.5, yield_val),
+                'soil_type': soil,
+                'yield': round(yield_abs, 3),
             })
 
         return pd.DataFrame(data)
@@ -1099,6 +1156,142 @@ def simulate_what_if(request: WhatIfScenarioRequest):
         recommendedScenario=best.name,
         generatedAt=datetime.now().isoformat(),
     )
+
+
+# ======================= DATASET ENDPOINTS =======================
+
+MANDATORY_FIELDS = [
+    'field_id', 'date', 'timestamp', 'temperature', 'humidity_air',
+    'precipitation', 'wind_speed', 'soil_moisture', 'crop_type',
+    'yield_actual', 'irrigation_volume', 'irrigation_recommended', 'is_anomaly',
+]
+
+
+@app.get("/dataset/generate")
+def generate_dataset(n_samples: int = 1000, field_id: str = "all", as_csv: bool = False):
+    """
+    Return synthetic dataset with all mandatory fields from the case specification.
+
+    Query params:
+      - n_samples  (int, default 1000): number of rows to generate
+      - field_id   (str, default "all"): filter to a single field or return all
+      - as_csv     (bool): if true, returns a plain-text CSV body
+    """
+    from fastapi.responses import PlainTextResponse
+
+    n_samples = max(10, min(n_samples, 5000))
+    df = yield_model._generate_training_data(n_samples=n_samples)
+
+    if field_id != "all":
+        df = df[df['field_id'] == field_id]
+
+    output_cols = MANDATORY_FIELDS
+    df_out = df[output_cols].copy()
+
+    if as_csv:
+        return PlainTextResponse(
+            content=df_out.to_csv(index=False),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename=agro_dataset_{n_samples}.csv"}
+        )
+
+    return {
+        "n_rows": len(df_out),
+        "fields": MANDATORY_FIELDS,
+        "anomaly_rate_pct": round(float(df_out['is_anomaly'].mean() * 100), 2),
+        "data": df_out.to_dict(orient='records'),
+    }
+
+
+@app.get("/dataset/eda")
+def dataset_eda(n_samples: int = 2000):
+    """
+    Exploratory Data Analysis on the synthetic dataset.
+    Returns per-column statistics, anomaly breakdown, correlation matrix
+    and crop distribution — fulfilling the EDA requirement from the case spec.
+    """
+    n_samples = max(100, min(n_samples, 5000))
+    df = yield_model._generate_training_data(n_samples=n_samples)
+
+    numeric_cols = ['temperature', 'humidity_air', 'precipitation', 'wind_speed',
+                    'soil_moisture', 'yield_actual', 'irrigation_volume', 'irrigation_recommended']
+
+    # Per-column descriptive stats
+    stats: dict = {}
+    for col in numeric_cols:
+        s = df[col]
+        stats[col] = {
+            'count': int(s.count()),
+            'mean': round(float(s.mean()), 4),
+            'std': round(float(s.std()), 4),
+            'min': round(float(s.min()), 4),
+            'q25': round(float(s.quantile(0.25)), 4),
+            'median': round(float(s.median()), 4),
+            'q75': round(float(s.quantile(0.75)), 4),
+            'max': round(float(s.max()), 4),
+            'missing': int(s.isna().sum()),
+        }
+
+    # Anomaly analysis
+    anomaly_df = df[df['is_anomaly']]
+    normal_df = df[~df['is_anomaly']]
+    anomaly_analysis = {
+        'total_anomalies': int(df['is_anomaly'].sum()),
+        'anomaly_rate_pct': round(float(df['is_anomaly'].mean() * 100), 2),
+        'anomaly_by_field': df.groupby('field_id')['is_anomaly'].sum().astype(int).to_dict(),
+        'anomaly_by_crop': df.groupby('crop_type')['is_anomaly'].sum().astype(int).to_dict(),
+        'mean_soil_moisture_normal': round(float(normal_df['soil_moisture'].mean()), 2),
+        'mean_soil_moisture_anomaly': round(float(anomaly_df['soil_moisture'].mean()), 2) if len(anomaly_df) else None,
+    }
+
+    # Crop distribution
+    crop_dist = df['crop_type'].value_counts().to_dict()
+
+    # Yield by crop (mean yield_actual)
+    yield_by_crop = df.groupby('crop_type')['yield_actual'].mean().round(4).to_dict()
+
+    # Pearson correlation matrix (numeric only)
+    corr_matrix = df[numeric_cols].corr().round(4).to_dict()
+
+    # Outlier counts using IQR method per column
+    outliers: dict = {}
+    for col in numeric_cols:
+        q1, q3 = df[col].quantile(0.25), df[col].quantile(0.75)
+        iqr = q3 - q1
+        n_out = int(((df[col] < q1 - 1.5 * iqr) | (df[col] > q3 + 1.5 * iqr)).sum())
+        outliers[col] = {'iqr_outliers': n_out, 'outlier_rate_pct': round(n_out / len(df) * 100, 2)}
+
+    return {
+        'dataset_info': {
+            'n_rows': len(df),
+            'n_cols': len(MANDATORY_FIELDS),
+            'mandatory_fields': MANDATORY_FIELDS,
+            'date_range': {'from': df['date'].min(), 'to': df['date'].max()},
+            'unique_fields': df['field_id'].nunique(),
+            'unique_crops': df['crop_type'].nunique(),
+        },
+        'descriptive_stats': stats,
+        'anomaly_analysis': anomaly_analysis,
+        'crop_distribution': crop_dist,
+        'yield_by_crop': yield_by_crop,
+        'outliers': outliers,
+        'correlation_matrix': corr_matrix,
+    }
+
+
+@app.get("/dataset/field/{field_id}")
+def get_field_dataset(field_id: str, n_samples: int = 500):
+    """Return dataset rows for a specific field with all mandatory columns."""
+    df = yield_model._generate_training_data(n_samples=n_samples)
+    field_df = df[df['field_id'] == field_id][MANDATORY_FIELDS]
+    if field_df.empty:
+        raise HTTPException(status_code=404, detail=f"No data found for field '{field_id}'")
+    return {
+        'field_id': field_id,
+        'n_rows': len(field_df),
+        'anomaly_rate_pct': round(float(field_df['is_anomaly'].mean() * 100), 2),
+        'data': field_df.to_dict(orient='records'),
+    }
 
 
 if __name__ == "__main__":

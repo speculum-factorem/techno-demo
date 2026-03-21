@@ -5,6 +5,7 @@ import { clearError, register } from '@application/store/slices/authSlice'
 import Button from '@presentation/components/common/Button/Button'
 import Input from '@presentation/components/common/Input/Input'
 import Alert from '@presentation/components/common/Alert/Alert'
+import PrivacyPolicyModal from '@presentation/components/legal/PrivacyPolicyModal'
 import styles from './AuthPage.module.scss'
 
 const STEPS = ['Аккаунт', 'Персональные данные', 'Организация']
@@ -22,6 +23,9 @@ const RegisterPage: React.FC = () => {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [organizationId, setOrganizationId] = useState('')
   const [inviteCode, setInviteCode] = useState('')
+  const [personalDataConsent, setPersonalDataConsent] = useState(false)
+  const [consentError, setConsentError] = useState('')
+  const [privacyOpen, setPrivacyOpen] = useState(false)
   const [passwordError, setPasswordError] = useState('')
 
   useEffect(() => {
@@ -51,14 +55,20 @@ const RegisterPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (step < STEPS.length - 1) { nextStep(); return }
+    if (!personalDataConsent) {
+      setConsentError('Необходимо согласие на обработку персональных данных')
+      return
+    }
+    setConsentError('')
     dispatch(clearError())
     const result = await dispatch(register({
       username, email, fullName, password, confirmPassword,
       organizationId: organizationId || undefined,
       inviteCode: inviteCode || undefined,
+      personalDataConsent: true,
     }))
     if (register.fulfilled.match(result)) {
-      navigate('/auth/login', { state: { registeredMessage: result.payload.message } })
+      navigate('/auth/verify-email', { state: { email } })
     }
   }
 
@@ -178,6 +188,28 @@ const RegisterPage: React.FC = () => {
                   onChange={e => setInviteCode(e.target.value)}
                   placeholder="Например, ORG1-INVITE-2026" fullWidth
                 />
+                <div className={styles.consentRow}>
+                  <input
+                    id="pd-consent"
+                    type="checkbox"
+                    checked={personalDataConsent}
+                    onChange={e => { setPersonalDataConsent(e.target.checked); setConsentError('') }}
+                    className={styles.consentCheckbox}
+                  />
+                  <div className={styles.consentText}>
+                    <label htmlFor="pd-consent" className={styles.consentLabel}>
+                      Согласен с обработкой персональных данных в соответствии с{' '}
+                    </label>
+                    <button
+                      type="button"
+                      className={styles.consentPolicyLink}
+                      onClick={() => setPrivacyOpen(true)}
+                    >
+                      Политикой конфиденциальности
+                    </button>
+                  </div>
+                </div>
+                {consentError && <span className={styles.consentError}>{consentError}</span>}
               </>
             )}
 
@@ -211,6 +243,8 @@ const RegisterPage: React.FC = () => {
           </p>
         </div>
       </div>
+
+      <PrivacyPolicyModal open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
     </div>
   )
 }

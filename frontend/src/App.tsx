@@ -26,6 +26,7 @@ import NotificationRulesPage from '@presentation/pages/NotificationRules/Notific
 import ReportsPage from '@presentation/pages/Reports/ReportsPage'
 import RbacManagementPage from '@presentation/pages/RbacManagement/RbacManagementPage'
 import IntegrationsPage from '@presentation/pages/Integrations/IntegrationsPage'
+import PrivacyPolicyPage from '@presentation/pages/Legal/PrivacyPolicyPage'
 import '@presentation/styles/global.scss'
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -48,6 +49,7 @@ const AppRoutes: React.FC = () => {
         <Route path="/auth/login" element={<LoginPage />} />
         <Route path="/auth/register" element={<RegisterPage />} />
         <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
+        <Route path="/privacy" element={<PrivacyPolicyPage />} />
         <Route
           path="/app"
           element={

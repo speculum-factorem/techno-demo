@@ -86,15 +86,32 @@ const FieldInsightsPage: React.FC = () => {
             <Card>
               <h3 className={styles.sectionTitle}>Паспорт операций</h3>
               <div className={styles.table}>
-                {[...passport.operations, ...passport.fertilizers, ...passport.treatments].map((r, i) => (
-                  <div key={`${r.type}-${i}`} className={styles.row}>
+                {[...passport.operations, ...passport.fertilizers, ...passport.treatments]
+                  .sort((a, b) => b.date.localeCompare(a.date))
+                  .map((r, i) => (
+                  <div key={`op-${i}`} className={styles.row}>
                     <span>{new Date(r.date).toLocaleDateString('ru-RU')}</span>
                     <span>{r.description}</span>
-                    <span>{r.amount ?? '—'} {r.unit ?? ''}</span>
+                    <span>{r.amount != null ? `${r.amount} ${r.unit ?? ''}` : '—'}</span>
                     <span>{money(r.cost ?? 0)}</span>
                   </div>
                 ))}
               </div>
+              {passport.results.length > 0 && (
+                <>
+                  <h3 className={styles.sectionTitle} style={{ marginTop: 20 }}>Результаты по сезонам</h3>
+                  <div className={styles.table}>
+                    {passport.results.map((r, i) => (
+                      <div key={`res-${i}`} className={styles.row}>
+                        <span>{r.season}</span>
+                        <span>Факт: {r.yieldActual} т/га (план: {r.yieldPlan})</span>
+                        <span>Выручка: {money(r.revenueActual)}</span>
+                        <span>Затраты: {money(r.costActual)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
             </Card>
 
             <Card>

@@ -1,5 +1,6 @@
 package com.agroanalytics.auth.dto;
 
+import jakarta.validation.constraints.AssertTrue;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -36,4 +37,8 @@ public class RegisterRequest {
 
     @Pattern(regexp = "^[a-zA-Z0-9\\-_.]{0,100}$", message = "Invite code contains invalid characters")
     private String inviteCode;
+
+    /** User consent to personal data processing (required for registration). */
+    @AssertTrue(message = "Personal data processing consent is required")
+    private boolean personalDataConsent;
 }

@@ -22,6 +22,10 @@ public class EmailVerificationToken {
     @Column(nullable = false, unique = true, length = 120)
     private String token;
 
+    /** 6-digit code sent by email for manual entry */
+    @Column(name = "verification_code", unique = true, length = 6)
+    private String verificationCode;
+
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;

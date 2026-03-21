@@ -51,10 +51,12 @@ export interface FieldPassportOperation {
 }
 
 export interface FieldPassportResult {
-  metric: string
-  value: number
-  unit: string
-  period: string
+  season: string
+  cropType: string
+  yieldActual: number
+  yieldPlan: number
+  revenueActual: number
+  costActual: number
 }
 
 export interface FieldPassport {
@@ -80,19 +82,19 @@ export interface FieldSatellitePoint {
 
 export interface FieldSatellite {
   fieldId: string
-  fieldName: string
+  fieldName?: string
   timeline: FieldSatellitePoint[]
   latestNdvi: number
   latestNdmi: number
-  stressLevel: 'LOW' | 'MEDIUM' | 'HIGH'
-  mapPreviewUrl: string
+  stressLevel: string
+  mapPreviewUrl?: string
   alerts: string[]
   recommendations: string[]
 }
 
 export interface FieldFinance {
   fieldId: string
-  fieldName: string
+  fieldName?: string
   planCost: number
   actualCost: number
   costPerHectare: number

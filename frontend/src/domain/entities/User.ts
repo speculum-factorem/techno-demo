@@ -28,4 +28,6 @@ export interface RegisterDto {
   confirmPassword: string
   organizationId?: string
   inviteCode?: string
+  /** Согласие на обработку персональных данных (обязательно) */
+  personalDataConsent: boolean
 }

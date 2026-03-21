@@ -58,20 +58,27 @@ export const register = createAsyncThunk(
 
 export const initializeAuth = createAsyncThunk(
   'auth/initializeAuth',
-  async (_, { rejectWithValue }) => {
+  async () => {
     const rawTokens = localStorage.getItem('tokens')
+    const rawUser = localStorage.getItem('user')
     if (!rawTokens) {
       return { isAuthenticated: false }
     }
 
+    const tokens = JSON.parse(rawTokens) as AuthTokens
+
     try {
       const user = await authApi.me()
-      const tokens = JSON.parse(rawTokens) as AuthTokens
       return { isAuthenticated: true, user, tokens }
-    } catch (err: any) {
+    } catch {
+      // Backend unavailable or mock mode — fall back to cached user
+      if (rawUser) {
+        const user = JSON.parse(rawUser) as User
+        return { isAuthenticated: true, user, tokens }
+      }
       localStorage.removeItem('tokens')
       localStorage.removeItem('user')
-      return rejectWithValue('Session expired')
+      return { isAuthenticated: false }
     }
   }
 )

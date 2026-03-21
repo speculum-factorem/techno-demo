@@ -1,6 +1,7 @@
 package com.agroanalytics.notification.service;
 
 import com.agroanalytics.notification.dto.AlertDto;
+import com.agroanalytics.notification.integration.EmailNotificationService;
 import com.agroanalytics.notification.integration.TelegramNotificationService;
 import com.agroanalytics.notification.model.Alert;
 import com.agroanalytics.notification.repository.AlertRepository;
@@ -22,6 +23,7 @@ public class AlertService {
 
     private final AlertRepository alertRepository;
     private final TelegramNotificationService telegramNotificationService;
+    private final EmailNotificationService emailNotificationService;
 
     public List<AlertDto> getAll() {
         return alertRepository.findAllByOrderByCreatedAtDesc()
@@ -74,13 +76,20 @@ public class AlertService {
         Alert saved = alertRepository.save(alert);
         log.info("Created {} alert [{}] for field {}: {}", severity, type, fieldId, title);
         AlertDto dto = toDto(saved);
-        try {
-            if ("CRITICAL".equalsIgnoreCase(severity) || "HIGH".equalsIgnoreCase(severity)
-                    || "WARNING".equalsIgnoreCase(severity)) {
+        boolean isImportant = "CRITICAL".equalsIgnoreCase(severity)
+                || "HIGH".equalsIgnoreCase(severity)
+                || "WARNING".equalsIgnoreCase(severity);
+        if (isImportant) {
+            try {
                 telegramNotificationService.sendAlertIfConfigured(title, message, severity);
+            } catch (Exception e) {
+                log.debug("Telegram hook skipped: {}", e.getMessage());
             }
-        } catch (Exception e) {
-            log.debug("Telegram hook skipped: {}", e.getMessage());
+            try {
+                emailNotificationService.sendAlertIfConfigured(title, message, severity, fieldName);
+            } catch (Exception e) {
+                log.debug("Email hook skipped: {}", e.getMessage());
+            }
         }
         return dto;
     }

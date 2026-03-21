@@ -19,17 +19,24 @@ public class VerificationEmailService {
     @Value("${app.frontend-url:http://localhost:3000}")
     private String frontendUrl;
 
-    public void sendVerificationEmail(String toEmail, String token) {
+    @Value("${spring.mail.username:}")
+    private String mailFrom;
+
+    public void sendVerificationEmail(String toEmail, String token, String verificationCode) {
         String verifyLink = frontendUrl + "/auth/verify-email?token=" + token;
-        String subject = "Confirm your AgroAnalytics email";
-        String body = "Welcome to AgroAnalytics!\n\n"
-                + "Please confirm your email by opening the link below:\n"
+        String subject = "Код подтверждения AgroAnalytics";
+        String body = "Здравствуйте!\n\n"
+                + "Вы зарегистрировались в AgroAnalytics.\n\n"
+                + "Код подтверждения email: " + verificationCode + "\n\n"
+                + "Введите этот код на странице подтверждения в приложении.\n\n"
+                + "Или перейдите по ссылке:\n"
                 + verifyLink + "\n\n"
-                + "If you did not create this account, ignore this message.";
+                + "Если вы не регистрировались, проигнорируйте это письмо.";
 
         if (mailSender.isPresent()) {
             try {
                 SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom(mailFrom);
                 message.setTo(toEmail);
                 message.setSubject(subject);
                 message.setText(body);
@@ -41,6 +48,6 @@ public class VerificationEmailService {
         }
 
         // Dev/local fallback so flow remains testable without SMTP.
-        log.info("Email verification link for {}: {}", toEmail, verifyLink);
+        log.info("Email verification for {} — code: {} — link: {}", toEmail, verificationCode, verifyLink);
     }
 }

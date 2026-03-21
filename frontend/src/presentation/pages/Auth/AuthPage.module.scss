@@ -359,6 +359,65 @@
   margin-top: 4px;
 }
 
+.consentRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  cursor: pointer;
+  margin-top: 4px;
+  padding: 10px 12px;
+  background: #f8f9fa;
+  border-radius: 10px;
+  border: 1px solid #e8eaed;
+}
+
+.consentCheckbox {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: #1a73e8;
+  cursor: pointer;
+}
+
+.consentLabel {
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #3c4043;
+  user-select: none;
+}
+
+.consentText {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: #3c4043;
+}
+
+.consentPolicyLink {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  color: #1a73e8;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  text-decoration: underline;
+  text-align: left;
+
+  &:hover {
+    color: #1557b0;
+  }
+}
+
+.consentError {
+  font-size: 0.82rem;
+  color: #d93025;
+  margin-top: -6px;
+}
+
 .formActions {
   display: flex;
   gap: 10px;

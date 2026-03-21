@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 import org.springframework.http.HttpStatus;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -40,9 +41,15 @@ public class AuthService {
 
     @Value("${app.auth.verification-ttl-minutes:1440}")
     private long verificationTtlMinutes;
+    @Value("${app.bootstrap.default-users:false}")
+    private boolean bootstrapDefaultUsers;
 
     @PostConstruct
     public void initDefaultUsers() {
+        if (!bootstrapDefaultUsers) {
+            log.info("Default users bootstrap disabled for current profile");
+            return;
+        }
         if (userRepository.findByUsername("admin").isEmpty()) {
             User admin = User.builder()
                     .username("admin")
@@ -152,7 +159,17 @@ public class AuthService {
     public void verifyEmail(String token) {
         EmailVerificationToken verificationToken = emailVerificationTokenRepository.findByToken(token)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid verification token"));
+        completeVerification(verificationToken);
+    }
 
+    public void verifyEmailByCode(String code) {
+        String normalized = code == null ? "" : code.trim();
+        EmailVerificationToken verificationToken = emailVerificationTokenRepository.findByVerificationCode(normalized)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid verification code"));
+        completeVerification(verificationToken);
+    }
+
+    private void completeVerification(EmailVerificationToken verificationToken) {
         if (verificationToken.getUsedAt() != null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Verification token is already used");
         }
@@ -220,15 +237,31 @@ public class AuthService {
         }
     }
 
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+
     private void createAndSendVerificationToken(User user) {
         String token = UUID.randomUUID().toString() + UUID.randomUUID();
+        String code = generateUniqueVerificationCode();
         EmailVerificationToken entity = EmailVerificationToken.builder()
                 .token(token)
+                .verificationCode(code)
                 .user(user)
                 .expiresAt(LocalDateTime.now().plusMinutes(verificationTtlMinutes))
                 .build();
         emailVerificationTokenRepository.save(entity);
-        verificationEmailService.sendVerificationEmail(user.getEmail(), token);
+        verificationEmailService.sendVerificationEmail(user.getEmail(), token, code);
+    }
+
+    /** 6-digit numeric code, unique among existing rows */
+    private String generateUniqueVerificationCode() {
+        for (int attempt = 0; attempt < 20; attempt++) {
+            int n = 100_000 + SECURE_RANDOM.nextInt(900_000);
+            String code = String.valueOf(n);
+            if (!emailVerificationTokenRepository.existsByVerificationCode(code)) {
+                return code;
+            }
+        }
+        throw new IllegalStateException("Could not generate unique verification code");
     }
 
     private void validatePasswordPolicy(String password) {

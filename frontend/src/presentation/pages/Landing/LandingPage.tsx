@@ -349,6 +349,7 @@ const LandingPage: React.FC = () => {
           <div className={styles.footerLinks}>
             <Link to="/auth/login" className={styles.footerLink}>Войти</Link>
             <Link to="/auth/register" className={styles.footerLink}>Регистрация</Link>
+            <Link to="/privacy" className={styles.footerLink}>Конфиденциальность</Link>
             {isAuthenticated && <Link to="/app" className={styles.footerLink}>Приложение</Link>}
           </div>
         </div>

@@ -1,11 +1,13 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { useAppDispatch, useAppSelector } from '@application/store/hooks'
 import { fetchModelMetrics } from '@application/store/slices/anomalySlice'
+import { analyticsApi } from '@infrastructure/api/AnalyticsApi'
 import Card from '@presentation/components/common/Card/Card'
 import Badge from '@presentation/components/common/Badge/Badge'
 import Loader from '@presentation/components/common/Loader/Loader'
 import {
-  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, RadarChart, Radar, PolarGrid, PolarAngleAxis
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ScatterChart, Scatter, Cell,
 } from 'recharts'
 import styles from './ModelMetricsPage.module.scss'
 
@@ -14,16 +16,40 @@ const CROP_LABELS: Record<string, string> = {
   barley: 'Ячмень', soy: 'Соя', sugar_beet: 'Сах. свёкла', other: 'Другие',
 }
 
+const FIELD_LABELS: Record<string, string> = {
+  temperature: 'Температура, °C',
+  humidity_air: 'Влажность воздуха, %',
+  precipitation: 'Осадки, мм',
+  wind_speed: 'Скорость ветра, м/с',
+  soil_moisture: 'Влажность почвы, %',
+  yield_actual: 'Урожайность (норм. 0–1)',
+  irrigation_volume: 'Объём полива, л/м²',
+  irrigation_recommended: 'Рек. полив, л/м²',
+}
+
+type Tab = 'metrics' | 'eda'
+
 const ModelMetricsPage: React.FC = () => {
   const dispatch = useAppDispatch()
   const { metrics, loadingMetrics } = useAppSelector(s => s.anomaly)
+  const [tab, setTab] = useState<Tab>('metrics')
+  const [eda, setEda] = useState<any>(null)
+  const [edaLoading, setEdaLoading] = useState(false)
 
   useEffect(() => {
     dispatch(fetchModelMetrics())
   }, [dispatch])
 
-  if (loadingMetrics && !metrics) return <Loader text="Расчёт метрик модели..." fullPage />
+  useEffect(() => {
+    if (tab === 'eda' && !eda) {
+      setEdaLoading(true)
+      analyticsApi.getDatasetEda(2000)
+        .then(setEda)
+        .finally(() => setEdaLoading(false))
+    }
+  }, [tab, eda])
 
+  if (loadingMetrics && !metrics) return <Loader text="Расчёт метрик модели..." fullPage />
   if (!metrics) return null
 
   const cropChartData = Object.entries(metrics.byCrop).map(([crop, m]) => ({
@@ -41,135 +67,295 @@ const ModelMetricsPage: React.FC = () => {
     <div className={styles.page}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Метрики качества ML-модели</h1>
+          <h1 className={styles.title}>Метрики ML-модели и анализ датасета</h1>
           <p className={styles.subtitle}>
-            Тестирование RandomForest на отложенной выборке · Модель v{metrics.modelVersion}
+            RandomForest · Прогноз урожайности · Ростовская область
           </p>
         </div>
-        <div className={styles.updatedAt}>
-          <span className="material-icons-round">schedule</span>
-          Рассчитано: {new Date(metrics.trainedAt).toLocaleString('ru-RU')}
+        <div className={styles.tabs}>
+          <button className={`${styles.tab} ${tab === 'metrics' ? styles.tabActive : ''}`} onClick={() => setTab('metrics')}>
+            <span className="material-icons-round">analytics</span> Метрики модели
+          </button>
+          <button className={`${styles.tab} ${tab === 'eda' ? styles.tabActive : ''}`} onClick={() => setTab('eda')}>
+            <span className="material-icons-round">dataset</span> Анализ датасета (EDA)
+          </button>
         </div>
       </div>
 
-      {/* Overall Metrics */}
-      <div className={styles.metricsGrid}>
-        <Card className={styles.metricCard}>
-          <div className={styles.metricIcon} style={{ background: '#e8f0fe' }}>
-            <span className="material-icons-round" style={{ color: '#1a73e8' }}>analytics</span>
-          </div>
-          <div className={styles.metricValue}>{metrics.overall.mae.toFixed(3)}</div>
-          <div className={styles.metricLabel}>MAE (т/га)</div>
-          <div className={styles.metricDesc}>Средняя абсолютная ошибка</div>
-        </Card>
-        <Card className={styles.metricCard}>
-          <div className={styles.metricIcon} style={{ background: '#fef9e0' }}>
-            <span className="material-icons-round" style={{ color: '#f59e0b' }}>show_chart</span>
-          </div>
-          <div className={styles.metricValue}>{metrics.overall.rmse.toFixed(3)}</div>
-          <div className={styles.metricLabel}>RMSE (т/га)</div>
-          <div className={styles.metricDesc}>Среднеквадратичная ошибка</div>
-        </Card>
-        <Card className={styles.metricCard}>
-          <div className={styles.metricIcon} style={{ background: r2Quality === 'success' ? '#e6f4ea' : '#fce8e6' }}>
-            <span className="material-icons-round" style={{ color: r2Quality === 'success' ? '#34a853' : '#ea4335' }}>
-              {r2Quality === 'success' ? 'thumb_up' : 'thumb_down'}
-            </span>
-          </div>
-          <div className={styles.metricValue}>{metrics.overall.r2.toFixed(3)}</div>
-          <div className={styles.metricLabel}>R² (коэф. детерминации)</div>
-          <Badge variant={r2Quality as any}>{r2Quality === 'success' ? 'Отлично' : r2Quality === 'warning' ? 'Приемлемо' : 'Плохо'}</Badge>
-        </Card>
-        <Card className={styles.metricCard}>
-          <div className={styles.metricIcon} style={{ background: accQuality === 'success' ? '#e6f4ea' : '#fce8e6' }}>
-            <span className="material-icons-round" style={{ color: accQuality === 'success' ? '#34a853' : '#ea4335' }}>percent</span>
-          </div>
-          <div className={styles.metricValue}>{metrics.overall.accuracy.toFixed(1)}%</div>
-          <div className={styles.metricLabel}>Точность (±15%)</div>
-          <Badge variant={accQuality as any}>{accQuality === 'success' ? 'Хорошая' : 'Требует улучшения'}</Badge>
-        </Card>
-      </div>
-
-      <div className={styles.testInfo}>
-        <span className="material-icons-round">info</span>
-        Тест проведён на <strong>{metrics.overall.testSamples}</strong> примерах отложенной выборки (20% датасета).
-        Точность = доля прогнозов с отклонением менее 15% от реального значения.
-      </div>
-
-      {/* Per-crop Chart */}
-      <Card>
-        <h3 className={styles.sectionTitle}>Точность по культурам</h3>
-        <div className={styles.chart}>
-          <ResponsiveContainer width="100%" height={280}>
-            <BarChart data={cropChartData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#dadce0" />
-              <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#5f6368' }} />
-              <YAxis tick={{ fontSize: 12, fill: '#5f6368' }} />
-              <Tooltip
-                contentStyle={{ border: '1px solid #dadce0', borderRadius: 8, fontSize: 12 }}
-              />
-              <Legend />
-              <Bar dataKey="MAE (т/га)" fill="#1a73e8" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="RMSE (т/га)" fill="#fbbc04" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="R²" fill="#34a853" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
-        <div className={styles.cropTable}>
-          <table>
-            <thead>
-              <tr><th>Культура</th><th>MAE</th><th>RMSE</th><th>R²</th><th>Выборка</th></tr>
-            </thead>
-            <tbody>
-              {Object.entries(metrics.byCrop).map(([crop, m]) => (
-                <tr key={crop}>
-                  <td>{CROP_LABELS[crop] || crop}</td>
-                  <td>{m.mae.toFixed(3)}</td>
-                  <td>{m.rmse.toFixed(3)}</td>
-                  <td className={m.r2 >= 0.85 ? styles.good : m.r2 >= 0.7 ? styles.ok : styles.bad}>
-                    {m.r2.toFixed(3)}
-                  </td>
-                  <td>{m.samples}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Card>
-
-      {/* Test Scenarios */}
-      <Card>
-        <h3 className={styles.sectionTitle}>Тестовые сценарии</h3>
-        <p className={styles.scenariosDesc}>
-          Проверка поведения системы на контрольных сценариях, включая сценарий из технического задания кейса.
-        </p>
-        <div className={styles.scenarios}>
-          {metrics.scenarios.map((s, i) => (
-            <div key={i} className={`${styles.scenario} ${styles[s.status]}`}>
-              <div className={styles.scenarioHeader}>
-                <span className={`material-icons-round ${styles.scenarioIcon}`}>
-                  {s.status === 'pass' ? 'check_circle' : 'cancel'}
-                </span>
-                <strong>{s.name}</strong>
-                <Badge variant={s.status === 'pass' ? 'success' : 'danger'}>
-                  {s.status === 'pass' ? 'ПРОЙДЕН' : 'ПРОВАЛЕН'}
-                </Badge>
+      {/* ===== METRICS TAB ===== */}
+      {tab === 'metrics' && (
+        <>
+          <div className={styles.metricsGrid}>
+            <Card className={styles.metricCard}>
+              <div className={styles.metricIcon} style={{ background: '#e8f0fe' }}>
+                <span className="material-icons-round" style={{ color: '#1a73e8' }}>analytics</span>
               </div>
-              <p className={styles.scenarioDesc}>{s.description}</p>
-              <div className={styles.scenarioParams}>
-                <span><strong>Влажность:</strong> {s.inputMoisture}%</span>
-                <span><strong>Температура:</strong> {s.inputTemp}°C</span>
-                <span><strong>Ожидаемая достоверность:</strong> {s.expectedConfidence}</span>
-                <span><strong>Фактическая:</strong>{' '}
-                  <span className={s.actualConfidence === s.expectedConfidence ? styles.good : styles.bad}>
-                    {s.actualConfidence}
-                  </span>
+              <div className={styles.metricValue}>{metrics.overall.mae.toFixed(3)}</div>
+              <div className={styles.metricLabel}>MAE (т/га)</div>
+              <div className={styles.metricDesc}>Средняя абсолютная ошибка</div>
+            </Card>
+            <Card className={styles.metricCard}>
+              <div className={styles.metricIcon} style={{ background: '#fef9e0' }}>
+                <span className="material-icons-round" style={{ color: '#f59e0b' }}>show_chart</span>
+              </div>
+              <div className={styles.metricValue}>{metrics.overall.rmse.toFixed(3)}</div>
+              <div className={styles.metricLabel}>RMSE (т/га)</div>
+              <div className={styles.metricDesc}>Среднеквадратичная ошибка</div>
+            </Card>
+            <Card className={styles.metricCard}>
+              <div className={styles.metricIcon} style={{ background: r2Quality === 'success' ? '#e6f4ea' : '#fce8e6' }}>
+                <span className="material-icons-round" style={{ color: r2Quality === 'success' ? '#34a853' : '#ea4335' }}>
+                  {r2Quality === 'success' ? 'thumb_up' : 'thumb_down'}
                 </span>
               </div>
+              <div className={styles.metricValue}>{metrics.overall.r2.toFixed(3)}</div>
+              <div className={styles.metricLabel}>R² (коэф. детерминации)</div>
+              <Badge variant={r2Quality as any}>{r2Quality === 'success' ? 'Отлично' : r2Quality === 'warning' ? 'Приемлемо' : 'Плохо'}</Badge>
+            </Card>
+            <Card className={styles.metricCard}>
+              <div className={styles.metricIcon} style={{ background: accQuality === 'success' ? '#e6f4ea' : '#fce8e6' }}>
+                <span className="material-icons-round" style={{ color: accQuality === 'success' ? '#34a853' : '#ea4335' }}>percent</span>
+              </div>
+              <div className={styles.metricValue}>{metrics.overall.accuracy.toFixed(1)}%</div>
+              <div className={styles.metricLabel}>Точность (±15%)</div>
+              <Badge variant={accQuality as any}>{accQuality === 'success' ? 'Хорошая' : 'Требует улучшения'}</Badge>
+            </Card>
+          </div>
+
+          <div className={styles.testInfo}>
+            <span className="material-icons-round">info</span>
+            Тест на <strong>{metrics.overall.testSamples}</strong> примерах (20% датасета). Точность = прогнозы с отклонением &lt;15%.
+          </div>
+
+          <Card>
+            <h3 className={styles.sectionTitle}>Точность по культурам</h3>
+            <div className={styles.chart}>
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={cropChartData} margin={{ top: 8, right: 16, bottom: 0, left: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#dadce0" />
+                  <XAxis dataKey="name" tick={{ fontSize: 12, fill: '#5f6368' }} />
+                  <YAxis tick={{ fontSize: 12, fill: '#5f6368' }} />
+                  <Tooltip contentStyle={{ border: '1px solid #dadce0', borderRadius: 8, fontSize: 12 }} />
+                  <Legend />
+                  <Bar dataKey="MAE (т/га)" fill="#1a73e8" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="RMSE (т/га)" fill="#fbbc04" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="R²" fill="#34a853" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-          ))}
-        </div>
-      </Card>
+            <div className={styles.cropTable}>
+              <table>
+                <thead>
+                  <tr><th>Культура</th><th>MAE</th><th>RMSE</th><th>R²</th><th>Выборка</th></tr>
+                </thead>
+                <tbody>
+                  {Object.entries(metrics.byCrop).map(([crop, m]) => (
+                    <tr key={crop}>
+                      <td>{CROP_LABELS[crop] || crop}</td>
+                      <td>{m.mae.toFixed(3)}</td>
+                      <td>{m.rmse.toFixed(3)}</td>
+                      <td className={m.r2 >= 0.85 ? styles.good : m.r2 >= 0.7 ? styles.ok : styles.bad}>{m.r2.toFixed(3)}</td>
+                      <td>{m.samples}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Card>
+
+          <Card>
+            <h3 className={styles.sectionTitle}>Тестовые сценарии кейса</h3>
+            <p className={styles.scenariosDesc}>Проверка поведения системы на контрольных сценариях, включая сценарий из технического задания.</p>
+            <div className={styles.scenarios}>
+              {metrics.scenarios.map((s, i) => (
+                <div key={i} className={`${styles.scenario} ${styles[s.status]}`}>
+                  <div className={styles.scenarioHeader}>
+                    <span className={`material-icons-round ${styles.scenarioIcon}`}>
+                      {s.status === 'pass' ? 'check_circle' : 'cancel'}
+                    </span>
+                    <strong>{s.name}</strong>
+                    <Badge variant={s.status === 'pass' ? 'success' : 'danger'}>
+                      {s.status === 'pass' ? 'ПРОЙДЕН' : 'ПРОВАЛЕН'}
+                    </Badge>
+                  </div>
+                  <p className={styles.scenarioDesc}>{s.description}</p>
+                  <div className={styles.scenarioParams}>
+                    <span><strong>Влажность:</strong> {s.inputMoisture}%</span>
+                    <span><strong>Температура:</strong> {s.inputTemp}°C</span>
+                    <span><strong>Ожид. достоверность:</strong> {s.expectedConfidence}</span>
+                    <span><strong>Факт:</strong>{' '}
+                      <span className={s.actualConfidence === s.expectedConfidence ? styles.good : styles.bad}>
+                        {s.actualConfidence}
+                      </span>
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        </>
+      )}
+
+      {/* ===== EDA TAB ===== */}
+      {tab === 'eda' && (
+        edaLoading ? <Loader text="Загрузка анализа датасета..." /> : eda && (
+          <>
+            {/* Dataset summary */}
+            <div className={styles.metricsGrid}>
+              <Card className={styles.metricCard}>
+                <div className={styles.metricIcon} style={{ background: '#e8f0fe' }}>
+                  <span className="material-icons-round" style={{ color: '#1a73e8' }}>table_rows</span>
+                </div>
+                <div className={styles.metricValue}>{eda.dataset_info.n_rows.toLocaleString('ru-RU')}</div>
+                <div className={styles.metricLabel}>Строк в датасете</div>
+                <div className={styles.metricDesc}>{eda.dataset_info.n_cols} обязательных полей</div>
+              </Card>
+              <Card className={styles.metricCard}>
+                <div className={styles.metricIcon} style={{ background: '#e6f4ea' }}>
+                  <span className="material-icons-round" style={{ color: '#34a853' }}>grass</span>
+                </div>
+                <div className={styles.metricValue}>{eda.dataset_info.unique_fields}</div>
+                <div className={styles.metricLabel}>Уникальных полей</div>
+                <div className={styles.metricDesc}>{eda.dataset_info.unique_crops} культур</div>
+              </Card>
+              <Card className={styles.metricCard}>
+                <div className={styles.metricIcon} style={{ background: '#fce8e6' }}>
+                  <span className="material-icons-round" style={{ color: '#ea4335' }}>warning</span>
+                </div>
+                <div className={styles.metricValue}>{eda.anomaly_analysis.anomaly_rate_pct}%</div>
+                <div className={styles.metricLabel}>Доля аномалий</div>
+                <div className={styles.metricDesc}>{eda.anomaly_analysis.total_anomalies} записей с is_anomaly=true</div>
+              </Card>
+              <Card className={styles.metricCard}>
+                <div className={styles.metricIcon} style={{ background: '#fef9e0' }}>
+                  <span className="material-icons-round" style={{ color: '#f59e0b' }}>date_range</span>
+                </div>
+                <div className={styles.metricValue} style={{ fontSize: '1rem' }}>{eda.dataset_info.date_range.from}</div>
+                <div className={styles.metricLabel}>Начало периода</div>
+                <div className={styles.metricDesc}>до {eda.dataset_info.date_range.to}</div>
+              </Card>
+            </div>
+
+            {/* Mandatory fields list */}
+            <Card>
+              <h3 className={styles.sectionTitle}>Обязательные поля датасета (из инструкции)</h3>
+              <div className={styles.fieldGrid}>
+                {eda.dataset_info.mandatory_fields.map((f: string) => (
+                  <div key={f} className={styles.fieldChip}>
+                    <span className="material-icons-round">check_circle</span>
+                    <code>{f}</code>
+                  </div>
+                ))}
+              </div>
+            </Card>
+
+            {/* Descriptive stats */}
+            <Card>
+              <h3 className={styles.sectionTitle}>Дескриптивная статистика числовых полей</h3>
+              <div className={styles.cropTable}>
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Поле</th><th>Среднее</th><th>Std</th><th>Min</th>
+                      <th>Q25</th><th>Медиана</th><th>Q75</th><th>Max</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(eda.descriptive_stats).map(([col, s]: [string, any]) => (
+                      <tr key={col}>
+                        <td><strong>{FIELD_LABELS[col] || col}</strong></td>
+                        <td>{s.mean}</td>
+                        <td>{s.std}</td>
+                        <td>{s.min}</td>
+                        <td>{s.q25}</td>
+                        <td>{s.median}</td>
+                        <td>{s.q75}</td>
+                        <td>{s.max}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {/* Crop distribution + yield */}
+            <div className={styles.grid2col}>
+              <Card>
+                <h3 className={styles.sectionTitle}>Распределение по культурам</h3>
+                <div className={styles.chart}>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart data={Object.entries(eda.crop_distribution).map(([k, v]) => ({ name: CROP_LABELS[k] || k, Количество: v }))}
+                      margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#dadce0" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                      <YAxis tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Bar dataKey="Количество" fill="#1a73e8" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+              <Card>
+                <h3 className={styles.sectionTitle}>Средняя урожайность (yield_actual, 0–1) по культурам</h3>
+                <div className={styles.chart}>
+                  <ResponsiveContainer width="100%" height={240}>
+                    <BarChart data={Object.entries(eda.yield_by_crop).map(([k, v]) => ({ name: CROP_LABELS[k] || k, 'yield_actual': v }))}
+                      margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#dadce0" />
+                      <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                      <YAxis domain={[0, 1]} tick={{ fontSize: 11 }} />
+                      <Tooltip />
+                      <Bar dataKey="yield_actual" fill="#34a853" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </Card>
+            </div>
+
+            {/* Outliers */}
+            <Card>
+              <h3 className={styles.sectionTitle}>Выбросы (метод IQR) по числовым полям</h3>
+              <div className={styles.cropTable}>
+                <table>
+                  <thead>
+                    <tr><th>Поле</th><th>Выбросов (IQR)</th><th>Доля, %</th><th>Оценка</th></tr>
+                  </thead>
+                  <tbody>
+                    {Object.entries(eda.outliers).map(([col, o]: [string, any]) => (
+                      <tr key={col}>
+                        <td><strong>{FIELD_LABELS[col] || col}</strong></td>
+                        <td>{o.iqr_outliers}</td>
+                        <td>{o.outlier_rate_pct}%</td>
+                        <td className={o.outlier_rate_pct > 5 ? styles.bad : o.outlier_rate_pct > 2 ? styles.ok : styles.good}>
+                          {o.outlier_rate_pct > 5 ? '⚠ Высокий' : o.outlier_rate_pct > 2 ? '~ Умеренный' : '✓ Норма'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Card>
+
+            {/* Anomaly breakdown */}
+            <Card>
+              <h3 className={styles.sectionTitle}>Аномалии (is_anomaly) по культурам</h3>
+              <div className={styles.chart}>
+                <ResponsiveContainer width="100%" height={220}>
+                  <BarChart
+                    data={Object.entries(eda.anomaly_analysis.anomaly_by_crop).map(([k, v]) => ({ name: CROP_LABELS[k] || k, Аномалии: v }))}
+                    margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#dadce0" />
+                    <XAxis dataKey="name" tick={{ fontSize: 11 }} />
+                    <YAxis tick={{ fontSize: 11 }} />
+                    <Tooltip />
+                    <Bar dataKey="Аномалии" fill="#ea4335" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </Card>
+          </>
+        )
+      )}
     </div>
   )
 }

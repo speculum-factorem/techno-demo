@@ -54,6 +54,11 @@ export const authApi = {
     return data
   },
 
+  async verifyEmailWithCode(code: string): Promise<{ message: string }> {
+    const { data } = await apiClient.post<{ message: string }>('/auth/verify-email-code', { code: code.replace(/\s/g, '') })
+    return data
+  },
+
   async logout(): Promise<void> {
     if (USE_MOCK) return
     await apiClient.post('/auth/logout')
@@ -65,6 +70,12 @@ export const authApi = {
   },
 
   async me(): Promise<User> {
+    if (USE_MOCK) {
+      await new Promise(r => setTimeout(r, 100))
+      const stored = localStorage.getItem('user')
+      if (stored) return JSON.parse(stored) as User
+      throw new Error('Not authenticated')
+    }
     const { data } = await apiClient.get<{ id: number; username: string; email: string; fullName: string; role: string }>('/auth/me')
     return {
       id: String(data.id),
