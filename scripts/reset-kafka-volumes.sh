@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Сброс тома Kafka (KRaft). Старый том от Confluent+ZK несовместим с образом Bitnami — удалите один раз при миграции.
+# Сброс тома Kafka (KRaft). При смене образа/режима брокера удалите том один раз.
 # Данные Postgres не трогаются.
 set -euo pipefail
 cd "$(dirname "$0")/.."

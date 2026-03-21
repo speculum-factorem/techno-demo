@@ -109,7 +109,7 @@ docker run --rm -v techno-demo_postgres_data:/volume -v $(pwd):/backup alpine \
 
 ## 10) Если Kafka «unhealthy» (`dependency failed to start`)
 
-В проекте используется **Kafka KRaft** (образ Bitnami, **без Zookeeper**) — нет рассинхрона `cluster.id` между ZK и брокером, как раньше у Confluent.
+В проекте используется **Kafka KRaft** (**`confluentinc/cp-kafka`**, **без Zookeeper**) — нет рассинхрона `cluster.id` между ZK и брокером, как в старом стеке Confluent+ZK.
 
 1. Логи:
    ```bash
@@ -118,7 +118,7 @@ docker run --rm -v techno-demo_postgres_data:/volume -v $(pwd):/backup alpine \
 2. Частые причины:
    - **мало RAM** — `KAFKA_HEAP_OPTS: "-Xmx512M -Xms256M"`; при OOM в логах `OutOfMemoryError`.
    - **долгий первый старт** — `start_period` healthcheck до **180s**; подождите 2–3 минуты.
-   - **после обновления с Confluent+ZK**: том данных теперь **`techno-demo_kafka_kraft_data`**. Старые `techno-demo_kafka_data` / `techno-demo_zookeeper_data` можно удалить вручную (`docker volume rm ...`), чтобы освободить место.
+   - **после обновления с Confluent+ZK или с эксперимента Bitnami**: том **`techno-demo_kafka_kraft_data`** должен соответствовать текущему образу; при ошибках старта брокера удалите его (`docker volume rm techno-demo_kafka_kraft_data`) и поднимите стек снова. Старые `techno-demo_kafka_data` / `techno-demo_zookeeper_data` при желании тоже удалите, чтобы освободить место.
 3. После `git pull` на сервере:
    ```bash
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
