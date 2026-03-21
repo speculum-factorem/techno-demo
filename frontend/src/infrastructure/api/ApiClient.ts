@@ -83,7 +83,15 @@ apiClient.interceptors.response.use(
       }
     }
 
-    if (status === 401) {
+    const authFlowPath =
+      requestUrl.includes('/auth/login')
+      || requestUrl.includes('/auth/register')
+      || requestUrl.includes('/auth/forgot-password')
+      || requestUrl.includes('/auth/reset-password')
+      || requestUrl.includes('/auth/verify-email')
+      || requestUrl.includes('/auth/verify-email-code')
+
+    if (status === 401 && !authFlowPath) {
       localStorage.removeItem('tokens')
       localStorage.removeItem('user')
       window.location.href = '/auth/login'

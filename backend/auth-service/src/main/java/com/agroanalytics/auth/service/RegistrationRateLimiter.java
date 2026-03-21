@@ -36,7 +36,7 @@ public class RegistrationRateLimiter {
             if (attempts.size() >= maxRequests) {
                 throw new ResponseStatusException(
                         HttpStatus.TOO_MANY_REQUESTS,
-                        "Too many registration attempts. Please try again later."
+                        "Слишком много попыток регистрации. Попробуйте позже."
                 );
             }
             attempts.addLast(now);

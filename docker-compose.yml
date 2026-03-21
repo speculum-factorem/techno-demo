@@ -3,6 +3,7 @@ services:
 
   postgres:
     image: postgres:16-alpine
+    # Пароль задаётся только при первом создании тома postgres_data; смена .env потом → password authentication failed
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}

@@ -15,6 +15,7 @@
 /Users/maxim/Desktop/hackOff2/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/model/User.java
 /Users/maxim/Desktop/hackOff2/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/model/EmailVerificationToken.java
 /Users/maxim/Desktop/hackOff2/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/dto/RefreshTokenRequest.java
+/Users/maxim/Desktop/hackOff2/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/config/RestExceptionHandler.java
 /Users/maxim/Desktop/hackOff2/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/dto/ResetPasswordRequest.java
 /Users/maxim/Desktop/hackOff2/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/dto/ResendLoginCodeRequest.java
 /Users/maxim/Desktop/hackOff2/techno-demo/backend/auth-service/src/main/java/com/agroanalytics/auth/repository/OrganizationInviteCodeRepository.java

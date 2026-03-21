@@ -89,8 +89,8 @@ public class SecurityConfig {
     }
 
     /**
-     * Authenticates requests forwarded by api-gateway (X-Organization-Id header) or
-     * direct internal service calls (X-Internal-Token header).
+     * Authenticates requests forwarded by api-gateway (X-User-Id и/или X-Organization-Id) или
+     * внутренние вызовы по X-Internal-Token.
      */
     private static class GatewayOrInternalAuthFilter extends OncePerRequestFilter {
         private final String configuredToken;
@@ -104,10 +104,12 @@ public class SecurityConfig {
                 throws ServletException, IOException {
             String xInternal = req.getHeader("X-Internal-Token");
             String xOrgId = req.getHeader("X-Organization-Id");
+            String xUserId = req.getHeader("X-User-Id");
 
             boolean isInternal = configuredToken != null && !configuredToken.isBlank()
                     && configuredToken.equals(xInternal);
-            boolean isGatewayForwarded = xOrgId != null && !xOrgId.isBlank();
+            boolean isGatewayForwarded = (xOrgId != null && !xOrgId.isBlank())
+                    || (xUserId != null && !xUserId.isBlank());
 
             if (isInternal || isGatewayForwarded) {
                 String role = isInternal ? "INTERNAL" : "USER";

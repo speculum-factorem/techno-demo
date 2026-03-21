@@ -80,10 +80,23 @@ export const authApi = {
       await new Promise(r => setTimeout(r, 800))
       return { message: 'Registration successful. Check your email to verify your account.', expiresInSeconds: 86400 }
     }
-    const { data } = await apiClient.post<EmailCodeResponse>('/auth/register', {
-      ...dto,
-      organizationId: dto.organizationId ? Number(dto.organizationId) : undefined,
-    })
+    const orgRaw = dto.organizationId != null && dto.organizationId !== ''
+      ? Number(dto.organizationId)
+      : undefined
+    const orgNum = Number.isFinite(orgRaw as number) ? orgRaw : undefined
+    const body: Record<string, unknown> = {
+      username: dto.username,
+      email: dto.email,
+      fullName: dto.fullName,
+      password: dto.password,
+      confirmPassword: dto.confirmPassword,
+      personalDataConsent: dto.personalDataConsent,
+    }
+    if (dto.inviteCode != null && dto.inviteCode !== '') {
+      body.inviteCode = dto.inviteCode
+      if (orgNum !== undefined) body.organizationId = orgNum
+    }
+    const { data } = await apiClient.post<EmailCodeResponse>('/auth/register', body)
     return data
   },
 

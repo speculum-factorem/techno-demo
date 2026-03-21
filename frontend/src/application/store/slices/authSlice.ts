@@ -40,6 +40,19 @@ if (rawUserInit && !parsedUserInit) {
 const initialUser =
   rawTokensInit && !parsedTokensInit ? null : rawUserInit && !parsedUserInit ? null : parsedUserInit
 
+function apiErrorMessage(err: unknown, fallback: string): string {
+  const e = err as { response?: { data?: Record<string, unknown> } }
+  const d = e.response?.data
+  if (!d || typeof d !== 'object') return fallback
+  const msg = d.message
+  if (typeof msg === 'string' && msg.trim()) return msg
+  const detail = d.detail
+  if (typeof detail === 'string' && detail.trim()) return detail
+  const er = d.error
+  if (typeof er === 'string' && er.trim()) return er
+  return fallback
+}
+
 const initialState: AuthState = {
   user: initialUser,
   tokens: parsedTokensInit,
@@ -59,8 +72,8 @@ export const login = createAsyncThunk(
     try {
       const result = await authApi.login(dto)
       return result
-    } catch (err: any) {
-      return rejectWithValue(err.response?.data?.message || 'Ошибка авторизации')
+    } catch (err: unknown) {
+      return rejectWithValue(apiErrorMessage(err, 'Ошибка авторизации'))
     }
   }
 )
@@ -71,10 +84,8 @@ export const verifyLoginCode = createAsyncThunk(
     try {
       const result = await authApi.verifyLoginCode(requestId, code)
       return result
-    } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data?.message || err.response?.data?.error || 'Ошибка подтверждения кода'
-      )
+    } catch (err: unknown) {
+      return rejectWithValue(apiErrorMessage(err, 'Ошибка подтверждения кода'))
     }
   }
 )
@@ -93,10 +104,8 @@ export const register = createAsyncThunk(
     try {
       const result = await authApi.register(dto)
       return result
-    } catch (err: any) {
-      return rejectWithValue(
-        err.response?.data?.message || err.response?.data?.error || 'Ошибка регистрации'
-      )
+    } catch (err: unknown) {
+      return rejectWithValue(apiErrorMessage(err, 'Ошибка регистрации'))
     }
   }
 )

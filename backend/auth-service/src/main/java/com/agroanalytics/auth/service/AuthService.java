@@ -82,6 +82,9 @@ public class AuthService {
     private String bootstrapAgronomistPassword;
     @Value("${app.bootstrap.invite-code:ORG1-INVITE-2026}")
     private String bootstrapInviteCode;
+    /** false = один и тот же invite можно использовать многократно (удобно для демо/VPS). */
+    @Value("${app.auth.invite-single-use:false}")
+    private boolean inviteSingleUse;
     private final Map<String, Deque<Long>> resendAttemptsByKey = new ConcurrentHashMap<>();
 
     @PostConstruct
@@ -195,6 +198,7 @@ public class AuthService {
     }
 
     private LoginResponse createLoginResponse(User user) {
+        user = assignPersonalOrganizationIfMissing(user);
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", user.getRole().name());
         claims.put("email", user.getEmail());
@@ -228,14 +232,14 @@ public class AuthService {
 
         validatePasswordPolicy(request.getPassword());
         if (!request.getPassword().equals(request.getConfirmPassword())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Passwords do not match");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Пароли не совпадают");
         }
 
         if (userRepository.findByUsername(normalizedUsername).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Username is already taken");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Этот логин уже занят");
         }
         if (userRepository.findByEmail(normalizedEmail).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already registered");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Этот email уже зарегистрирован");
         }
 
         Long organizationId = validateAndResolveOrganization(request);
@@ -251,8 +255,21 @@ public class AuthService {
                 .build();
 
         userRepository.save(user);
+        user = assignPersonalOrganizationIfMissing(user);
         createAndSendVerificationToken(user);
         return verificationTtlMinutes * 60;
+    }
+
+    /**
+     * У пользователя без invite нет organizationId — gateway не проставляет X-Organization-Id и field-service
+     * отклоняет запросы. Личное «пространство» = id пользователя (уникально, без отдельной таблицы организаций).
+     */
+    private User assignPersonalOrganizationIfMissing(User user) {
+        if (user.getId() == null || user.getOrganizationId() != null || user.getRole() == User.Role.ADMIN) {
+            return user;
+        }
+        user.setOrganizationId(user.getId());
+        return userRepository.save(user);
     }
 
     public void verifyEmail(String token) {
@@ -340,6 +357,8 @@ public class AuthService {
         if (!user.isEmailVerified()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Email is not verified");
         }
+
+        user = assignPersonalOrganizationIfMissing(user);
 
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", user.getRole().name());
@@ -532,37 +551,43 @@ public class AuthService {
         if (!(hasUpper && hasLower && hasDigit && hasSpecial)) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
-                    "Password must contain uppercase, lowercase, digit, and special character"
+                    "Пароль: нужны заглавная и строчная буквы, цифра и спецсимвол"
             );
         }
     }
 
     private Long validateAndResolveOrganization(RegisterRequest request) {
-        if (request.getOrganizationId() == null) {
+        String inviteRaw = request.getInviteCode();
+        boolean hasInvite = inviteRaw != null && !inviteRaw.isBlank();
+        Long orgId = request.getOrganizationId();
+
+        if (!hasInvite) {
+            if (orgId != null) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Укажите invite-код для этой организации или оставьте поле «ID организации» пустым"
+                );
+            }
             return null;
         }
-        if (request.getInviteCode() == null || request.getInviteCode().isBlank()) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Invite code is required when organizationId is provided"
-            );
-        }
 
-        OrganizationInviteCode invite = organizationInviteCodeRepository.findByCode(request.getInviteCode().trim())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite code is invalid"));
+        OrganizationInviteCode invite = organizationInviteCodeRepository.findByCode(inviteRaw.trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Неверный invite-код"));
 
-        if (invite.getUsedAt() != null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite code is already used");
+        if (inviteSingleUse && invite.getUsedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Этот invite-код уже был использован");
         }
         if (invite.getExpiresAt() != null && invite.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite code has expired");
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Срок действия invite-кода истёк");
         }
-        if (!invite.getOrganizationId().equals(request.getOrganizationId())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite code does not match organizationId");
+        if (orgId != null && !invite.getOrganizationId().equals(orgId)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite-код не соответствует указанной организации");
         }
 
-        invite.setUsedAt(LocalDateTime.now());
-        organizationInviteCodeRepository.save(invite);
+        if (inviteSingleUse) {
+            invite.setUsedAt(LocalDateTime.now());
+            organizationInviteCodeRepository.save(invite);
+        }
         return invite.getOrganizationId();
     }
 }

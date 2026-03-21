@@ -34,8 +34,14 @@ import '@presentation/styles/global.scss'
 
 const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isAuthenticated, initialized } = useAppSelector(s => s.auth)
-  if (!initialized) return null
-  return isAuthenticated ? <>{children}</> : <Navigate to="/auth/login" replace />
+  if (!initialized) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '50vh', color: '#5f6368' }}>
+        Загрузка…
+      </div>
+    )
+  }
+  return isAuthenticated ? <>{children}</> : <Navigate to="/auth/login" replace state={{ from: 'app' }} />
 }
 
 const AppRoutes: React.FC = () => {

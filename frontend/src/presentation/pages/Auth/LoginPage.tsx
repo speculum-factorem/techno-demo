@@ -231,6 +231,8 @@ const LoginPage: React.FC = () => {
           }
           setCodeError('')
           setCodeModalOpen(false)
+          dispatch(clearLoginChallenge())
+          navigate('/app', { replace: true })
         }}
       />
     </div>

@@ -70,6 +70,8 @@ app:
     register-rate-limit:
       requests: ${REGISTER_RATE_LIMIT_REQUESTS:5}
       window-seconds: ${REGISTER_RATE_LIMIT_WINDOW_SECONDS:900}
+    # true — invite одноразовый; false (по умолчанию) — один код для многих регистраций (демо)
+    invite-single-use: ${INVITE_SINGLE_USE:false}
 ---
 spring:
   config:

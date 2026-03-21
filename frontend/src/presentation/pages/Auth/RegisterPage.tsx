@@ -63,8 +63,8 @@ const RegisterPage: React.FC = () => {
 
   const validateStep1 = () => {
     const normalizedFullName = fullName.trim()
-    if (!/^[A-Za-zА-Яа-яЁё\s-]{2,120}$/.test(normalizedFullName)) {
-      return 'ФИО: 2-120 символов, только буквы, пробел и дефис'
+    if (!/^[\p{L}\p{M}0-9._'\-\s]{2,120}$/u.test(normalizedFullName)) {
+      return 'ФИО: 2–120 символов, буквы (в т.ч. кириллица), пробел, дефис, точка'
     }
     return ''
   }
@@ -97,7 +97,13 @@ const RegisterPage: React.FC = () => {
     e.preventDefault()
     if (step < STEPS.length - 1) { nextStep(); return }
     setFormatError('')
-    if (inviteCode && !/^[a-zA-Z0-9\-_.]{1,100}$/.test(inviteCode.trim())) {
+    const ti = inviteCode.trim()
+    const oid = organizationId.trim()
+    if (oid && !ti) {
+      setFormatError('Укажите invite-код или удалите ID организации')
+      return
+    }
+    if (ti && !/^[a-zA-Z0-9\-_.]{1,100}$/.test(ti)) {
       setFormatError('Invite-код содержит недопустимые символы')
       return
     }
@@ -107,10 +113,12 @@ const RegisterPage: React.FC = () => {
     }
     setConsentError('')
     dispatch(clearError())
+    const trimmedInvite = inviteCode.trim()
+    const trimmedOrg = organizationId.trim()
     const result = await dispatch(register({
       username, email, fullName, password, confirmPassword,
-      organizationId: organizationId || undefined,
-      inviteCode: inviteCode || undefined,
+      organizationId: trimmedOrg || undefined,
+      inviteCode: trimmedInvite || undefined,
       personalDataConsent: true,
     }))
     if (register.fulfilled.match(result)) {
@@ -230,7 +238,8 @@ const RegisterPage: React.FC = () => {
             {step === 2 && (
               <>
                 <Alert type="info">
-                  Поля организации — опциональны. Если у вас есть invite-код, введите его вместе с ID организации.
+                  Без invite-кода регистрация без привязки к организации. С кодом можно указать только его
+                  (ID организации необязателен) или код и ID вместе — они должны совпадать.
                 </Alert>
                 <Input label="ID организации (опционально)" icon="apartment" type="number" value={organizationId}
                   onChange={e => setOrganizationId(e.target.value)}

@@ -14,33 +14,33 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class RegisterRequest {
 
-    @NotBlank(message = "Username is required")
-    @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
-    @Pattern(regexp = "^[a-zA-Z0-9._-]{3,50}$", message = "Username contains invalid characters")
+    @NotBlank(message = "обязательное поле")
+    @Size(min = 3, max = 50, message = "от 3 до 50 символов")
+    @Pattern(regexp = "^[a-zA-Z0-9._-]{3,50}$", message = "только латиница, цифры и символы . _ -")
     private String username;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email must be valid")
+    @NotBlank(message = "обязательное поле")
+    @Email(message = "некорректный адрес")
     private String email;
 
-    @NotBlank(message = "Full name is required")
-    @Size(min = 2, max = 120, message = "Full name must be between 2 and 120 characters")
-    @Pattern(regexp = "^[A-Za-zА-Яа-яЁё\\s-]{2,120}$", message = "Full name contains invalid characters")
+    @NotBlank(message = "обязательное поле")
+    @Size(min = 2, max = 120, message = "от 2 до 120 символов")
+    @Pattern(regexp = "^[\\p{L}\\p{M}0-9._'\\-\\s]{2,120}$", message = "допустимы буквы, пробел, дефис, точка, апостроф")
     private String fullName;
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 8, max = 72, message = "Password must be between 8 and 72 characters")
+    @NotBlank(message = "обязательное поле")
+    @Size(min = 8, max = 72, message = "от 8 до 72 символов")
     private String password;
 
-    @NotBlank(message = "Password confirmation is required")
+    @NotBlank(message = "обязательное поле")
     private String confirmPassword;
 
     private Long organizationId;
 
-    @Pattern(regexp = "^[a-zA-Z0-9\\-_.]{0,100}$", message = "Invite code contains invalid characters")
+    @Pattern(regexp = "^[a-zA-Z0-9\\-_.]{0,100}$", message = "недопустимые символы в коде")
     private String inviteCode;
 
     /** User consent to personal data processing (required for registration). */
-    @AssertTrue(message = "Personal data processing consent is required")
+    @AssertTrue(message = "необходимо согласие на обработку персональных данных")
     private boolean personalDataConsent;
 }

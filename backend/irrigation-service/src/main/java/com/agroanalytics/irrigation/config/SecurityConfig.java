@@ -55,10 +55,12 @@ public class SecurityConfig {
                 throws ServletException, IOException {
             String xInternal = req.getHeader("X-Internal-Token");
             String xOrgId = req.getHeader("X-Organization-Id");
+            String xUserId = req.getHeader("X-User-Id");
 
             boolean isInternal = configuredToken != null && !configuredToken.isBlank()
                     && configuredToken.equals(xInternal);
-            boolean isGatewayForwarded = xOrgId != null && !xOrgId.isBlank();
+            boolean isGatewayForwarded = (xOrgId != null && !xOrgId.isBlank())
+                    || (xUserId != null && !xUserId.isBlank());
 
             if (isInternal || isGatewayForwarded) {
                 String role = isInternal ? "INTERNAL" : "USER";

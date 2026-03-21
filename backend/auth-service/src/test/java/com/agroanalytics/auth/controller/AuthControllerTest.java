@@ -1,5 +1,6 @@
 package com.agroanalytics.auth.controller;
 
+import com.agroanalytics.auth.config.RestExceptionHandler;
 import com.agroanalytics.auth.dto.LoginRequest;
 import com.agroanalytics.auth.dto.LoginChallengeResponse;
 import com.agroanalytics.auth.dto.RegisterRequest;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.web.servlet.MockMvc;
@@ -25,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @WebMvcTest(controllers = AuthController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Import(RestExceptionHandler.class)
 class AuthControllerTest {
 
     @Autowired
