@@ -50,14 +50,17 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
       KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      # Лимит JVM для слабых VPS; на сервере с 16+ ГБ можно поднять до -Xmx1G
+      KAFKA_HEAP_OPTS: "-Xmx512M -Xms256M"
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
       test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1"]
       interval: 15s
-      timeout: 15s
-      retries: 15
-      start_period: 30s
+      timeout: 20s
+      retries: 30
+      # Первый запуск часто >30s; иначе compose помечает контейнер unhealthy
+      start_period: 120s
     restart: unless-stopped
 
   kafka-ui:

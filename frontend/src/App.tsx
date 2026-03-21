@@ -95,9 +95,10 @@ const AppRoutes: React.FC = () => {
 
 const App: React.FC = () => {
   return (
-    <Provider store={store}>
-      <AppRoutes />
-    </Provider>
+    // <Provider store={store}>
+    //   <AppRoutes />
+    // </Provider>
+    <Dashboard />
   )
 }
 

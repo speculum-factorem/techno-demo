@@ -99,3 +99,25 @@ docker run --rm -v techno-demo_postgres_data:/volume -v $(pwd):/backup alpine \
 - Use strong secrets in `.env`.
 - Rotate `JWT_SECRET` and `INTERNAL_API_TOKEN` periodically.
 
+## 10) Если Kafka «unhealthy» (`dependency failed to start`)
+
+1. Посмотреть логи:
+   ```bash
+   docker compose logs kafka --tail=200
+   docker compose logs zookeeper --tail=100
+   ```
+2. Частые причины:
+   - **мало RAM** на VPS — в `docker-compose.yml` для Kafka задан `KAFKA_HEAP_OPTS: "-Xmx512M -Xms256M"`; при OOM в логах будет `OutOfMemoryError`.
+   - **первый старт долгий** — в актуальной версии проекта увеличен `start_period` healthcheck до 120s.
+3. После правок в репозитории на сервере:
+   ```bash
+   git pull
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+   ```
+4. Если том Kafka повреждён после сбоев диска (редко):
+   ```bash
+   docker compose down
+   docker volume rm techno-demo_kafka_data   # удалит данные брокера
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+   ```
+
