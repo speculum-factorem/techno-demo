@@ -26,8 +26,6 @@ services:
     ports: []
   kafka:
     ports: []
-  zookeeper:
-    ports: []
 
   # Monitoring/UI are optional in production.
   # If needed, temporarily open and protect them by firewall/VPN.

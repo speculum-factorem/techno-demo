@@ -109,23 +109,24 @@ docker run --rm -v techno-demo_postgres_data:/volume -v $(pwd):/backup alpine \
 
 ## 10) Если Kafka «unhealthy» (`dependency failed to start`)
 
-1. Посмотреть логи:
+В проекте используется **Kafka KRaft** (образ Bitnami, **без Zookeeper**) — нет рассинхрона `cluster.id` между ZK и брокером, как раньше у Confluent.
+
+1. Логи:
    ```bash
-   docker compose logs kafka --tail=200
-   docker compose logs zookeeper --tail=100
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml logs kafka --tail=200
    ```
 2. Частые причины:
-   - **мало RAM** на VPS — в `docker-compose.yml` для Kafka задан `KAFKA_HEAP_OPTS: "-Xmx512M -Xms256M"`; при OOM в логах будет `OutOfMemoryError`.
-   - **первый старт долгий** — в актуальной версии проекта увеличен `start_period` healthcheck до 120s.
-3. После правок в репозитории на сервере:
+   - **мало RAM** — `KAFKA_HEAP_OPTS: "-Xmx512M -Xms256M"`; при OOM в логах `OutOfMemoryError`.
+   - **долгий первый старт** — `start_period` healthcheck до **180s**; подождите 2–3 минуты.
+   - **после обновления с Confluent+ZK**: том данных теперь **`techno-demo_kafka_kraft_data`**. Старые `techno-demo_kafka_data` / `techno-demo_zookeeper_data` можно удалить вручную (`docker volume rm ...`), чтобы освободить место.
+3. После `git pull` на сервере:
    ```bash
-   git pull
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
    ```
-4. Если том Kafka повреждён после сбоев диска (редко):
+4. Сброс данных брокера (очереди Kafka обнулятся):
    ```bash
-   docker compose down
-   docker volume rm techno-demo_kafka_data   # удалит данные брокера
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+   docker volume rm techno-demo_kafka_kraft_data
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
    ```
 
@@ -148,24 +149,10 @@ docker run --rm -v techno-demo_postgres_data:/volume -v $(pwd):/backup alpine \
    ```
 
 8. **Kafka помечается `unhealthy`, `dependency failed`**  
-   - Сначала логи: `docker logs techno-demo-kafka-1 2>&1 | tail -80`  
-   - Если в логах **`InconsistentClusterIdException`** — сбросьте тома **Kafka и Zookeeper вместе** (п. 9). Только `kafka_data` иногда недостаточно, если ZK пересоздавался отдельно.  
-   - Если ошибок нет, а healthcheck падает: в compose для Kafka используется **`127.0.0.1:9092`**, для ZK — **`127.0.0.1:2181`** (не `localhost` / IPv6). Обновите `docker-compose.yml` с репозитория и пересоздайте:  
-     `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d kafka`  
+   См. раздел **10) Если Kafka «unhealthy»** выше (KRaft, том `kafka_kraft_data`). Быстрый сброс: `./scripts/reset-kafka-volumes.sh`  
 
-9. **`InconsistentClusterIdException` в логах Kafka**  
-   Текст вида: *Cluster ID ... doesn't match stored clusterId ... in meta.properties* — том Kafka и/или Zookeeper рассинхронизированы (часто после `docker compose down`, новой сети или частичного удаления томов).
-
-   **Исправление (демо; Postgres не трогаем):** снести **оба** тома и поднять стек:
-   ```bash
-   cd ~/techno-demo
-   docker compose -f docker-compose.yml -f docker-compose.prod.yml down
-   docker volume rm techno-demo_kafka_data techno-demo_zookeeper_data
-   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-   ```
-   Имена томов: `docker volume ls | grep -E 'kafka|zookeeper'`.
-
-   Либо из корня репозитория: `chmod +x scripts/reset-kafka-volumes.sh && ./scripts/reset-kafka-volumes.sh`
+9. **Старый стек Confluent + Zookeeper (до миграции на KRaft)**  
+   Если в логах ещё встречается **`InconsistentClusterIdException`** на старом деплое — обновите репозиторий и поднимите актуальный compose; при необходимости удалите старые тома: `techno-demo_kafka_data`, `techno-demo_zookeeper_data`.
 
 10. **Белый экран в браузере после открытия `http://<IP>/`**  
    Частые причины:

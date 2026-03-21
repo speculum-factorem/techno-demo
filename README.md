@@ -108,7 +108,7 @@ uvicorn main:app --reload --port 8000
 Требуется запущенный PostgreSQL и Kafka. Запускайте через Docker Compose инфраструктуру:
 
 ```bash
-docker-compose up postgres kafka zookeeper -d
+docker compose up postgres kafka -d
 cd backend/auth-service
 mvn spring-boot:run
 ```
@@ -121,7 +121,7 @@ mvn spring-boot:run
 | API Gateway | Spring Cloud Gateway, JJWT |
 | Микросервисы | Java 21, Spring Boot 3.2, Spring Data JPA, Spring Kafka |
 | ML / Analytics | Python 3.12, FastAPI, scikit-learn (RandomForest), pandas |
-| Брокер сообщений | Apache Kafka + Zookeeper |
+| Брокер сообщений | Apache Kafka (KRaft, без Zookeeper) |
 | База данных | PostgreSQL 16 (6 отдельных БД) |
 | Погодные данные | Open-Meteo API (бесплатно, без API-ключа) |
 | Деплой | Docker Compose, nginx, multi-stage builds |
