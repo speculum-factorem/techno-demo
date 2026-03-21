@@ -32,6 +32,9 @@ public class SecurityConfig {
     @Value("${agro.cors.allowed-origins}")
     private String allowedOrigins;
 
+    @Value("${agro.cors.allowed-origin-patterns:}")
+    private String allowedOriginPatterns;
+
     @Value("${agro.security.internal-api-token:}")
     private String internalApiToken;
 
@@ -58,12 +61,25 @@ public class SecurityConfig {
                 .map(String::trim)
                 .filter(s -> !s.isEmpty())
                 .collect(Collectors.toList());
-        if (origins.isEmpty() || origins.contains("*")) {
-            throw new IllegalStateException("agro.cors.allowed-origins must be non-empty and cannot contain '*'");
+        List<String> patterns = Arrays.stream(allowedOriginPatterns.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
+
+        if (origins.contains("*")) {
+            throw new IllegalStateException("agro.cors.allowed-origins cannot contain '*'; use agro.cors.allowed-origin-patterns");
+        }
+        if (origins.isEmpty() && patterns.isEmpty()) {
+            throw new IllegalStateException("agro.cors: set allowed-origins and/or allowed-origin-patterns");
         }
 
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(origins);
+        if (!origins.isEmpty()) {
+            configuration.setAllowedOrigins(origins);
+        }
+        for (String pattern : patterns) {
+            configuration.addAllowedOriginPattern(pattern);
+        }
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);

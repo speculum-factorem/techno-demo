@@ -1,0 +1,10 @@
+# Профиль docker: запросы с фронта идут как Origin http(s)://<IP>:80 — дополняем globalcors шаблонами
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        corsConfigurations:
+          '[/**]':
+            allowedOriginPatterns:
+              - "http://*"
+              - "https://*"

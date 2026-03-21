@@ -180,3 +180,10 @@ docker run --rm -v techno-demo_postgres_data:/volume -v $(pwd):/backup alpine \
      У себя в браузере: жёсткое обновление (**Ctrl+Shift+R** / **Cmd+Shift+R**) или DevTools → Application → Service Workers → **Unregister**, затем обновить страницу.
    - **Ошибка в консоли** (F12 → Console): если видите падение до рендера — пришлите текст ошибки. Битый JSON в `localStorage` для `user`/`tokens` теперь очищается при старте приложения.
 
+11. **`403 Forbidden` на `/api/auth/register` (и другие API)**  
+   Браузер отправляет заголовок **`Origin: http://<ваш_IP>`**. Если в `.env` в **`APP_CORS_ALLOWED_ORIGINS`** только `localhost`, Spring CORS на **api-gateway** и **auth-service** отклоняет запрос (**403**).  
+   **Исправление:** в актуальной версии для профиля **docker** добавлены шаблоны `http://*,https://*` (см. `application-docker.yml` у gateway и `application.yml` у auth/field). Пересоберите и перезапустите:  
+   `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build api-gateway auth-service field-service`  
+   Либо явно добавьте Origin в `.env`:  
+   `APP_CORS_ALLOWED_ORIGINS=http://ВАШ_IP,http://localhost:5173` и **`FRONTEND_URL=http://ВАШ_IP`** (для ссылок в письмах).
+
