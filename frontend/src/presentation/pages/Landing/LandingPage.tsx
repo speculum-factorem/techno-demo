@@ -61,6 +61,9 @@ const LandingPage: React.FC = () => {
             <a href="#features" className={styles.navLink}>Возможности</a>
             <a href="#how" className={styles.navLink}>Как работает</a>
             <a href="#tech" className={styles.navLink}>Технологии</a>
+            <Link to="/about-service" className={styles.navLink}>О сервисе</Link>
+            <Link to="/about-app" className={styles.navLink}>О приложении</Link>
+            <Link to="/docs" className={styles.navLink}>Документация</Link>
           </div>
           <div className={styles.navActions}>
             {isAuthenticated ? (
@@ -349,6 +352,9 @@ const LandingPage: React.FC = () => {
           <div className={styles.footerLinks}>
             <Link to="/auth/login" className={styles.footerLink}>Войти</Link>
             <Link to="/auth/register" className={styles.footerLink}>Регистрация</Link>
+            <Link to="/about-service" className={styles.footerLink}>О сервисе</Link>
+            <Link to="/about-app" className={styles.footerLink}>О приложении</Link>
+            <Link to="/docs" className={styles.footerLink}>Документация</Link>
             <Link to="/privacy" className={styles.footerLink}>Конфиденциальность</Link>
             {isAuthenticated && <Link to="/app" className={styles.footerLink}>Приложение</Link>}
           </div>

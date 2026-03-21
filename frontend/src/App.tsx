@@ -6,6 +6,9 @@ import { useAppDispatch, useAppSelector } from '@application/store/hooks'
 import { initializeAuth } from '@application/store/slices/authSlice'
 import MainLayout from '@presentation/components/layout/MainLayout/MainLayout'
 import LandingPage from '@presentation/pages/Landing/LandingPage'
+import ServiceInfoPage from '@presentation/pages/Landing/ServiceInfoPage'
+import AppInfoPage from '@presentation/pages/Landing/AppInfoPage'
+import DocumentationPage from '@presentation/pages/Landing/DocumentationPage'
 import LoginPage from '@presentation/pages/Auth/LoginPage'
 import RegisterPage from '@presentation/pages/Auth/RegisterPage'
 import VerifyEmailPage from '@presentation/pages/Auth/VerifyEmailPage'
@@ -46,6 +49,9 @@ const AppRoutes: React.FC = () => {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/about-service" element={<ServiceInfoPage />} />
+        <Route path="/about-app" element={<AppInfoPage />} />
+        <Route path="/docs" element={<DocumentationPage />} />
         <Route path="/auth/login" element={<LoginPage />} />
         <Route path="/auth/register" element={<RegisterPage />} />
         <Route path="/auth/verify-email" element={<VerifyEmailPage />} />
