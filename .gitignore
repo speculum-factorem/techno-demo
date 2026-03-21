@@ -1,0 +1,21 @@
+# Java build artifacts
+**/target/
+*.jar
+*.war
+*.class
+
+# Node.js
+node_modules/
+frontend/dist/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# IDE
+.idea/
+*.iml
+.DS_Store

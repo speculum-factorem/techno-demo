@@ -79,7 +79,7 @@ app:
   cors:
     allowed-origins: ${APP_CORS_ALLOWED_ORIGINS}
   bootstrap:
-    default-users: false
+    default-users: true
 
 ---
 # Docker: браузер шлёт Origin http(s)://<IP> — без этого Spring CORS даёт 403 на /api/auth/*
