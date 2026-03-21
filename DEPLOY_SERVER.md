@@ -147,7 +147,13 @@ docker run --rm -v techno-demo_postgres_data:/volume -v $(pwd):/backup alpine \
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build analytics-service
    ```
 
-8. **`InconsistentClusterIdException` в логах Kafka**  
+8. **Kafka помечается `unhealthy`, `dependency failed`**  
+   - Сначала логи: `docker logs techno-demo-kafka-1 2>&1 | tail -80`  
+   - Если в логах **`InconsistentClusterIdException`** — см. пункт 9 ниже (снести том `kafka_data`).  
+   - Если ошибок нет, а healthcheck падает: в compose для проверки используется **`127.0.0.1:9092`**, а не `localhost` (иначе на части Linux `localhost` идёт в **IPv6** `::1`, а брокер слушает только IPv4). Обновите `docker-compose.yml` и пересоздайте Kafka:  
+     `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d kafka`  
+
+9. **`InconsistentClusterIdException` в логах Kafka**  
    Текст вида: *Cluster ID ... doesn't match stored clusterId ... in meta.properties* — том Kafka содержит данные от **старого** кластера, а Zookeeper уже **новый** (или наоборот после `docker compose down`/пересоздания контейнеров).
 
    **Исправление (демо/без сохранения очередей):** снести том Kafka и поднять стек заново:
@@ -166,7 +172,7 @@ docker run --rm -v techno-demo_postgres_data:/volume -v $(pwd):/backup alpine \
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
    ```
 
-9. **Белый экран в браузере после открытия `http://<IP>/`**  
+10. **Белый экран в браузере после открытия `http://<IP>/`**  
    Частые причины:
    - **Service Worker** отдал старый `index.html` со старыми путями `/assets/*.js` после нового деплоя. В актуальной версии фронта SW обновлён (сеть для HTML и `/assets/`, `sw.js` кладётся в `public/` и попадает в образ). Пересоберите frontend:  
      `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build frontend`  

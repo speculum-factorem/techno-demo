@@ -46,6 +46,8 @@ services:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      # Явные LISTENERS: без них на части окружений брокер стартует непредсказуемо
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:29092
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
@@ -55,12 +57,13 @@ services:
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
-      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 > /dev/null 2>&1"]
+      # localhost → ::1 (IPv6), брокер часто только на IPv4 → unhealthy. Только 127.0.0.1.
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server 127.0.0.1:9092 >/dev/null 2>&1 || exit 1"]
       interval: 15s
-      timeout: 20s
+      timeout: 25s
       retries: 30
       # Первый запуск часто >30s; иначе compose помечает контейнер unhealthy
-      start_period: 120s
+      start_period: 180s
     restart: unless-stopped
 
   kafka-ui:
