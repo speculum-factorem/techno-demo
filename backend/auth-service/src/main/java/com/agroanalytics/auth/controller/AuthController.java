@@ -77,16 +77,16 @@ public class AuthController {
 
     @Operation(summary = "Подтверждение email", description = "Подтверждение email по токену из письма")
     @GetMapping("/verify-email")
-    public ResponseEntity<Map<String, String>> verifyEmail(@RequestParam("token") String token) {
-        authService.verifyEmail(token);
-        return ResponseEntity.ok(Map.of("message", "Email verified successfully"));
+    public ResponseEntity<LoginResponse> verifyEmail(@RequestParam("token") String token) {
+        LoginResponse response = authService.verifyEmail(token);
+        return ResponseEntity.ok(response);
     }
 
-    @Operation(summary = "Подтверждение email по коду", description = "Ввод 6-значного кода из письма")
+    @Operation(summary = "Подтверждение email по коду", description = "Ввод 6-значного кода из письма и автоматический вход")
     @PostMapping("/verify-email-code")
-    public ResponseEntity<Map<String, String>> verifyEmailByCode(@Valid @RequestBody VerifyEmailCodeRequest request) {
-        authService.verifyEmailByCode(request.getEmail(), request.getCode());
-        return ResponseEntity.ok(Map.of("message", "Email verified successfully"));
+    public ResponseEntity<LoginResponse> verifyEmailByCode(@Valid @RequestBody VerifyEmailCodeRequest request) {
+        LoginResponse response = authService.verifyEmailByCode(request.getEmail(), request.getCode());
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping("/verify-email-code/resend")

@@ -343,13 +343,12 @@ const RegisterPage: React.FC = () => {
         }}
         onSubmit={async (code) => {
           try {
-            await authApi.verifyEmailWithCode(email, code)
+            const { user, tokens } = await authApi.verifyEmailWithCode(email, code)
+            localStorage.setItem('user', JSON.stringify(user))
+            localStorage.setItem('tokens', JSON.stringify(tokens))
             setCodeError('')
             setCodeModalOpen(false)
-            navigate('/auth/login', {
-              replace: true,
-              state: { registeredMessage: 'Email подтвержден. Теперь можно войти.' },
-            })
+            window.location.href = '/app'
           } catch (err: any) {
             setCodeError(err.response?.data?.message || 'Неверный или просроченный код')
           }

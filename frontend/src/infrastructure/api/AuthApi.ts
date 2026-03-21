@@ -105,12 +105,12 @@ export const authApi = {
     return data
   },
 
-  async verifyEmailWithCode(email: string, code: string): Promise<{ message: string }> {
-    const { data } = await apiClient.post<{ message: string }>('/auth/verify-email-code', {
+  async verifyEmailWithCode(email: string, code: string): Promise<{ user: User; tokens: AuthTokens }> {
+    const { data } = await apiClient.post<AuthResponse>('/auth/verify-email-code', {
       email,
       code: code.replace(/\s/g, ''),
     })
-    return data
+    return mapAuthResponse(data)
   },
 
   async resendEmailCode(email: string): Promise<EmailCodeResponse> {

@@ -272,13 +272,14 @@ public class AuthService {
         return userRepository.save(user);
     }
 
-    public void verifyEmail(String token) {
+    public LoginResponse verifyEmail(String token) {
         EmailVerificationToken verificationToken = emailVerificationTokenRepository.findByToken(token)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid verification token"));
-        completeVerification(verificationToken);
+        User user = completeVerification(verificationToken);
+        return createLoginResponse(user);
     }
 
-    public void verifyEmailByCode(String email, String code) {
+    public LoginResponse verifyEmailByCode(String email, String code) {
         String normalizedEmail = email == null ? "" : email.trim().toLowerCase();
         String normalizedCode = code == null ? "" : code.trim();
         EmailVerificationToken verificationToken = emailVerificationTokenRepository
@@ -292,7 +293,8 @@ public class AuthService {
             emailVerificationTokenRepository.save(verificationToken);
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid verification code");
         }
-        completeVerification(verificationToken);
+        User user = completeVerification(verificationToken);
+        return createLoginResponse(user);
     }
 
     public long resendEmailVerificationCode(String email) {
@@ -324,7 +326,7 @@ public class AuthService {
         return ChronoUnit.SECONDS.between(now, token.getExpiresAt());
     }
 
-    private void completeVerification(EmailVerificationToken verificationToken) {
+    private User completeVerification(EmailVerificationToken verificationToken) {
         if (verificationToken.getUsedAt() != null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Verification token is already used");
         }
@@ -337,6 +339,7 @@ public class AuthService {
         userRepository.save(user);
         verificationToken.setUsedAt(LocalDateTime.now());
         emailVerificationTokenRepository.save(verificationToken);
+        return user;
     }
 
     public LoginResponse refresh(RefreshTokenRequest request) {
