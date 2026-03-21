@@ -61,3 +61,14 @@ agro:
     sync-on-startup: true
   # Sent as X-Internal-Token to field-service (must match field-service INTERNAL_API_TOKEN)
   internal-api-token: ${INTERNAL_API_TOKEN:}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true

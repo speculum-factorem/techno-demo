@@ -1,5 +1,7 @@
 # Прод-сервер (только 80 наружу): из каталога techno-demo
-# docker-compose --env-file .env -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Compose V2 (типично на Ubuntu с docker.io / Docker Engine): docker compose …
+# docker compose --env-file .env -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+# Старый бинарь v1: docker-compose … (если установлен отдельно)
 services:
   # Public entrypoint
   frontend:

@@ -64,6 +64,12 @@ spring:
   config:
     activate:
       on-profile: docker
+# Сводный /actuator/health учитывает Kafka/БД и может долго отдавать 503 — Docker помечает контейнер unhealthy
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
 agro:
   cors:
     allowed-origin-patterns: ${APP_CORS_ALLOWED_ORIGIN_PATTERNS:http://*,https://*}

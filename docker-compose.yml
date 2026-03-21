@@ -137,11 +137,11 @@ services:
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is required}
       APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:?APP_CORS_ALLOWED_ORIGINS is required}
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf --max-time 5 http://127.0.0.1:8082/actuator/health >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -sf --max-time 5 http://127.0.0.1:8082/actuator/health/liveness >/dev/null || exit 1"]
       interval: 20s
       timeout: 10s
-      retries: 5
-      start_period: 90s
+      retries: 6
+      start_period: 120s
     restart: unless-stopped
 
   weather-service:
@@ -162,11 +162,11 @@ services:
       AGRO_FIELD_SERVICE_BASE_URL: http://field-service:8082
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is required}
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf --max-time 5 http://127.0.0.1:8083/actuator/health >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -sf --max-time 5 http://127.0.0.1:8083/actuator/health/liveness >/dev/null || exit 1"]
       interval: 20s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 6
+      start_period: 120s
     restart: unless-stopped
 
   analytics-service:
@@ -209,11 +209,11 @@ services:
       ANALYTICS_SERVICE_URL: http://analytics-service:8000
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is required}
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf --max-time 5 http://127.0.0.1:8084/actuator/health >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -sf --max-time 5 http://127.0.0.1:8084/actuator/health/liveness >/dev/null || exit 1"]
       interval: 20s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 6
+      start_period: 120s
     restart: unless-stopped
 
   notification-service:
@@ -241,11 +241,11 @@ services:
       FRONTEND_URL: ${FRONTEND_URL:-http://localhost:3000}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is required}
     healthcheck:
-      test: ["CMD-SHELL", "curl -sf --max-time 5 http://127.0.0.1:8085/actuator/health >/dev/null || exit 1"]
+      test: ["CMD-SHELL", "curl -sf --max-time 5 http://127.0.0.1:8085/actuator/health/liveness >/dev/null || exit 1"]
       interval: 20s
       timeout: 10s
-      retries: 5
-      start_period: 60s
+      retries: 6
+      start_period: 120s
     restart: unless-stopped
 
   # ===================== MONITORING =====================

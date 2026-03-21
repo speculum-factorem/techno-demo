@@ -68,3 +68,14 @@ notifications:
 agro:
   security:
     internal-api-token: ${INTERNAL_API_TOKEN:}
+
+---
+spring:
+  config:
+    activate:
+      on-profile: docker
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
