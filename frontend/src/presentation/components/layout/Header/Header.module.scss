@@ -7,27 +7,38 @@
   left: 0;
   right: 0;
   height: $header-height;
-  background: $surface;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   border-bottom: 1px solid $outline;
   @include flex(row, center, space-between);
-  padding: 0 16px 0 24px;
+  padding: 0 18px 0 24px;
   z-index: 100;
-  box-shadow: $shadow-sm;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  min-width: 0;
 }
 
 .left {
   @include flex(row, center, flex-start, 16px);
+  min-width: 0;
+  flex: 1 1 auto;
 }
 
 .logo {
   @include flex(row, center, flex-start, 10px);
   text-decoration: none;
   color: $text-primary;
-  padding: 6px 8px;
+  padding: 7px 10px;
   border-radius: $radius-md;
-  transition: background $transition-fast;
+  transition: background $transition-fast, transform $transition-fast;
 
-  &:hover { background: $surface-variant; text-decoration: none; }
+  &:hover {
+    background: $surface-variant;
+    text-decoration: none;
+    transform: translateY(-1px);
+  }
+  min-width: 0;
+  max-width: 100%;
 }
 
 .logoIcon {
@@ -37,6 +48,7 @@
 
 .logoText {
   @include flex(column, flex-start, center, 0);
+  min-width: 0;
 }
 
 .logoTitle {
@@ -44,16 +56,23 @@
   font-weight: 700;
   color: $text-primary;
   line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .logoSub {
   font-size: $font-size-xs;
   color: $text-secondary;
   font-weight: 400;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .right {
   @include flex(row, center, flex-end, 8px);
+  flex-shrink: 0;
 }
 
 .iconBtn {
@@ -61,13 +80,18 @@
   @include flex(row, center, center);
   width: 40px;
   height: 40px;
+  flex-shrink: 0;
   border-radius: $radius-full;
   color: $text-secondary;
   text-decoration: none;
-  transition: background $transition-fast;
+  transition: background $transition-fast, transform $transition-fast;
   font-size: 22px;
 
-  &:hover { background: $surface-variant; color: $text-primary; }
+  &:hover {
+    background: $surface-variant;
+    color: $text-primary;
+    transform: translateY(-1px);
+  }
 }
 
 .badge {
@@ -100,16 +124,21 @@
 .avatar {
   width: 36px;
   height: 36px;
+  flex-shrink: 0;
   border-radius: $radius-full;
-  background: $primary;
+  background: linear-gradient(135deg, $primary 0%, #0d63c7 100%);
   color: white;
   font-size: $font-size-base;
   font-weight: 600;
   @include flex(row, center, center);
   cursor: pointer;
-  transition: opacity $transition-fast;
+  transition: opacity $transition-fast, transform $transition-fast, box-shadow $transition-fast;
 
-  &:hover { opacity: 0.9; }
+  &:hover {
+    opacity: 0.95;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(26, 115, 232, 0.35);
+  }
 }
 
 .dropdown {
@@ -118,7 +147,7 @@
   right: 0;
   background: $surface;
   border-radius: $radius-lg;
-  box-shadow: $shadow-xl;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.14);
   border: 1px solid $outline;
   min-width: 260px;
   overflow: hidden;
@@ -168,4 +197,47 @@
   &:hover { background: $surface-variant; }
 
   .material-icons-round { color: $text-secondary; font-size: 20px !important; }
+}
+
+@media (max-width: 900px) {
+  .header {
+    padding: 0 12px 0 14px;
+  }
+
+  .left {
+    gap: 10px;
+  }
+
+  .logo {
+    padding: 6px 8px;
+    gap: 8px;
+  }
+
+  .logoSub {
+    display: none;
+  }
+}
+
+@media (max-width: 560px) {
+  .logoTitle {
+    font-size: $font-size-base;
+    max-width: 132px;
+  }
+
+  .iconBtn {
+    width: 36px;
+    height: 36px;
+    font-size: 20px;
+  }
+
+  .avatar {
+    width: 34px;
+    height: 34px;
+    font-size: $font-size-sm;
+  }
+
+  .badge {
+    top: 2px;
+    right: 2px;
+  }
 }
