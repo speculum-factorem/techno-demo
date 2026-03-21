@@ -149,28 +149,23 @@ docker run --rm -v techno-demo_postgres_data:/volume -v $(pwd):/backup alpine \
 
 8. **Kafka помечается `unhealthy`, `dependency failed`**  
    - Сначала логи: `docker logs techno-demo-kafka-1 2>&1 | tail -80`  
-   - Если в логах **`InconsistentClusterIdException`** — см. пункт 9 ниже (снести том `kafka_data`).  
-   - Если ошибок нет, а healthcheck падает: в compose для проверки используется **`127.0.0.1:9092`**, а не `localhost` (иначе на части Linux `localhost` идёт в **IPv6** `::1`, а брокер слушает только IPv4). Обновите `docker-compose.yml` и пересоздайте Kafka:  
+   - Если в логах **`InconsistentClusterIdException`** — сбросьте тома **Kafka и Zookeeper вместе** (п. 9). Только `kafka_data` иногда недостаточно, если ZK пересоздавался отдельно.  
+   - Если ошибок нет, а healthcheck падает: в compose для Kafka используется **`127.0.0.1:9092`**, для ZK — **`127.0.0.1:2181`** (не `localhost` / IPv6). Обновите `docker-compose.yml` с репозитория и пересоздайте:  
      `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d kafka`  
 
 9. **`InconsistentClusterIdException` в логах Kafka**  
-   Текст вида: *Cluster ID ... doesn't match stored clusterId ... in meta.properties* — том Kafka содержит данные от **старого** кластера, а Zookeeper уже **новый** (или наоборот после `docker compose down`/пересоздания контейнеров).
+   Текст вида: *Cluster ID ... doesn't match stored clusterId ... in meta.properties* — том Kafka и/или Zookeeper рассинхронизированы (часто после `docker compose down`, новой сети или частичного удаления томов).
 
-   **Исправление (демо/без сохранения очередей):** снести том Kafka и поднять стек заново:
+   **Исправление (демо; Postgres не трогаем):** снести **оба** тома и поднять стек:
    ```bash
    cd ~/techno-demo
-   docker compose -f docker-compose.yml -f docker-compose.prod.yml down
-   docker volume rm techno-demo_kafka_data
-   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
-   ```
-   Имя тома проверьте: `docker volume ls | grep kafka`.
-
-   Если ошибка останется — сбросить и Zookeeper (полностью «чистый» брокер; **потеряются** только данные Kafka/ZK, не Postgres):
-   ```bash
    docker compose -f docker-compose.yml -f docker-compose.prod.yml down
    docker volume rm techno-demo_kafka_data techno-demo_zookeeper_data
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
    ```
+   Имена томов: `docker volume ls | grep -E 'kafka|zookeeper'`.
+
+   Либо из корня репозитория: `chmod +x scripts/reset-kafka-volumes.sh && ./scripts/reset-kafka-volumes.sh`
 
 10. **Белый экран в браузере после открытия `http://<IP>/`**  
    Частые причины:
@@ -181,9 +176,8 @@ docker run --rm -v techno-demo_postgres_data:/volume -v $(pwd):/backup alpine \
    - **Ошибка в консоли** (F12 → Console): если видите падение до рендера — пришлите текст ошибки. Битый JSON в `localStorage` для `user`/`tokens` теперь очищается при старте приложения.
 
 11. **`403 Forbidden` на `/api/auth/register` (и другие API)**  
-   Браузер отправляет заголовок **`Origin: http://<ваш_IP>`**. Если в `.env` в **`APP_CORS_ALLOWED_ORIGINS`** только `localhost`, Spring CORS на **api-gateway** и **auth-service** отклоняет запрос (**403**).  
-   **Исправление:** в актуальной версии для профиля **docker** добавлены шаблоны `http://*,https://*` (см. `application-docker.yml` у gateway и `application.yml` у auth/field). Пересоберите и перезапустите:  
-   `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build api-gateway auth-service field-service`  
-   Либо явно добавьте Origin в `.env`:  
-   `APP_CORS_ALLOWED_ORIGINS=http://ВАШ_IP,http://localhost:5173` и **`FRONTEND_URL=http://ВАШ_IP`** (для ссылок в письмах).
+   Браузер шлёт **`Origin: http://<IP>`** даже когда страница и `/api` на **одном хосте** (через nginx). Spring CORS на **gateway/auth** может ответить **403**, если origin не в белом списке.  
+   **Исправление (рекомендуется):** в актуальной версии **nginx** фронта для `location /api/` задано **`proxy_set_header Origin ""`** — заголовок **не уходит** в gateway, запрос не считается CORS и **403 из‑за CORS пропадает**. Пересоберите только frontend:  
+   `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build frontend`  
+   Дополнительно можно указать в `.env`: **`FRONTEND_URL=http://ВАШ_IP`** (ссылки в письмах) и при прямом доступе к gateway (без nginx): **`APP_CORS_ALLOWED_ORIGINS=http://ВАШ_IP,...`** или шаблоны в профиле **docker** (`http://*,https://*`).
 

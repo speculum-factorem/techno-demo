@@ -28,7 +28,8 @@ services:
     volumes:
       - zookeeper_data:/var/lib/zookeeper/data
     healthcheck:
-      test: ["CMD", "nc", "-z", "localhost", "2181"]
+      # как у Kafka: localhost может резолвиться в ::1
+      test: ["CMD", "nc", "-z", "127.0.0.1", "2181"]
       interval: 10s
       timeout: 5s
       retries: 5
