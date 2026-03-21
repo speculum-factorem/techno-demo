@@ -48,7 +48,7 @@ cp .env.example .env
 Edit `.env`:
 
 - Set strong values for:
-  - `POSTGRES_PASSWORD`
+  - `POSTGRES_USER` and `POSTGRES_PASSWORD` — **must match the very first values used when the Postgres Docker volume was created** (see warning below)
   - `JWT_SECRET`
   - `INTERNAL_API_TOKEN`
   - `BOOTSTRAP_ADMIN_PASSWORD`
@@ -56,6 +56,14 @@ Edit `.env`:
 - Set CORS/URLs for your server IP:
   - `APP_CORS_ALLOWED_ORIGINS=http://45.94.122.52`
   - `FRONTEND_URL=http://45.94.122.52`
+
+**Postgres volume warning:** `scripts/init-db.sql` and role creation run **only on first** `postgres_data` volume init. If you later change `POSTGRES_USER` / `POSTGRES_PASSWORD` in `.env`, services will log `password authentication failed for user "..."` and stay unhealthy. Fix: either **revert `.env` to the original user/password**, or **remove the volume** (all DB data lost) and start again:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml down
+docker volume rm techno-demo_postgres_data
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
 
 ## 5) Start in production mode
 
@@ -121,7 +129,10 @@ docker run --rm -v techno-demo_postgres_data:/volume -v $(pwd):/backup alpine \
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
    ```
 
-5. **`field-service` / другие Java-сервисы unhealthy при работающем приложении**  
+5. **`field-service` (или любой сервис с JPA): `password authentication failed for user "agro_user"`**  
+   Несовпадение логина/пароля Postgres с тем, что записано в **существующем** томе `postgres_data`. Поставьте в `.env` те же `POSTGRES_USER` / `POSTGRES_PASSWORD`, что были при **первом** `docker compose up`, либо удалите том `techno-demo_postgres_data` и поднимите стек заново (данные БД обнулятся). См. предупреждение в разделе **4) Configure environment**.
+
+6. **`field-service` / другие Java-сервисы unhealthy из‑за healthcheck**  
    Образ `eclipse-temurin:*-jre` **не содержит `wget`**. Старый healthcheck в compose вызывал `wget` → проверка всегда падала. В актуальной версии в JRE-образы добавлен `curl`, healthcheck переведён на `curl`. Пересоберите сервисы:
    ```bash
    git pull
@@ -129,14 +140,14 @@ docker run --rm -v techno-demo_postgres_data:/volume -v $(pwd):/backup alpine \
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
    ```
 
-6. **`analytics-service` unhealthy**  
+7. **`analytics-service` unhealthy**  
    Раньше Uvicorn не открывал порт, пока не завершалось обучение ML при старте. В актуальной версии обучение идёт в фоне, `/health` отвечает сразу. Обновите код и пересоберите:
    ```bash
    git pull
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build analytics-service
    ```
 
-7. **`InconsistentClusterIdException` в логах Kafka**  
+8. **`InconsistentClusterIdException` в логах Kafka**  
    Текст вида: *Cluster ID ... doesn't match stored clusterId ... in meta.properties* — том Kafka содержит данные от **старого** кластера, а Zookeeper уже **новый** (или наоборот после `docker compose down`/пересоздания контейнеров).
 
    **Исправление (демо/без сохранения очередей):** снести том Kafka и поднять стек заново:
@@ -154,4 +165,11 @@ docker run --rm -v techno-demo_postgres_data:/volume -v $(pwd):/backup alpine \
    docker volume rm techno-demo_kafka_data techno-demo_zookeeper_data
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
    ```
+
+9. **Белый экран в браузере после открытия `http://<IP>/`**  
+   Частые причины:
+   - **Service Worker** отдал старый `index.html` со старыми путями `/assets/*.js` после нового деплоя. В актуальной версии фронта SW обновлён (сеть для HTML и `/assets/`, `sw.js` кладётся в `public/` и попадает в образ). Пересоберите frontend:  
+     `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build frontend`  
+     У себя в браузере: жёсткое обновление (**Ctrl+Shift+R** / **Cmd+Shift+R**) или DevTools → Application → Service Workers → **Unregister**, затем обновить страницу.
+   - **Ошибка в консоли** (F12 → Console): если видите падение до рендера — пришлите текст ошибки. Битый JSON в `localStorage` для `user`/`tokens` теперь очищается при старте приложения.
 

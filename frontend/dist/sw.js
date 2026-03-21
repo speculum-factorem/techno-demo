@@ -1,17 +1,11 @@
-/* АгроАналитика Service Worker — PWA offline support */
-const CACHE_NAME = 'agroanalytica-v2'
+/* АгроАналитика Service Worker — PWA offline support
+ * Важно: не кэшировать index.html при install и не отдавать HTML cache-first —
+ * иначе после деплоя остаётся старый index со старыми /assets/*.js → белый экран.
+ * Precache не используем: в Vite у manifest и бандлов хэши в пути, addAll('/manifest.json') в prod даёт 404. */
+const CACHE_NAME = 'agroanalytica-v4'
 
-const STATIC_ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
-]
-
-// Install: cache static shell
 self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS))
-  )
+  event.waitUntil(caches.open(CACHE_NAME))
   self.skipWaiting()
 })
 
@@ -43,13 +37,43 @@ self.addEventListener('fetch', (event) => {
     return
   }
 
-  // Static assets — cache first, fallback to network
+  // HTML / навигация — всегда сначала сеть (актуальный index после деплоя)
+  const isDocument =
+    request.mode === 'navigate' ||
+    url.pathname === '/' ||
+    (url.pathname.endsWith('.html') && !url.pathname.startsWith('/api/'))
+
+  if (isDocument) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => response)
+        .catch(() => caches.match('/index.html'))
+    )
+    return
+  }
+
+  // Vite-бандлы — network-first, затем кэш (новые хэши после релиза)
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      fetch(request)
+        .then((response) => {
+          if (request.method === 'GET' && response.ok) {
+            const clone = response.clone()
+            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
+          }
+          return response
+        })
+        .catch(() => caches.match(request))
+    )
+    return
+  }
+
+  // Прочие статика — cache first
   event.respondWith(
     caches.match(request).then((cached) => {
       if (cached) return cached
       return fetch(request)
         .then((response) => {
-          // Cache successful GET responses for static assets
           if (request.method === 'GET' && response.ok) {
             const clone = response.clone()
             caches.open(CACHE_NAME).then((cache) => cache.put(request, clone))
@@ -57,7 +81,6 @@ self.addEventListener('fetch', (event) => {
           return response
         })
         .catch(() => {
-          // Fallback to index.html for navigation requests (SPA)
           if (request.mode === 'navigate') {
             return caches.match('/index.html')
           }
@@ -75,7 +98,6 @@ self.addEventListener('sync', (event) => {
 })
 
 async function syncPendingActions() {
-  // Sync any queued offline actions when connectivity is restored
   console.log('[SW] Syncing pending actions...')
 }
 
@@ -86,8 +108,8 @@ self.addEventListener('push', (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || 'АгроАналитика', {
       body: data.body || '',
-      icon: '/manifest.json',
-      badge: '/manifest.json',
+      icon: '/vite.svg',
+      badge: '/vite.svg',
       tag: data.tag || 'agro-alert',
       data: { url: data.url || '/' },
       actions: [

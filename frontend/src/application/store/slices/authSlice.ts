@@ -15,10 +15,35 @@ interface AuthState {
   loginChallengeExpiresInSeconds: number | null
 }
 
+function safeParseJson<T>(raw: string | null, fallback: T): T {
+  if (raw == null || raw === '') return fallback
+  try {
+    return JSON.parse(raw) as T
+  } catch {
+    return fallback
+  }
+}
+
+const rawTokensInit = localStorage.getItem('tokens')
+const rawUserInit = localStorage.getItem('user')
+const parsedTokensInit = safeParseJson<AuthTokens | null>(rawTokensInit, null)
+const parsedUserInit = safeParseJson<User | null>(rawUserInit, null)
+// Битый JSON в localStorage ломал весь Redux при старте
+if (rawTokensInit && !parsedTokensInit) {
+  localStorage.removeItem('tokens')
+  localStorage.removeItem('user')
+}
+if (rawUserInit && !parsedUserInit) {
+  localStorage.removeItem('user')
+}
+
+const initialUser =
+  rawTokensInit && !parsedTokensInit ? null : rawUserInit && !parsedUserInit ? null : parsedUserInit
+
 const initialState: AuthState = {
-  user: JSON.parse(localStorage.getItem('user') || 'null'),
-  tokens: JSON.parse(localStorage.getItem('tokens') || 'null'),
-  isAuthenticated: !!localStorage.getItem('tokens'),
+  user: initialUser,
+  tokens: parsedTokensInit,
+  isAuthenticated: !!parsedTokensInit,
   initialized: false,
   loading: false,
   error: null,
