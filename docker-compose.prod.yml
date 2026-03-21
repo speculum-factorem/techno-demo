@@ -1,0 +1,40 @@
+services:
+  # Public entrypoint
+  frontend:
+    ports:
+      - "80:80"
+
+  # Keep gateway internal; frontend proxies /api -> api-gateway
+  api-gateway:
+    ports: []
+
+  # Internal services should not be published to internet
+  auth-service:
+    ports: []
+  field-service:
+    ports: []
+  weather-service:
+    ports: []
+  analytics-service:
+    ports: []
+  irrigation-service:
+    ports: []
+  notification-service:
+    ports: []
+
+  postgres:
+    ports: []
+  kafka:
+    ports: []
+  zookeeper:
+    ports: []
+
+  # Monitoring/UI are optional in production.
+  # If needed, temporarily open and protect them by firewall/VPN.
+  prometheus:
+    ports: []
+  grafana:
+    ports: []
+  kafka-ui:
+    ports: []
+

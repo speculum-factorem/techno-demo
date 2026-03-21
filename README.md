@@ -50,6 +50,19 @@ docker-compose up --build
 # Сборка займёт 3–5 минут (компиляция Java + обучение ML-модели)
 ```
 
+### Прод-деплой на удалённый сервер
+
+- Подготовлен production override: `docker-compose.prod.yml`
+- Подробная пошаговая инструкция: `DEPLOY_SERVER.md`
+
+Запуск в production-режиме:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+```
+
+В этом режиме наружу публикуется только frontend (`80`), остальные сервисы остаются внутренними.
+
 ### Доступ к приложению
 
 | Сервис | URL |
