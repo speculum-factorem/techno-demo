@@ -8,11 +8,25 @@ const apiClient: AxiosInstance = axios.create({
   headers: { 'Content-Type': 'application/json' },
 })
 
+const requestPath = (config: { baseURL?: string; url?: string }) => {
+  const base = (config.baseURL ?? '').replace(/\/$/, '')
+  const path = config.url?.startsWith('/') ? config.url : `/${config.url ?? ''}`
+  return `${base}${path}`
+}
+
+/** Не вешать Bearer на публичные эндпоинты — меньше шансов странного поведения прокси/фильтров. */
+const isPublicAuthRequest = (config: { baseURL?: string; url?: string }) => {
+  const p = requestPath(config)
+  return /\/auth\/(register|login|forgot-password|reset-password|verify-email|verify-email-code)(\?|$)/.test(p)
+}
+
 apiClient.interceptors.request.use((config) => {
-  const tokens = localStorage.getItem('tokens')
-  if (tokens) {
-    const { accessToken } = JSON.parse(tokens)
-    config.headers.Authorization = `Bearer ${accessToken}`
+  if (!isPublicAuthRequest(config)) {
+    const tokens = localStorage.getItem('tokens')
+    if (tokens) {
+      const { accessToken } = JSON.parse(tokens)
+      config.headers.Authorization = `Bearer ${accessToken}`
+    }
   }
   return config
 })
