@@ -90,7 +90,7 @@ services:
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET is required}
       APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:?APP_CORS_ALLOWED_ORIGINS is required}
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf --max-time 5 http://127.0.0.1:8080/actuator/health >/dev/null || exit 1"]
       interval: 20s
       timeout: 10s
       retries: 5
@@ -121,7 +121,7 @@ services:
       MAIL_USERNAME: ${MAIL_USERNAME:-}
       MAIL_PASSWORD: ${MAIL_PASSWORD:-}
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf --max-time 5 http://127.0.0.1:8081/actuator/health >/dev/null || exit 1"]
       interval: 20s
       timeout: 10s
       retries: 5
@@ -144,11 +144,11 @@ services:
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is required}
       APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:?APP_CORS_ALLOWED_ORIGINS is required}
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf --max-time 5 http://127.0.0.1:8082/actuator/health >/dev/null || exit 1"]
       interval: 20s
       timeout: 10s
       retries: 5
-      start_period: 60s
+      start_period: 90s
     restart: unless-stopped
 
   weather-service:
@@ -169,7 +169,7 @@ services:
       AGRO_FIELD_SERVICE_BASE_URL: http://field-service:8082
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is required}
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf --max-time 5 http://127.0.0.1:8083/actuator/health >/dev/null || exit 1"]
       interval: 20s
       timeout: 10s
       retries: 5
@@ -216,7 +216,7 @@ services:
       ANALYTICS_SERVICE_URL: http://analytics-service:8000
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is required}
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf --max-time 5 http://127.0.0.1:8084/actuator/health >/dev/null || exit 1"]
       interval: 20s
       timeout: 10s
       retries: 5
@@ -241,7 +241,7 @@ services:
       TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is required}
     healthcheck:
-      test: ["CMD-SHELL", "wget -qO- http://localhost:8085/actuator/health || exit 1"]
+      test: ["CMD-SHELL", "curl -sf --max-time 5 http://127.0.0.1:8085/actuator/health >/dev/null || exit 1"]
       interval: 20s
       timeout: 10s
       retries: 5

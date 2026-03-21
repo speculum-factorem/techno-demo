@@ -121,14 +121,22 @@ docker run --rm -v techno-demo_postgres_data:/volume -v $(pwd):/backup alpine \
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
    ```
 
-5. **`analytics-service` unhealthy**  
+5. **`field-service` / другие Java-сервисы unhealthy при работающем приложении**  
+   Образ `eclipse-temurin:*-jre` **не содержит `wget`**. Старый healthcheck в compose вызывал `wget` → проверка всегда падала. В актуальной версии в JRE-образы добавлен `curl`, healthcheck переведён на `curl`. Пересоберите сервисы:
+   ```bash
+   git pull
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml build --no-cache field-service
+   docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+   ```
+
+6. **`analytics-service` unhealthy**  
    Раньше Uvicorn не открывал порт, пока не завершалось обучение ML при старте. В актуальной версии обучение идёт в фоне, `/health` отвечает сразу. Обновите код и пересоберите:
    ```bash
    git pull
    docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build analytics-service
    ```
 
-6. **`InconsistentClusterIdException` в логах Kafka**  
+7. **`InconsistentClusterIdException` в логах Kafka**  
    Текст вида: *Cluster ID ... doesn't match stored clusterId ... in meta.properties* — том Kafka содержит данные от **старого** кластера, а Zookeeper уже **новый** (или наоборот после `docker compose down`/пересоздания контейнеров).
 
    **Исправление (демо/без сохранения очередей):** снести том Kafka и поднять стек заново:
