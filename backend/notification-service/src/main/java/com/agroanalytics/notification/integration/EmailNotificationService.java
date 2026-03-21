@@ -21,16 +21,19 @@ public class EmailNotificationService {
     private final boolean enabled;
     private final String from;
     private final String to;
+    private final String appBaseUrl;
 
     public EmailNotificationService(
             @Autowired(required = false) JavaMailSender mailSender,
             @Value("${notifications.email.enabled:false}") boolean enabled,
             @Value("${notifications.email.from:}") String from,
-            @Value("${notifications.email.to:}") String to) {
+            @Value("${notifications.email.to:}") String to,
+            @Value("${app.frontend-url:http://localhost:3000}") String appBaseUrl) {
         this.mailSender = Optional.ofNullable(mailSender);
         this.enabled = enabled;
         this.from = from;
         this.to = to;
+        this.appBaseUrl = appBaseUrl.endsWith("/") ? appBaseUrl.substring(0, appBaseUrl.length() - 1) : appBaseUrl;
     }
 
     public void sendAlertIfConfigured(String title, String message, String severity, String fieldName) {
@@ -81,7 +84,7 @@ public class EmailNotificationService {
         sb.append("СОБЫТИЕ: ").append(title).append("\n\n");
         sb.append("ДЕТАЛИ:\n").append(message).append("\n\n");
         sb.append("-".repeat(50)).append("\n");
-        sb.append("Перейдите в приложение для подробностей: http://localhost:5173\n");
+        sb.append("Перейдите в приложение для подробностей: ").append(appBaseUrl).append("\n");
         sb.append("Это автоматическое уведомление — отвечать не нужно.");
         return sb.toString();
     }

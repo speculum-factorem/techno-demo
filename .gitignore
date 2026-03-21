@@ -15,6 +15,11 @@ __pycache__/
 .venv/
 venv/
 
+# Secrets / локальная конфигурация (на сервере создайте .env из .env.example)
+.env
+.env.local
+.env.*.local
+
 # IDE
 .idea/
 *.iml

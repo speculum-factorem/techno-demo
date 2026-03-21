@@ -52,6 +52,9 @@ springdoc:
   swagger-ui:
     path: /swagger-ui.html
 
+app:
+  frontend-url: ${FRONTEND_URL:http://localhost:3000}
+
 notifications:
   telegram:
     enabled: ${TELEGRAM_ENABLED:false}

@@ -1,3 +1,5 @@
+# Прод-сервер (только 80 наружу): из каталога techno-demo
+# docker-compose --env-file .env -f docker-compose.yml -f docker-compose.prod.yml up -d --build
 services:
   # Public entrypoint
   frontend:
