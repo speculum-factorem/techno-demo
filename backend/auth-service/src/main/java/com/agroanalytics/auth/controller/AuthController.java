@@ -66,8 +66,7 @@ public class AuthController {
             @Valid @RequestBody RegisterRequest request,
             HttpServletRequest httpRequest
     ) {
-        String clientKey = httpRequest.getRemoteAddr();
-        registrationRateLimiter.checkLimit(clientKey == null ? "unknown" : clientKey);
+        registrationRateLimiter.checkLimit(clientIp(httpRequest));
         long expiresInSeconds = authService.register(request);
         return ResponseEntity.status(201).body(Map.of(
                 "message", "Регистрация успешна. На почту отправлен код подтверждения (6 цифр) и ссылка.",
@@ -181,5 +180,15 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of(
                 "message", "Неверный логин или пароль",
                 "error", "Invalid username or password"));
+    }
+
+    /** За nginx/gateway все запросы не должны упираться в один remoteAddr контейнера. */
+    private static String clientIp(HttpServletRequest req) {
+        String xff = req.getHeader("X-Forwarded-For");
+        if (xff != null && !xff.isBlank()) {
+            return xff.split(",")[0].trim();
+        }
+        String ra = req.getRemoteAddr();
+        return ra == null || ra.isBlank() ? "unknown" : ra;
     }
 }

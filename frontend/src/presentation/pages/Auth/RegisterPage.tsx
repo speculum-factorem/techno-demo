@@ -43,6 +43,7 @@ const RegisterPage: React.FC = () => {
 
   const validatePassword = (p: string) => {
     if (p.length < 8) return 'Минимум 8 символов'
+    if (!/[a-z]/.test(p)) return 'Нужна хотя бы одна строчная буква'
     if (!/[A-Z]/.test(p)) return 'Нужна хотя бы одна заглавная буква'
     if (!/[0-9]/.test(p)) return 'Нужна хотя бы одна цифра'
     if (!/[^a-zA-Z0-9]/.test(p)) return 'Нужен хотя бы один спецсимвол'

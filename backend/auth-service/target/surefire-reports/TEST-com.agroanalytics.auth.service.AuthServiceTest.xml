@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.agroanalytics.auth.service.AuthServiceTest" time="1.002" tests="3" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.agroanalytics.auth.service.AuthServiceTest" time="0.048" tests="3" errors="3" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="21"/>
     <property name="sun.jnu.encoding" value="UTF-8"/>
@@ -12,14 +12,14 @@
     <property name="os.name" value="Mac OS X"/>
     <property name="java.vm.specification.version" value="21"/>
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
-    <property name="user.country" value="RU"/>
+    <property name="user.country" value="US"/>
     <property name="sun.boot.library.path" value="/Users/maxim/.sdkman/candidates/java/21.0.2-tem/lib"/>
-    <property name="sun.java.command" value="/Users/maxim/Desktop/hackOff2/techno-demo/backend/auth-service/target/surefire/surefirebooter-20260322010629006_3.jar /Users/maxim/Desktop/hackOff2/techno-demo/backend/auth-service/target/surefire 2026-03-22T01-06-28_800-jvmRun1 surefire-20260322010629006_1tmp surefire_0-20260322010629006_2tmp"/>
+    <property name="sun.java.command" value="/Users/maxim/Desktop/hackOff2/techno-demo/backend/auth-service/target/surefire/surefirebooter-20260322011906534_3.jar /Users/maxim/Desktop/hackOff2/techno-demo/backend/auth-service/target/surefire 2026-03-22T01-19-06_416-jvmRun1 surefire-20260322011906534_1tmp surefire_0-20260322011906534_2tmp"/>
     <property name="jdk.debug" value="release"/>
     <property name="surefire.test.class.path" value="/Users/maxim/Desktop/hackOff2/techno-demo/backend/auth-service/target/test-classes:/Users/maxim/Desktop/hackOff2/techno-demo/backend/auth-service/target/classes:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-starter-web/3.2.0/spring-boot-starter-web-3.2.0.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-starter/3.2.0/spring-boot-starter-3.2.0.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot/3.2.0/spring-boot-3.2.0.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-autoconfigure/3.2.0/spring-boot-autoconfigure-3.2.0.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-starter-logging/3.2.0/spring-boot-starter-logging-3.2.0.jar:/Users/maxim/.m2/repository/ch/qos/logback/logback-classic/1.4.11/logback-classic-1.4.11.jar:/Users/maxim/.m2/repository/ch/qos/logback/logback-core/1.4.11/logback-core-1.4.11.jar:/Users/maxim/.m2/repository/org/apache/logging/log4j/log4j-to-slf4j/2.21.1/log4j-to-slf4j-2.21.1.jar:/Users/maxim/.m2/repository/org/apache/logging/log4j/log4j-api/2.21.1/log4j-api-2.21.1.jar:/Users/maxim/.m2/repository/org/slf4j/jul-to-slf4j/2.0.9/jul-to-slf4j-2.0.9.jar:/Users/maxim/.m2/repository/jakarta/annotation/jakarta.annotation-api/2.1.1/jakarta.annotation-api-2.1.1.jar:/Users/maxim/.m2/repository/org/yaml/snakeyaml/2.2/snakeyaml-2.2.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-starter-json/3.2.0/spring-boot-starter-json-3.2.0.jar:/Users/maxim/.m2/repository/com/fasterxml/jackson/datatype/jackson-datatype-jdk8/2.15.3/jackson-datatype-jdk8-2.15.3.jar:/Users/maxim/.m2/repository/com/fasterxml/jackson/datatype/jackson-datatype-jsr310/2.15.3/jackson-datatype-jsr310-2.15.3.jar:/Users/maxim/.m2/repository/com/fasterxml/jackson/module/jackson-module-parameter-names/2.15.3/jackson-module-parameter-names-2.15.3.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-starter-tomcat/3.2.0/spring-boot-starter-tomcat-3.2.0.jar:/Users/maxim/.m2/repository/org/apache/tomcat/embed/tomcat-embed-core/10.1.16/tomcat-embed-core-10.1.16.jar:/Users/maxim/.m2/repository/org/apache/tomcat/embed/tomcat-embed-websocket/10.1.16/tomcat-embed-websocket-10.1.16.jar:/Users/maxim/.m2/repository/org/springframework/spring-web/6.1.1/spring-web-6.1.1.jar:/Users/maxim/.m2/repository/org/springframework/spring-beans/6.1.1/spring-beans-6.1.1.jar:/Users/maxim/.m2/repository/org/springframework/spring-webmvc/6.1.1/spring-webmvc-6.1.1.jar:/Users/maxim/.m2/repository/org/springframework/spring-context/6.1.1/spring-context-6.1.1.jar:/Users/maxim/.m2/repository/org/springframework/spring-expression/6.1.1/spring-expression-6.1.1.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-starter-data-jpa/3.2.0/spring-boot-starter-data-jpa-3.2.0.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-starter-aop/3.2.0/spring-boot-starter-aop-3.2.0.jar:/Users/maxim/.m2/repository/org/aspectj/aspectjweaver/1.9.20.1/aspectjweaver-1.9.20.1.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-starter-jdbc/3.2.0/spring-boot-starter-jdbc-3.2.0.jar:/Users/maxim/.m2/repository/com/zaxxer/HikariCP/5.0.1/HikariCP-5.0.1.jar:/Users/maxim/.m2/repository/org/springframework/spring-jdbc/6.1.1/spring-jdbc-6.1.1.jar:/Users/maxim/.m2/repository/org/hibernate/orm/hibernate-core/6.3.1.Final/hibernate-core-6.3.1.Final.jar:/Users/maxim/.m2/repository/jakarta/persistence/jakarta.persistence-api/3.1.0/jakarta.persistence-api-3.1.0.jar:/Users/maxim/.m2/repository/jakarta/transaction/jakarta.transaction-api/2.0.1/jakarta.transaction-api-2.0.1.jar:/Users/maxim/.m2/repository/org/jboss/logging/jboss-logging/3.5.3.Final/jboss-logging-3.5.3.Final.jar:/Users/maxim/.m2/repository/org/hibernate/common/hibernate-commons-annotations/6.0.6.Final/hibernate-commons-annotations-6.0.6.Final.jar:/Users/maxim/.m2/repository/io/smallrye/jandex/3.1.2/jandex-3.1.2.jar:/Users/maxim/.m2/repository/com/fasterxml/classmate/1.6.0/classmate-1.6.0.jar:/Users/maxim/.m2/repository/net/bytebuddy/byte-buddy/1.14.10/byte-buddy-1.14.10.jar:/Users/maxim/.m2/repository/org/glassfish/jaxb/jaxb-runtime/4.0.4/jaxb-runtime-4.0.4.jar:/Users/maxim/.m2/repository/org/glassfish/jaxb/jaxb-core/4.0.4/jaxb-core-4.0.4.jar:/Users/maxim/.m2/repository/org/glassfish/jaxb/txw2/4.0.4/txw2-4.0.4.jar:/Users/maxim/.m2/repository/com/sun/istack/istack-commons-runtime/4.1.2/istack-commons-runtime-4.1.2.jar:/Users/maxim/.m2/repository/jakarta/inject/jakarta.inject-api/2.0.1/jakarta.inject-api-2.0.1.jar:/Users/maxim/.m2/repository/org/antlr/antlr4-runtime/4.10.1/antlr4-runtime-4.10.1.jar:/Users/maxim/.m2/repository/org/springframework/data/spring-data-jpa/3.2.0/spring-data-jpa-3.2.0.jar:/Users/maxim/.m2/repository/org/springframework/data/spring-data-commons/3.2.0/spring-data-commons-3.2.0.jar:/Users/maxim/.m2/repository/org/springframework/spring-orm/6.1.1/spring-orm-6.1.1.jar:/Users/maxim/.m2/repository/org/springframework/spring-tx/6.1.1/spring-tx-6.1.1.jar:/Users/maxim/.m2/repository/org/slf4j/slf4j-api/2.0.9/slf4j-api-2.0.9.jar:/Users/maxim/.m2/repository/org/springframework/spring-aspects/6.1.1/spring-aspects-6.1.1.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-starter-security/3.2.0/spring-boot-starter-security-3.2.0.jar:/Users/maxim/.m2/repository/org/springframework/spring-aop/6.1.1/spring-aop-6.1.1.jar:/Users/maxim/.m2/repository/org/springframework/security/spring-security-config/6.2.0/spring-security-config-6.2.0.jar:/Users/maxim/.m2/repository/org/springframework/security/spring-security-web/6.2.0/spring-security-web-6.2.0.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-starter-validation/3.2.0/spring-boot-starter-validation-3.2.0.jar:/Users/maxim/.m2/repository/org/apache/tomcat/embed/tomcat-embed-el/10.1.16/tomcat-embed-el-10.1.16.jar:/Users/maxim/.m2/repository/org/hibernate/validator/hibernate-validator/8.0.1.Final/hibernate-validator-8.0.1.Final.jar:/Users/maxim/.m2/repository/jakarta/validation/jakarta.validation-api/3.0.2/jakarta.validation-api-3.0.2.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-starter-mail/3.2.0/spring-boot-starter-mail-3.2.0.jar:/Users/maxim/.m2/repository/org/springframework/spring-context-support/6.1.1/spring-context-support-6.1.1.jar:/Users/maxim/.m2/repository/org/eclipse/angus/jakarta.mail/2.0.2/jakarta.mail-2.0.2.jar:/Users/maxim/.m2/repository/jakarta/activation/jakarta.activation-api/2.1.2/jakarta.activation-api-2.1.2.jar:/Users/maxim/.m2/repository/org/eclipse/angus/angus-activation/2.0.1/angus-activation-2.0.1.jar:/Users/maxim/.m2/repository/org/postgresql/postgresql/42.6.0/postgresql-42.6.0.jar:/Users/maxim/.m2/repository/org/checkerframework/checker-qual/3.31.0/checker-qual-3.31.0.jar:/Users/maxim/.m2/repository/io/jsonwebtoken/jjwt-api/0.12.3/jjwt-api-0.12.3.jar:/Users/maxim/.m2/repository/io/jsonwebtoken/jjwt-impl/0.12.3/jjwt-impl-0.12.3.jar:/Users/maxim/.m2/repository/io/jsonwebtoken/jjwt-jackson/0.12.3/jjwt-jackson-0.12.3.jar:/Users/maxim/.m2/repository/com/fasterxml/jackson/core/jackson-databind/2.15.3/jackson-databind-2.15.3.jar:/Users/maxim/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.15.3/jackson-annotations-2.15.3.jar:/Users/maxim/.m2/repository/com/fasterxml/jackson/core/jackson-core/2.15.3/jackson-core-2.15.3.jar:/Users/maxim/.m2/repository/org/projectlombok/lombok/1.18.30/lombok-1.18.30.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-starter-actuator/3.2.0/spring-boot-starter-actuator-3.2.0.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-actuator-autoconfigure/3.2.0/spring-boot-actuator-autoconfigure-3.2.0.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-actuator/3.2.0/spring-boot-actuator-3.2.0.jar:/Users/maxim/.m2/repository/io/micrometer/micrometer-observation/1.12.0/micrometer-observation-1.12.0.jar:/Users/maxim/.m2/repository/io/micrometer/micrometer-commons/1.12.0/micrometer-commons-1.12.0.jar:/Users/maxim/.m2/repository/io/micrometer/micrometer-jakarta9/1.12.0/micrometer-jakarta9-1.12.0.jar:/Users/maxim/.m2/repository/io/micrometer/micrometer-registry-prometheus/1.12.0/micrometer-registry-prometheus-1.12.0.jar:/Users/maxim/.m2/repository/io/micrometer/micrometer-core/1.12.0/micrometer-core-1.12.0.jar:/Users/maxim/.m2/repository/org/hdrhistogram/HdrHistogram/2.1.12/HdrHistogram-2.1.12.jar:/Users/maxim/.m2/repository/org/latencyutils/LatencyUtils/2.0.3/LatencyUtils-2.0.3.jar:/Users/maxim/.m2/repository/io/prometheus/simpleclient_common/0.16.0/simpleclient_common-0.16.0.jar:/Users/maxim/.m2/repository/io/prometheus/simpleclient/0.16.0/simpleclient-0.16.0.jar:/Users/maxim/.m2/repository/io/prometheus/simpleclient_tracer_otel/0.16.0/simpleclient_tracer_otel-0.16.0.jar:/Users/maxim/.m2/repository/io/prometheus/simpleclient_tracer_common/0.16.0/simpleclient_tracer_common-0.16.0.jar:/Users/maxim/.m2/repository/io/prometheus/simpleclient_tracer_otel_agent/0.16.0/simpleclient_tracer_otel_agent-0.16.0.jar:/Users/maxim/.m2/repository/org/springdoc/springdoc-openapi-starter-webmvc-ui/2.3.0/springdoc-openapi-starter-webmvc-ui-2.3.0.jar:/Users/maxim/.m2/repository/org/springdoc/springdoc-openapi-starter-webmvc-api/2.3.0/springdoc-openapi-starter-webmvc-api-2.3.0.jar:/Users/maxim/.m2/repository/org/springdoc/springdoc-openapi-starter-common/2.3.0/springdoc-openapi-starter-common-2.3.0.jar:/Users/maxim/.m2/repository/io/swagger/core/v3/swagger-core-jakarta/2.2.19/swagger-core-jakarta-2.2.19.jar:/Users/maxim/.m2/repository/org/apache/commons/commons-lang3/3.13.0/commons-lang3-3.13.0.jar:/Users/maxim/.m2/repository/io/swagger/core/v3/swagger-annotations-jakarta/2.2.19/swagger-annotations-jakarta-2.2.19.jar:/Users/maxim/.m2/repository/io/swagger/core/v3/swagger-models-jakarta/2.2.19/swagger-models-jakarta-2.2.19.jar:/Users/maxim/.m2/repository/com/fasterxml/jackson/dataformat/jackson-dataformat-yaml/2.15.3/jackson-dataformat-yaml-2.15.3.jar:/Users/maxim/.m2/repository/org/webjars/swagger-ui/5.10.3/swagger-ui-5.10.3.jar:/Users/maxim/.m2/repository/net/logstash/logback/logstash-logback-encoder/7.4/logstash-logback-encoder-7.4.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-starter-test/3.2.0/spring-boot-starter-test-3.2.0.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-test/3.2.0/spring-boot-test-3.2.0.jar:/Users/maxim/.m2/repository/org/springframework/boot/spring-boot-test-autoconfigure/3.2.0/spring-boot-test-autoconfigure-3.2.0.jar:/Users/maxim/.m2/repository/com/jayway/jsonpath/json-path/2.8.0/json-path-2.8.0.jar:/Users/maxim/.m2/repository/jakarta/xml/bind/jakarta.xml.bind-api/4.0.1/jakarta.xml.bind-api-4.0.1.jar:/Users/maxim/.m2/repository/net/minidev/json-smart/2.5.0/json-smart-2.5.0.jar:/Users/maxim/.m2/repository/net/minidev/accessors-smart/2.5.0/accessors-smart-2.5.0.jar:/Users/maxim/.m2/repository/org/ow2/asm/asm/9.3/asm-9.3.jar:/Users/maxim/.m2/repository/org/assertj/assertj-core/3.24.2/assertj-core-3.24.2.jar:/Users/maxim/.m2/repository/org/awaitility/awaitility/4.2.0/awaitility-4.2.0.jar:/Users/maxim/.m2/repository/org/hamcrest/hamcrest/2.2/hamcrest-2.2.jar:/Users/maxim/.m2/repository/org/junit/jupiter/junit-jupiter/5.10.1/junit-jupiter-5.10.1.jar:/Users/maxim/.m2/repository/org/junit/jupiter/junit-jupiter-api/5.10.1/junit-jupiter-api-5.10.1.jar:/Users/maxim/.m2/repository/org/opentest4j/opentest4j/1.3.0/opentest4j-1.3.0.jar:/Users/maxim/.m2/repository/org/junit/platform/junit-platform-commons/1.10.1/junit-platform-commons-1.10.1.jar:/Users/maxim/.m2/repository/org/apiguardian/apiguardian-api/1.1.2/apiguardian-api-1.1.2.jar:/Users/maxim/.m2/repository/org/junit/jupiter/junit-jupiter-params/5.10.1/junit-jupiter-params-5.10.1.jar:/Users/maxim/.m2/repository/org/junit/jupiter/junit-jupiter-engine/5.10.1/junit-jupiter-engine-5.10.1.jar:/Users/maxim/.m2/repository/org/junit/platform/junit-platform-engine/1.10.1/junit-platform-engine-1.10.1.jar:/Users/maxim/.m2/repository/org/mockito/mockito-core/5.7.0/mockito-core-5.7.0.jar:/Users/maxim/.m2/repository/net/bytebuddy/byte-buddy-agent/1.14.10/byte-buddy-agent-1.14.10.jar:/Users/maxim/.m2/repository/org/objenesis/objenesis/3.3/objenesis-3.3.jar:/Users/maxim/.m2/repository/org/mockito/mockito-junit-jupiter/5.7.0/mockito-junit-jupiter-5.7.0.jar:/Users/maxim/.m2/repository/org/skyscreamer/jsonassert/1.5.1/jsonassert-1.5.1.jar:/Users/maxim/.m2/repository/com/vaadin/external/google/android-json/0.0.20131108.vaadin1/android-json-0.0.20131108.vaadin1.jar:/Users/maxim/.m2/repository/org/springframework/spring-core/6.1.1/spring-core-6.1.1.jar:/Users/maxim/.m2/repository/org/springframework/spring-jcl/6.1.1/spring-jcl-6.1.1.jar:/Users/maxim/.m2/repository/org/springframework/spring-test/6.1.1/spring-test-6.1.1.jar:/Users/maxim/.m2/repository/org/xmlunit/xmlunit-core/2.9.1/xmlunit-core-2.9.1.jar:/Users/maxim/.m2/repository/org/springframework/security/spring-security-test/6.2.0/spring-security-test-6.2.0.jar:/Users/maxim/.m2/repository/org/springframework/security/spring-security-core/6.2.0/spring-security-core-6.2.0.jar:/Users/maxim/.m2/repository/org/springframework/security/spring-security-crypto/6.2.0/spring-security-crypto-6.2.0.jar:"/>
     <property name="sun.cpu.endian" value="little"/>
     <property name="user.home" value="/Users/maxim"/>
-    <property name="user.language" value="ru"/>
+    <property name="user.language" value="en"/>
     <property name="java.specification.vendor" value="Oracle Corporation"/>
     <property name="java.version.date" value="2024-01-16"/>
     <property name="java.home" value="/Users/maxim/.sdkman/candidates/java/21.0.2-tem"/>
@@ -32,7 +32,7 @@
     <property name="FILE_LOG_CHARSET" value="UTF-8"/>
     <property name="java.awt.headless" value="true"/>
     <property name="apple.awt.application.name" value="ForkedBooter"/>
-    <property name="surefire.real.class.path" value="/Users/maxim/Desktop/hackOff2/techno-demo/backend/auth-service/target/surefire/surefirebooter-20260322010629006_3.jar"/>
+    <property name="surefire.real.class.path" value="/Users/maxim/Desktop/hackOff2/techno-demo/backend/auth-service/target/surefire/surefirebooter-20260322011906534_3.jar"/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="java.runtime.version" value="21.0.2+13-LTS"/>
     <property name="user.name" value="maxim"/>
@@ -50,7 +50,7 @@
     <property name="user.dir" value="/Users/maxim/Desktop/hackOff2/techno-demo/backend/auth-service"/>
     <property name="os.arch" value="aarch64"/>
     <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
-    <property name="PID" value="36573"/>
+    <property name="PID" value="45639"/>
     <property name="CONSOLE_LOG_CHARSET" value="UTF-8"/>
     <property name="native.encoding" value="UTF-8"/>
     <property name="java.library.path" value="/Users/maxim/Library/Java/Extensions:/Library/Java/Extensions:/Network/Library/Java/Extensions:/System/Library/Java/Extensions:/usr/lib/java:."/>
@@ -61,7 +61,319 @@
     <property name="sun.io.unicode.encoding" value="UnicodeBig"/>
     <property name="java.class.version" value="65.0"/>
   </properties>
-  <testcase name="login_validCredentials_returnsChallenge" classname="com.agroanalytics.auth.service.AuthServiceTest" time="0.972"/>
-  <testcase name="login_wrongPassword_throwsBadCredentials" classname="com.agroanalytics.auth.service.AuthServiceTest" time="0.009"/>
-  <testcase name="login_userNotFound_throwsBadCredentials" classname="com.agroanalytics.auth.service.AuthServiceTest" time="0.005"/>
+  <testcase name="login_validCredentials_returnsChallenge" classname="com.agroanalytics.auth.service.AuthServiceTest" time="0.017">
+    <error message="Could not initialize plugin: interface org.mockito.plugins.MockMaker (alternate: null)" type="java.lang.IllegalStateException"><![CDATA[java.lang.IllegalStateException: Could not initialize plugin: interface org.mockito.plugins.MockMaker (alternate: null)
+	at org.mockito.internal.configuration.plugins.PluginLoader$1.invoke(PluginLoader.java:84)
+	at jdk.proxy2/jdk.proxy2.$Proxy84.isTypeMockable(Unknown Source)
+	at org.mockito.internal.util.MockUtil.typeMockabilityOf(MockUtil.java:78)
+	at org.mockito.internal.util.MockCreationValidator.validateType(MockCreationValidator.java:22)
+	at org.mockito.internal.creation.MockSettingsImpl.validatedSettings(MockSettingsImpl.java:274)
+	at org.mockito.internal.creation.MockSettingsImpl.build(MockSettingsImpl.java:235)
+	at org.mockito.internal.MockitoCore.mock(MockitoCore.java:86)
+	at org.mockito.Mockito.mock(Mockito.java:2101)
+	at org.mockito.internal.configuration.MockAnnotationProcessor.processAnnotationForMock(MockAnnotationProcessor.java:79)
+	at org.mockito.internal.configuration.MockAnnotationProcessor.process(MockAnnotationProcessor.java:28)
+	at org.mockito.internal.configuration.MockAnnotationProcessor.process(MockAnnotationProcessor.java:25)
+	at org.mockito.internal.configuration.IndependentAnnotationEngine.createMockFor(IndependentAnnotationEngine.java:44)
+	at org.mockito.internal.configuration.IndependentAnnotationEngine.process(IndependentAnnotationEngine.java:72)
+	at org.mockito.internal.configuration.InjectingAnnotationEngine.processIndependentAnnotations(InjectingAnnotationEngine.java:62)
+	at org.mockito.internal.configuration.InjectingAnnotationEngine.process(InjectingAnnotationEngine.java:47)
+	at org.mockito.MockitoAnnotations.openMocks(MockitoAnnotations.java:81)
+	at org.mockito.internal.framework.DefaultMockitoSession.<init>(DefaultMockitoSession.java:43)
+	at org.mockito.internal.session.DefaultMockitoSessionBuilder.startMocking(DefaultMockitoSessionBuilder.java:83)
+	at org.mockito.junit.jupiter.MockitoExtension.beforeEach(MockitoExtension.java:159)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	Suppressed: java.lang.NullPointerException: Cannot invoke "java.util.Set.forEach(java.util.function.Consumer)" because the return value of "org.junit.jupiter.api.extension.ExtensionContext$Store.remove(Object, java.lang.Class)" is null
+		at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:190)
+		... 2 more
+Caused by: java.lang.IllegalStateException: Internal problem occurred, please report it. Mockito is unable to load the default implementation of class that is a part of Mockito distribution. Failed to load interface org.mockito.plugins.MockMaker
+	at org.mockito.internal.configuration.plugins.DefaultMockitoPlugins.create(DefaultMockitoPlugins.java:105)
+	at org.mockito.internal.configuration.plugins.DefaultMockitoPlugins.getDefaultPlugin(DefaultMockitoPlugins.java:79)
+	at org.mockito.internal.configuration.plugins.PluginLoader.loadPlugin(PluginLoader.java:75)
+	at org.mockito.internal.configuration.plugins.PluginLoader.loadPlugin(PluginLoader.java:50)
+	at org.mockito.internal.configuration.plugins.PluginRegistry.<init>(PluginRegistry.java:27)
+	at org.mockito.internal.configuration.plugins.Plugins.<clinit>(Plugins.java:22)
+	at org.mockito.internal.MockitoCore.<clinit>(MockitoCore.java:73)
+	at org.mockito.Mockito.<clinit>(Mockito.java:1683)
+	at org.springframework.boot.test.mock.mockito.MockReset.withSettings(MockReset.java:81)
+	at org.springframework.boot.test.mock.mockito.MockDefinition.createMock(MockDefinition.java:147)
+	at org.springframework.boot.test.mock.mockito.MockitoPostProcessor.registerMock(MockitoPostProcessor.java:185)
+	at org.springframework.boot.test.mock.mockito.MockitoPostProcessor.register(MockitoPostProcessor.java:167)
+	at org.springframework.boot.test.mock.mockito.MockitoPostProcessor.postProcessBeanFactory(MockitoPostProcessor.java:141)
+	at org.springframework.boot.test.mock.mockito.MockitoPostProcessor.postProcessBeanFactory(MockitoPostProcessor.java:129)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:363)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:197)
+	at org.springframework.context.support.AbstractApplicationContext.invokeBeanFactoryPostProcessors(AbstractApplicationContext.java:775)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:597)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:753)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:455)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:323)
+	at org.springframework.boot.test.context.SpringBootContextLoader.lambda$loadContext$3(SpringBootContextLoader.java:137)
+	at org.springframework.util.function.ThrowingSupplier.get(ThrowingSupplier.java:58)
+	at org.springframework.util.function.ThrowingSupplier.get(ThrowingSupplier.java:46)
+	at org.springframework.boot.SpringApplication.withHook(SpringApplication.java:1442)
+	at org.springframework.boot.test.context.SpringBootContextLoader$ContextLoaderHook.run(SpringBootContextLoader.java:552)
+	at org.springframework.boot.test.context.SpringBootContextLoader.loadContext(SpringBootContextLoader.java:137)
+	at org.springframework.boot.test.context.SpringBootContextLoader.loadContext(SpringBootContextLoader.java:108)
+	at org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate.loadContextInternal(DefaultCacheAwareContextLoaderDelegate.java:225)
+	at org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate.loadContext(DefaultCacheAwareContextLoaderDelegate.java:152)
+	at org.springframework.test.context.support.DefaultTestContext.getApplicationContext(DefaultTestContext.java:130)
+	at org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener.postProcessFields(MockitoTestExecutionListener.java:110)
+	at org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener.injectFields(MockitoTestExecutionListener.java:94)
+	at org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener.prepareTestInstance(MockitoTestExecutionListener.java:61)
+	at org.springframework.test.context.TestContextManager.prepareTestInstance(TestContextManager.java:247)
+	at org.springframework.test.context.junit.jupiter.SpringExtension.postProcessTestInstance(SpringExtension.java:163)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$2$1.accept(ReferencePipeline.java:179)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.StreamSpliterators$WrappingSpliterator.forEachRemaining(StreamSpliterators.java:310)
+	at java.base/java.util.stream.Streams$ConcatSpliterator.forEachRemaining(Streams.java:735)
+	at java.base/java.util.stream.Streams$ConcatSpliterator.forEachRemaining(Streams.java:734)
+	at java.base/java.util.stream.ReferencePipeline$Head.forEach(ReferencePipeline.java:762)
+	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+	... 2 more
+Caused by: java.lang.reflect.InvocationTargetException
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at org.mockito.internal.configuration.plugins.DefaultMockitoPlugins.create(DefaultMockitoPlugins.java:103)
+	... 47 more
+Caused by: org.mockito.exceptions.base.MockitoInitializationException: 
+Could not initialize inline Byte Buddy mock maker.
+
+It appears as if your JDK does not supply a working agent attachment mechanism.
+Java               : 21
+JVM vendor name    : Eclipse Adoptium
+JVM vendor version : 21.0.2+13-LTS
+JVM name           : OpenJDK 64-Bit Server VM
+JVM version        : 21.0.2+13-LTS
+JVM info           : mixed mode
+OS name            : Mac OS X
+OS version         : 13.5
+
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.<init>(InlineDelegateByteBuddyMockMaker.java:260)
+	at org.mockito.internal.creation.bytebuddy.InlineByteBuddyMockMaker.<init>(InlineByteBuddyMockMaker.java:23)
+	... 50 more
+Caused by: java.lang.IllegalStateException: Could not self-attach to current VM using external process
+	at net.bytebuddy.agent.ByteBuddyAgent.installExternal(ByteBuddyAgent.java:706)
+	at net.bytebuddy.agent.ByteBuddyAgent.install(ByteBuddyAgent.java:636)
+	at net.bytebuddy.agent.ByteBuddyAgent.install(ByteBuddyAgent.java:616)
+	at net.bytebuddy.agent.ByteBuddyAgent.install(ByteBuddyAgent.java:568)
+	at net.bytebuddy.agent.ByteBuddyAgent.install(ByteBuddyAgent.java:545)
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.<clinit>(InlineDelegateByteBuddyMockMaker.java:133)
+	... 51 more
+]]></error>
+  </testcase>
+  <testcase name="login_wrongPassword_throwsBadCredentials" classname="com.agroanalytics.auth.service.AuthServiceTest" time="0.002">
+    <error message="Could not initialize plugin: interface org.mockito.plugins.MockMaker (alternate: null)" type="java.lang.IllegalStateException"><![CDATA[java.lang.IllegalStateException: Could not initialize plugin: interface org.mockito.plugins.MockMaker (alternate: null)
+	at org.mockito.internal.configuration.plugins.PluginLoader$1.invoke(PluginLoader.java:84)
+	at jdk.proxy2/jdk.proxy2.$Proxy84.isTypeMockable(Unknown Source)
+	at org.mockito.internal.util.MockUtil.typeMockabilityOf(MockUtil.java:78)
+	at org.mockito.internal.util.MockCreationValidator.validateType(MockCreationValidator.java:22)
+	at org.mockito.internal.creation.MockSettingsImpl.validatedSettings(MockSettingsImpl.java:274)
+	at org.mockito.internal.creation.MockSettingsImpl.build(MockSettingsImpl.java:235)
+	at org.mockito.internal.MockitoCore.mock(MockitoCore.java:86)
+	at org.mockito.Mockito.mock(Mockito.java:2101)
+	at org.mockito.internal.configuration.MockAnnotationProcessor.processAnnotationForMock(MockAnnotationProcessor.java:79)
+	at org.mockito.internal.configuration.MockAnnotationProcessor.process(MockAnnotationProcessor.java:28)
+	at org.mockito.internal.configuration.MockAnnotationProcessor.process(MockAnnotationProcessor.java:25)
+	at org.mockito.internal.configuration.IndependentAnnotationEngine.createMockFor(IndependentAnnotationEngine.java:44)
+	at org.mockito.internal.configuration.IndependentAnnotationEngine.process(IndependentAnnotationEngine.java:72)
+	at org.mockito.internal.configuration.InjectingAnnotationEngine.processIndependentAnnotations(InjectingAnnotationEngine.java:62)
+	at org.mockito.internal.configuration.InjectingAnnotationEngine.process(InjectingAnnotationEngine.java:47)
+	at org.mockito.MockitoAnnotations.openMocks(MockitoAnnotations.java:81)
+	at org.mockito.internal.framework.DefaultMockitoSession.<init>(DefaultMockitoSession.java:43)
+	at org.mockito.internal.session.DefaultMockitoSessionBuilder.startMocking(DefaultMockitoSessionBuilder.java:83)
+	at org.mockito.junit.jupiter.MockitoExtension.beforeEach(MockitoExtension.java:159)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	Suppressed: java.lang.NullPointerException: Cannot invoke "java.util.Set.forEach(java.util.function.Consumer)" because the return value of "org.junit.jupiter.api.extension.ExtensionContext$Store.remove(Object, java.lang.Class)" is null
+		at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:190)
+		... 2 more
+Caused by: java.lang.IllegalStateException: Internal problem occurred, please report it. Mockito is unable to load the default implementation of class that is a part of Mockito distribution. Failed to load interface org.mockito.plugins.MockMaker
+	at org.mockito.internal.configuration.plugins.DefaultMockitoPlugins.create(DefaultMockitoPlugins.java:105)
+	at org.mockito.internal.configuration.plugins.DefaultMockitoPlugins.getDefaultPlugin(DefaultMockitoPlugins.java:79)
+	at org.mockito.internal.configuration.plugins.PluginLoader.loadPlugin(PluginLoader.java:75)
+	at org.mockito.internal.configuration.plugins.PluginLoader.loadPlugin(PluginLoader.java:50)
+	at org.mockito.internal.configuration.plugins.PluginRegistry.<init>(PluginRegistry.java:27)
+	at org.mockito.internal.configuration.plugins.Plugins.<clinit>(Plugins.java:22)
+	at org.mockito.internal.MockitoCore.<clinit>(MockitoCore.java:73)
+	at org.mockito.Mockito.<clinit>(Mockito.java:1683)
+	at org.springframework.boot.test.mock.mockito.MockReset.withSettings(MockReset.java:81)
+	at org.springframework.boot.test.mock.mockito.MockDefinition.createMock(MockDefinition.java:147)
+	at org.springframework.boot.test.mock.mockito.MockitoPostProcessor.registerMock(MockitoPostProcessor.java:185)
+	at org.springframework.boot.test.mock.mockito.MockitoPostProcessor.register(MockitoPostProcessor.java:167)
+	at org.springframework.boot.test.mock.mockito.MockitoPostProcessor.postProcessBeanFactory(MockitoPostProcessor.java:141)
+	at org.springframework.boot.test.mock.mockito.MockitoPostProcessor.postProcessBeanFactory(MockitoPostProcessor.java:129)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:363)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:197)
+	at org.springframework.context.support.AbstractApplicationContext.invokeBeanFactoryPostProcessors(AbstractApplicationContext.java:775)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:597)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:753)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:455)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:323)
+	at org.springframework.boot.test.context.SpringBootContextLoader.lambda$loadContext$3(SpringBootContextLoader.java:137)
+	at org.springframework.util.function.ThrowingSupplier.get(ThrowingSupplier.java:58)
+	at org.springframework.util.function.ThrowingSupplier.get(ThrowingSupplier.java:46)
+	at org.springframework.boot.SpringApplication.withHook(SpringApplication.java:1442)
+	at org.springframework.boot.test.context.SpringBootContextLoader$ContextLoaderHook.run(SpringBootContextLoader.java:552)
+	at org.springframework.boot.test.context.SpringBootContextLoader.loadContext(SpringBootContextLoader.java:137)
+	at org.springframework.boot.test.context.SpringBootContextLoader.loadContext(SpringBootContextLoader.java:108)
+	at org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate.loadContextInternal(DefaultCacheAwareContextLoaderDelegate.java:225)
+	at org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate.loadContext(DefaultCacheAwareContextLoaderDelegate.java:152)
+	at org.springframework.test.context.support.DefaultTestContext.getApplicationContext(DefaultTestContext.java:130)
+	at org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener.postProcessFields(MockitoTestExecutionListener.java:110)
+	at org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener.injectFields(MockitoTestExecutionListener.java:94)
+	at org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener.prepareTestInstance(MockitoTestExecutionListener.java:61)
+	at org.springframework.test.context.TestContextManager.prepareTestInstance(TestContextManager.java:247)
+	at org.springframework.test.context.junit.jupiter.SpringExtension.postProcessTestInstance(SpringExtension.java:163)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$2$1.accept(ReferencePipeline.java:179)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.StreamSpliterators$WrappingSpliterator.forEachRemaining(StreamSpliterators.java:310)
+	at java.base/java.util.stream.Streams$ConcatSpliterator.forEachRemaining(Streams.java:735)
+	at java.base/java.util.stream.Streams$ConcatSpliterator.forEachRemaining(Streams.java:734)
+	at java.base/java.util.stream.ReferencePipeline$Head.forEach(ReferencePipeline.java:762)
+	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+	... 2 more
+Caused by: java.lang.reflect.InvocationTargetException
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at org.mockito.internal.configuration.plugins.DefaultMockitoPlugins.create(DefaultMockitoPlugins.java:103)
+	... 47 more
+Caused by: org.mockito.exceptions.base.MockitoInitializationException: 
+Could not initialize inline Byte Buddy mock maker.
+
+It appears as if your JDK does not supply a working agent attachment mechanism.
+Java               : 21
+JVM vendor name    : Eclipse Adoptium
+JVM vendor version : 21.0.2+13-LTS
+JVM name           : OpenJDK 64-Bit Server VM
+JVM version        : 21.0.2+13-LTS
+JVM info           : mixed mode
+OS name            : Mac OS X
+OS version         : 13.5
+
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.<init>(InlineDelegateByteBuddyMockMaker.java:260)
+	at org.mockito.internal.creation.bytebuddy.InlineByteBuddyMockMaker.<init>(InlineByteBuddyMockMaker.java:23)
+	... 50 more
+Caused by: java.lang.IllegalStateException: Could not self-attach to current VM using external process
+	at net.bytebuddy.agent.ByteBuddyAgent.installExternal(ByteBuddyAgent.java:706)
+	at net.bytebuddy.agent.ByteBuddyAgent.install(ByteBuddyAgent.java:636)
+	at net.bytebuddy.agent.ByteBuddyAgent.install(ByteBuddyAgent.java:616)
+	at net.bytebuddy.agent.ByteBuddyAgent.install(ByteBuddyAgent.java:568)
+	at net.bytebuddy.agent.ByteBuddyAgent.install(ByteBuddyAgent.java:545)
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.<clinit>(InlineDelegateByteBuddyMockMaker.java:133)
+	... 51 more
+]]></error>
+  </testcase>
+  <testcase name="login_userNotFound_throwsBadCredentials" classname="com.agroanalytics.auth.service.AuthServiceTest" time="0.004">
+    <error message="Could not initialize plugin: interface org.mockito.plugins.MockMaker (alternate: null)" type="java.lang.IllegalStateException"><![CDATA[java.lang.IllegalStateException: Could not initialize plugin: interface org.mockito.plugins.MockMaker (alternate: null)
+	at org.mockito.internal.configuration.plugins.PluginLoader$1.invoke(PluginLoader.java:84)
+	at jdk.proxy2/jdk.proxy2.$Proxy84.isTypeMockable(Unknown Source)
+	at org.mockito.internal.util.MockUtil.typeMockabilityOf(MockUtil.java:78)
+	at org.mockito.internal.util.MockCreationValidator.validateType(MockCreationValidator.java:22)
+	at org.mockito.internal.creation.MockSettingsImpl.validatedSettings(MockSettingsImpl.java:274)
+	at org.mockito.internal.creation.MockSettingsImpl.build(MockSettingsImpl.java:235)
+	at org.mockito.internal.MockitoCore.mock(MockitoCore.java:86)
+	at org.mockito.Mockito.mock(Mockito.java:2101)
+	at org.mockito.internal.configuration.MockAnnotationProcessor.processAnnotationForMock(MockAnnotationProcessor.java:79)
+	at org.mockito.internal.configuration.MockAnnotationProcessor.process(MockAnnotationProcessor.java:28)
+	at org.mockito.internal.configuration.MockAnnotationProcessor.process(MockAnnotationProcessor.java:25)
+	at org.mockito.internal.configuration.IndependentAnnotationEngine.createMockFor(IndependentAnnotationEngine.java:44)
+	at org.mockito.internal.configuration.IndependentAnnotationEngine.process(IndependentAnnotationEngine.java:72)
+	at org.mockito.internal.configuration.InjectingAnnotationEngine.processIndependentAnnotations(InjectingAnnotationEngine.java:62)
+	at org.mockito.internal.configuration.InjectingAnnotationEngine.process(InjectingAnnotationEngine.java:47)
+	at org.mockito.MockitoAnnotations.openMocks(MockitoAnnotations.java:81)
+	at org.mockito.internal.framework.DefaultMockitoSession.<init>(DefaultMockitoSession.java:43)
+	at org.mockito.internal.session.DefaultMockitoSessionBuilder.startMocking(DefaultMockitoSessionBuilder.java:83)
+	at org.mockito.junit.jupiter.MockitoExtension.beforeEach(MockitoExtension.java:159)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	Suppressed: java.lang.NullPointerException: Cannot invoke "java.util.Set.forEach(java.util.function.Consumer)" because the return value of "org.junit.jupiter.api.extension.ExtensionContext$Store.remove(Object, java.lang.Class)" is null
+		at org.mockito.junit.jupiter.MockitoExtension.afterEach(MockitoExtension.java:190)
+		... 2 more
+Caused by: java.lang.IllegalStateException: Internal problem occurred, please report it. Mockito is unable to load the default implementation of class that is a part of Mockito distribution. Failed to load interface org.mockito.plugins.MockMaker
+	at org.mockito.internal.configuration.plugins.DefaultMockitoPlugins.create(DefaultMockitoPlugins.java:105)
+	at org.mockito.internal.configuration.plugins.DefaultMockitoPlugins.getDefaultPlugin(DefaultMockitoPlugins.java:79)
+	at org.mockito.internal.configuration.plugins.PluginLoader.loadPlugin(PluginLoader.java:75)
+	at org.mockito.internal.configuration.plugins.PluginLoader.loadPlugin(PluginLoader.java:50)
+	at org.mockito.internal.configuration.plugins.PluginRegistry.<init>(PluginRegistry.java:27)
+	at org.mockito.internal.configuration.plugins.Plugins.<clinit>(Plugins.java:22)
+	at org.mockito.internal.MockitoCore.<clinit>(MockitoCore.java:73)
+	at org.mockito.Mockito.<clinit>(Mockito.java:1683)
+	at org.springframework.boot.test.mock.mockito.MockReset.withSettings(MockReset.java:81)
+	at org.springframework.boot.test.mock.mockito.MockDefinition.createMock(MockDefinition.java:147)
+	at org.springframework.boot.test.mock.mockito.MockitoPostProcessor.registerMock(MockitoPostProcessor.java:185)
+	at org.springframework.boot.test.mock.mockito.MockitoPostProcessor.register(MockitoPostProcessor.java:167)
+	at org.springframework.boot.test.mock.mockito.MockitoPostProcessor.postProcessBeanFactory(MockitoPostProcessor.java:141)
+	at org.springframework.boot.test.mock.mockito.MockitoPostProcessor.postProcessBeanFactory(MockitoPostProcessor.java:129)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:363)
+	at org.springframework.context.support.PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(PostProcessorRegistrationDelegate.java:197)
+	at org.springframework.context.support.AbstractApplicationContext.invokeBeanFactoryPostProcessors(AbstractApplicationContext.java:775)
+	at org.springframework.context.support.AbstractApplicationContext.refresh(AbstractApplicationContext.java:597)
+	at org.springframework.boot.SpringApplication.refresh(SpringApplication.java:753)
+	at org.springframework.boot.SpringApplication.refreshContext(SpringApplication.java:455)
+	at org.springframework.boot.SpringApplication.run(SpringApplication.java:323)
+	at org.springframework.boot.test.context.SpringBootContextLoader.lambda$loadContext$3(SpringBootContextLoader.java:137)
+	at org.springframework.util.function.ThrowingSupplier.get(ThrowingSupplier.java:58)
+	at org.springframework.util.function.ThrowingSupplier.get(ThrowingSupplier.java:46)
+	at org.springframework.boot.SpringApplication.withHook(SpringApplication.java:1442)
+	at org.springframework.boot.test.context.SpringBootContextLoader$ContextLoaderHook.run(SpringBootContextLoader.java:552)
+	at org.springframework.boot.test.context.SpringBootContextLoader.loadContext(SpringBootContextLoader.java:137)
+	at org.springframework.boot.test.context.SpringBootContextLoader.loadContext(SpringBootContextLoader.java:108)
+	at org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate.loadContextInternal(DefaultCacheAwareContextLoaderDelegate.java:225)
+	at org.springframework.test.context.cache.DefaultCacheAwareContextLoaderDelegate.loadContext(DefaultCacheAwareContextLoaderDelegate.java:152)
+	at org.springframework.test.context.support.DefaultTestContext.getApplicationContext(DefaultTestContext.java:130)
+	at org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener.postProcessFields(MockitoTestExecutionListener.java:110)
+	at org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener.injectFields(MockitoTestExecutionListener.java:94)
+	at org.springframework.boot.test.mock.mockito.MockitoTestExecutionListener.prepareTestInstance(MockitoTestExecutionListener.java:61)
+	at org.springframework.test.context.TestContextManager.prepareTestInstance(TestContextManager.java:247)
+	at org.springframework.test.context.junit.jupiter.SpringExtension.postProcessTestInstance(SpringExtension.java:163)
+	at java.base/java.util.stream.ReferencePipeline$3$1.accept(ReferencePipeline.java:197)
+	at java.base/java.util.stream.ReferencePipeline$2$1.accept(ReferencePipeline.java:179)
+	at java.base/java.util.ArrayList$ArrayListSpliterator.forEachRemaining(ArrayList.java:1708)
+	at java.base/java.util.stream.AbstractPipeline.copyInto(AbstractPipeline.java:509)
+	at java.base/java.util.stream.AbstractPipeline.wrapAndCopyInto(AbstractPipeline.java:499)
+	at java.base/java.util.stream.StreamSpliterators$WrappingSpliterator.forEachRemaining(StreamSpliterators.java:310)
+	at java.base/java.util.stream.Streams$ConcatSpliterator.forEachRemaining(Streams.java:735)
+	at java.base/java.util.stream.Streams$ConcatSpliterator.forEachRemaining(Streams.java:734)
+	at java.base/java.util.stream.ReferencePipeline$Head.forEach(ReferencePipeline.java:762)
+	at java.base/java.util.Optional.orElseGet(Optional.java:364)
+	... 2 more
+Caused by: java.lang.reflect.InvocationTargetException
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at java.base/java.lang.reflect.Constructor.newInstance(Constructor.java:486)
+	at org.mockito.internal.configuration.plugins.DefaultMockitoPlugins.create(DefaultMockitoPlugins.java:103)
+	... 47 more
+Caused by: org.mockito.exceptions.base.MockitoInitializationException: 
+Could not initialize inline Byte Buddy mock maker.
+
+It appears as if your JDK does not supply a working agent attachment mechanism.
+Java               : 21
+JVM vendor name    : Eclipse Adoptium
+JVM vendor version : 21.0.2+13-LTS
+JVM name           : OpenJDK 64-Bit Server VM
+JVM version        : 21.0.2+13-LTS
+JVM info           : mixed mode
+OS name            : Mac OS X
+OS version         : 13.5
+
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.<init>(InlineDelegateByteBuddyMockMaker.java:260)
+	at org.mockito.internal.creation.bytebuddy.InlineByteBuddyMockMaker.<init>(InlineByteBuddyMockMaker.java:23)
+	... 50 more
+Caused by: java.lang.IllegalStateException: Could not self-attach to current VM using external process
+	at net.bytebuddy.agent.ByteBuddyAgent.installExternal(ByteBuddyAgent.java:706)
+	at net.bytebuddy.agent.ByteBuddyAgent.install(ByteBuddyAgent.java:636)
+	at net.bytebuddy.agent.ByteBuddyAgent.install(ByteBuddyAgent.java:616)
+	at net.bytebuddy.agent.ByteBuddyAgent.install(ByteBuddyAgent.java:568)
+	at net.bytebuddy.agent.ByteBuddyAgent.install(ByteBuddyAgent.java:545)
+	at org.mockito.internal.creation.bytebuddy.InlineDelegateByteBuddyMockMaker.<clinit>(InlineDelegateByteBuddyMockMaker.java:133)
+	... 51 more
+]]></error>
+  </testcase>
 </testsuite>
