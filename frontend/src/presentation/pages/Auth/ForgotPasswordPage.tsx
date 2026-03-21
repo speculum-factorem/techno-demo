@@ -111,4 +111,4 @@ const ForgotPasswordPage: React.FC = () => {
   )
 }
 
-export default ForgotPasswordPage
+export default ForgotPasswordPage  
