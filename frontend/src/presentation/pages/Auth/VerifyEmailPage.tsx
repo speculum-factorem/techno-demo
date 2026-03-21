@@ -27,9 +27,12 @@ const VerifyEmailPage: React.FC = () => {
     setMessage('Подтверждаем email по ссылке...')
 
     authApi.verifyEmail(token)
-      .then((res) => {
+      .then(({ user, tokens }) => {
+        localStorage.setItem('user', JSON.stringify(user))
+        localStorage.setItem('tokens', JSON.stringify(tokens))
         setStatus('success')
-        setMessage(res.message)
+        setMessage('Email подтверждён. Перенаправление...')
+        setTimeout(() => { window.location.href = '/app' }, 500)
       })
       .catch((err) => {
         setStatus('error')
@@ -53,9 +56,12 @@ const VerifyEmailPage: React.FC = () => {
         setMessage('Не удалось определить email. Зарегистрируйтесь заново или используйте ссылку из письма.')
         return
       }
-      const res = await authApi.verifyEmailWithCode(emailHint, digits)
+      const { user, tokens } = await authApi.verifyEmailWithCode(emailHint, digits)
+      localStorage.setItem('user', JSON.stringify(user))
+      localStorage.setItem('tokens', JSON.stringify(tokens))
       setStatus('success')
-      setMessage(res.message)
+      setMessage('Email подтверждён. Перенаправление...')
+      setTimeout(() => { window.location.href = '/app' }, 500)
     } catch (err: any) {
       setStatus('error')
       setMessage(err.response?.data?.message || err.response?.data?.detail || 'Неверный или просроченный код')

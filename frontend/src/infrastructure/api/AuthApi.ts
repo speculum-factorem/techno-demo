@@ -100,9 +100,9 @@ export const authApi = {
     return data
   },
 
-  async verifyEmail(token: string): Promise<{ message: string }> {
-    const { data } = await apiClient.get<{ message: string }>(`/auth/verify-email?token=${encodeURIComponent(token)}`)
-    return data
+  async verifyEmail(token: string): Promise<{ user: User; tokens: AuthTokens }> {
+    const { data } = await apiClient.get<AuthResponse>(`/auth/verify-email?token=${encodeURIComponent(token)}`)
+    return mapAuthResponse(data)
   },
 
   async verifyEmailWithCode(email: string, code: string): Promise<{ user: User; tokens: AuthTokens }> {
