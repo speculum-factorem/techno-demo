@@ -298,6 +298,7 @@ const RegisterPage: React.FC = () => {
         open={codeModalOpen}
         title="Подтверждение регистрации"
         description={`Мы отправили 6-значный код на ${email}. Введите его, чтобы завершить регистрацию.`}
+        emailHint={email.trim()}
         submitLabel="Подтвердить регистрацию"
         loading={loading}
         error={codeError}
