@@ -5,6 +5,8 @@ import path from 'path'
 export default defineConfig({
   plugins: [react()],
   resolve: {
+    // Одна копия react / react-redux в бандле — иначе <Provider> и хуки смотрят в разный Context → «store is null»
+    dedupe: ['react', 'react-dom', 'react-redux', 'react-is', 'use-sync-external-store'],
     alias: {
       '@domain': path.resolve(__dirname, 'src/domain'),
       '@application': path.resolve(__dirname, 'src/application'),

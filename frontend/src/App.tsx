@@ -1,7 +1,5 @@
 import React from 'react'
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
-import { Provider } from 'react-redux'
-import { store } from '@application/store'
 import { useAppDispatch, useAppSelector } from '@application/store/hooks'
 import { initializeAuth } from '@application/store/slices/authSlice'
 import MainLayout from '@presentation/components/layout/MainLayout/MainLayout'
@@ -93,13 +91,6 @@ const AppRoutes: React.FC = () => {
   )
 }
 
-const App: React.FC = () => {
-  return (
-    // <Provider store={store}>
-    //   <AppRoutes />
-    // </Provider>
-    <Dashboard />
-  )
-}
+const App: React.FC = () => <AppRoutes />
 
 export default App

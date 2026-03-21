@@ -174,6 +174,7 @@ docker run --rm -v techno-demo_postgres_data:/volume -v $(pwd):/backup alpine \
 
 10. **Белый экран в браузере после открытия `http://<IP>/`**  
    Частые причины:
+   - В консоли: **`Cannot destructure property 'store' ... as it is null`** — хуки Redux не видят `<Provider>` (часто из‑за **двух копий** `react-redux`/`react` в production-бандле). В актуальной версии фронта: `Provider` вынесен в `main.tsx`, в `vite.config.ts` добавлен `resolve.dedupe`. Пересоберите образ frontend и обновите страницу.
    - **Service Worker** отдал старый `index.html` со старыми путями `/assets/*.js` после нового деплоя. В актуальной версии фронта SW обновлён (сеть для HTML и `/assets/`, `sw.js` кладётся в `public/` и попадает в образ). Пересоберите frontend:  
      `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build frontend`  
      У себя в браузере: жёсткое обновление (**Ctrl+Shift+R** / **Cmd+Shift+R**) или DevTools → Application → Service Workers → **Unregister**, затем обновить страницу.
