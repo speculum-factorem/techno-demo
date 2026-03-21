@@ -36,6 +36,13 @@ public class EmailVerificationToken {
     @Column(name = "used_at")
     private LocalDateTime usedAt;
 
+    @Column(name = "failed_attempts", nullable = false)
+    @Builder.Default
+    private int failedAttempts = 0;
+
+    @Column(name = "last_sent_at")
+    private LocalDateTime lastSentAt;
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

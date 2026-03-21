@@ -2,12 +2,16 @@ package com.agroanalytics.auth.service;
 
 import com.agroanalytics.auth.dto.LoginRequest;
 import com.agroanalytics.auth.dto.LoginResponse;
+import com.agroanalytics.auth.dto.LoginChallengeResponse;
 import com.agroanalytics.auth.dto.RefreshTokenRequest;
 import com.agroanalytics.auth.dto.RegisterRequest;
+import com.agroanalytics.auth.dto.VerifyLoginCodeRequest;
 import com.agroanalytics.auth.model.EmailVerificationToken;
+import com.agroanalytics.auth.model.LoginVerificationCode;
 import com.agroanalytics.auth.model.OrganizationInviteCode;
 import com.agroanalytics.auth.model.User;
 import com.agroanalytics.auth.repository.EmailVerificationTokenRepository;
+import com.agroanalytics.auth.repository.LoginVerificationCodeRepository;
 import com.agroanalytics.auth.repository.OrganizationInviteCodeRepository;
 import com.agroanalytics.auth.repository.UserRepository;
 import jakarta.annotation.PostConstruct;
@@ -22,10 +26,14 @@ import org.springframework.http.HttpStatus;
 
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayDeque;
 import java.util.HashMap;
+import java.util.Deque;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 @RequiredArgsConstructor
@@ -34,6 +42,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final EmailVerificationTokenRepository emailVerificationTokenRepository;
+    private final LoginVerificationCodeRepository loginVerificationCodeRepository;
     private final OrganizationInviteCodeRepository organizationInviteCodeRepository;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
@@ -41,8 +50,27 @@ public class AuthService {
 
     @Value("${app.auth.verification-ttl-minutes:1440}")
     private long verificationTtlMinutes;
+    @Value("${app.auth.login-code-ttl-minutes:10}")
+    private long loginCodeTtlMinutes;
+    @Value("${app.auth.login-code-max-attempts:5}")
+    private int loginCodeMaxAttempts;
+    @Value("${app.auth.email-code-max-attempts:5}")
+    private int emailCodeMaxAttempts;
+    @Value("${app.auth.login-code-resend-cooldown-seconds:30}")
+    private long loginCodeResendCooldownSeconds;
+    @Value("${app.auth.email-code-resend-cooldown-seconds:30}")
+    private long emailCodeResendCooldownSeconds;
+    @Value("${app.auth.login-code-resend-rate-limit.requests:5}")
+    private int loginResendRateLimitRequests;
+    @Value("${app.auth.login-code-resend-rate-limit.window-seconds:600}")
+    private int loginResendRateLimitWindowSeconds;
+    @Value("${app.auth.email-code-resend-rate-limit.requests:5}")
+    private int emailResendRateLimitRequests;
+    @Value("${app.auth.email-code-resend-rate-limit.window-seconds:600}")
+    private int emailResendRateLimitWindowSeconds;
     @Value("${app.bootstrap.default-users:false}")
     private boolean bootstrapDefaultUsers;
+    private final Map<String, Deque<Long>> resendAttemptsByKey = new ConcurrentHashMap<>();
 
     @PostConstruct
     public void initDefaultUsers() {
@@ -86,7 +114,7 @@ public class AuthService {
         }
     }
 
-    public LoginResponse login(LoginRequest request) {
+    public LoginChallengeResponse login(LoginRequest request) {
         User user = userRepository.findByUsername(request.getUsername())
                 .orElseThrow(() -> new BadCredentialsException("Invalid username or password"));
 
@@ -97,6 +125,63 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Email is not verified");
         }
 
+        LoginVerificationCode challenge = createAndSendLoginCode(user);
+        return buildLoginChallengeResponse(challenge);
+    }
+
+    public LoginResponse verifyLoginCode(VerifyLoginCodeRequest request) {
+        LoginVerificationCode challenge = loginVerificationCodeRepository.findByRequestId(request.getRequestId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid login challenge"));
+
+        if (challenge.getUsedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Login code is already used");
+        }
+        if (challenge.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Login code has expired");
+        }
+        if (challenge.getFailedAttempts() >= loginCodeMaxAttempts) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many login code attempts");
+        }
+        if (!challenge.getCode().equals(request.getCode().trim())) {
+            challenge.setFailedAttempts(challenge.getFailedAttempts() + 1);
+            loginVerificationCodeRepository.save(challenge);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid login code");
+        }
+
+        challenge.setUsedAt(LocalDateTime.now());
+        loginVerificationCodeRepository.save(challenge);
+        User user = challenge.getUser();
+        return createLoginResponse(user);
+    }
+
+    public LoginChallengeResponse resendLoginCode(String requestId) {
+        LoginVerificationCode current = loginVerificationCodeRepository.findByRequestId(requestId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid login challenge"));
+        if (current.getUsedAt() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Login code is already used");
+        }
+        if (current.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Login code has expired");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (current.getLastSentAt() != null) {
+            LocalDateTime nextAvailableAt = current.getLastSentAt().plusSeconds(loginCodeResendCooldownSeconds);
+            if (nextAvailableAt.isAfter(now)) {
+                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Please wait before requesting a new login code");
+            }
+        }
+        checkRateLimit(
+                "login-resend:user:" + current.getUser().getId(),
+                loginResendRateLimitRequests,
+                loginResendRateLimitWindowSeconds
+        );
+        LoginVerificationCode next = createAndSendLoginCode(current.getUser());
+        current.setUsedAt(LocalDateTime.now());
+        loginVerificationCodeRepository.save(current);
+        return buildLoginChallengeResponse(next);
+    }
+
+    private LoginResponse createLoginResponse(User user) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", user.getRole().name());
         claims.put("email", user.getEmail());
@@ -123,7 +208,7 @@ public class AuthService {
                 .build();
     }
 
-    public void register(RegisterRequest request) {
+    public long register(RegisterRequest request) {
         String normalizedUsername = request.getUsername().trim();
         String normalizedEmail = request.getEmail().trim().toLowerCase();
         String normalizedFullName = request.getFullName().trim();
@@ -154,6 +239,7 @@ public class AuthService {
 
         userRepository.save(user);
         createAndSendVerificationToken(user);
+        return verificationTtlMinutes * 60;
     }
 
     public void verifyEmail(String token) {
@@ -162,11 +248,50 @@ public class AuthService {
         completeVerification(verificationToken);
     }
 
-    public void verifyEmailByCode(String code) {
-        String normalized = code == null ? "" : code.trim();
-        EmailVerificationToken verificationToken = emailVerificationTokenRepository.findByVerificationCode(normalized)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid verification code"));
+    public void verifyEmailByCode(String email, String code) {
+        String normalizedEmail = email == null ? "" : email.trim().toLowerCase();
+        String normalizedCode = code == null ? "" : code.trim();
+        EmailVerificationToken verificationToken = emailVerificationTokenRepository
+                .findFirstByUserEmailAndUsedAtIsNullOrderByCreatedAtDesc(normalizedEmail)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Verification request not found"));
+        if (verificationToken.getFailedAttempts() >= emailCodeMaxAttempts) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many verification code attempts");
+        }
+        if (!normalizedCode.equals(verificationToken.getVerificationCode())) {
+            verificationToken.setFailedAttempts(verificationToken.getFailedAttempts() + 1);
+            emailVerificationTokenRepository.save(verificationToken);
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid verification code");
+        }
         completeVerification(verificationToken);
+    }
+
+    public long resendEmailVerificationCode(String email) {
+        String normalizedEmail = email == null ? "" : email.trim().toLowerCase();
+        EmailVerificationToken token = emailVerificationTokenRepository
+                .findFirstByUserEmailAndUsedAtIsNullOrderByCreatedAtDesc(normalizedEmail)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Verification request not found"));
+        if (token.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Verification code has expired");
+        }
+        LocalDateTime now = LocalDateTime.now();
+        if (token.getLastSentAt() != null) {
+            LocalDateTime nextAvailableAt = token.getLastSentAt().plusSeconds(emailCodeResendCooldownSeconds);
+            if (nextAvailableAt.isAfter(now)) {
+                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Please wait before requesting a new verification code");
+            }
+        }
+        checkRateLimit(
+                "email-resend:user:" + token.getUser().getId(),
+                emailResendRateLimitRequests,
+                emailResendRateLimitWindowSeconds
+        );
+        String nextCode = generateUniqueVerificationCode();
+        token.setVerificationCode(nextCode);
+        token.setFailedAttempts(0);
+        token.setLastSentAt(now);
+        emailVerificationTokenRepository.save(token);
+        verificationEmailService.sendVerificationEmail(token.getUser().getEmail(), token.getToken(), nextCode);
+        return ChronoUnit.SECONDS.between(now, token.getExpiresAt());
     }
 
     private void completeVerification(EmailVerificationToken verificationToken) {
@@ -247,6 +372,7 @@ public class AuthService {
                 .verificationCode(code)
                 .user(user)
                 .expiresAt(LocalDateTime.now().plusMinutes(verificationTtlMinutes))
+                .lastSentAt(LocalDateTime.now())
                 .build();
         emailVerificationTokenRepository.save(entity);
         verificationEmailService.sendVerificationEmail(user.getEmail(), token, code);
@@ -262,6 +388,50 @@ public class AuthService {
             }
         }
         throw new IllegalStateException("Could not generate unique verification code");
+    }
+
+    private LoginVerificationCode createAndSendLoginCode(User user) {
+        String code = generateSixDigitCode();
+        LocalDateTime now = LocalDateTime.now();
+        LoginVerificationCode challenge = LoginVerificationCode.builder()
+                .requestId(UUID.randomUUID().toString() + UUID.randomUUID())
+                .code(code)
+                .user(user)
+                .expiresAt(now.plusMinutes(loginCodeTtlMinutes))
+                .lastSentAt(now)
+                .build();
+        loginVerificationCodeRepository.save(challenge);
+        verificationEmailService.sendLoginCodeEmail(user.getEmail(), code);
+        return challenge;
+    }
+
+    private LoginChallengeResponse buildLoginChallengeResponse(LoginVerificationCode challenge) {
+        long expiresInSeconds = Math.max(0, ChronoUnit.SECONDS.between(LocalDateTime.now(), challenge.getExpiresAt()));
+        return LoginChallengeResponse.builder()
+                .requestId(challenge.getRequestId())
+                .expiresInSeconds(expiresInSeconds)
+                .message("Код для входа отправлен на email")
+                .build();
+    }
+
+    private void checkRateLimit(String key, int maxRequests, int windowSeconds) {
+        long now = System.currentTimeMillis();
+        long windowMillis = windowSeconds * 1000L;
+        Deque<Long> attempts = resendAttemptsByKey.computeIfAbsent(key, unused -> new ArrayDeque<>());
+        synchronized (attempts) {
+            while (!attempts.isEmpty() && now - attempts.peekFirst() > windowMillis) {
+                attempts.pollFirst();
+            }
+            if (attempts.size() >= maxRequests) {
+                throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Too many resend requests");
+            }
+            attempts.addLast(now);
+        }
+    }
+
+    private String generateSixDigitCode() {
+        int n = 100_000 + SECURE_RANDOM.nextInt(900_000);
+        return String.valueOf(n);
     }
 
     private void validatePasswordPolicy(String password) {

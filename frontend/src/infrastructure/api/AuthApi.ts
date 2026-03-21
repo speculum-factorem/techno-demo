@@ -10,6 +10,17 @@ type AuthResponse = {
   user: { id: number; username: string; email: string; fullName: string; role: string }
 }
 
+type LoginChallengeResponse = {
+  requestId: string
+  expiresInSeconds: number
+  message: string
+}
+
+type EmailCodeResponse = {
+  message: string
+  expiresInSeconds: number
+}
+
 const mapAuthResponse = (data: AuthResponse): { user: User; tokens: AuthTokens } => ({
   user: {
     id: String(data.user.id),
@@ -22,27 +33,53 @@ const mapAuthResponse = (data: AuthResponse): { user: User; tokens: AuthTokens }
 })
 
 export const authApi = {
-  async login(dto: LoginDto): Promise<{ user: User; tokens: AuthTokens }> {
+  async login(dto: LoginDto): Promise<LoginChallengeResponse> {
     if (USE_MOCK) {
       await new Promise(r => setTimeout(r, 800))
-      if (dto.username === 'admin' && dto.password === 'admin') {
+      const isDemoAdmin = dto.username === 'admin' && dto.password === 'admin'
+      const isDemoAgronomist = dto.username === 'agronomist' && dto.password === 'agronomist'
+      if (isDemoAdmin || isDemoAgronomist) {
+        return { requestId: 'mock-request-id', expiresInSeconds: 600, message: 'Код отправлен на email' }
+      }
+      throw { response: { data: { message: 'Неверный логин или пароль' } } }
+    }
+    const { data } = await apiClient.post<LoginChallengeResponse>('/auth/login', dto)
+    return data
+  },
+
+  async verifyLoginCode(requestId: string, code: string): Promise<{ user: User; tokens: AuthTokens }> {
+    if (USE_MOCK) {
+      await new Promise(r => setTimeout(r, 600))
+      if (code === '000000') {
         return {
           user: mockUser,
           tokens: { accessToken: 'mock-token', refreshToken: 'mock-refresh', expiresIn: 3600 },
         }
       }
-      throw { response: { data: { message: 'Неверный логин или пароль' } } }
+      throw { response: { data: { message: 'Неверный код подтверждения' } } }
     }
-    const { data } = await apiClient.post<AuthResponse>('/auth/login', dto)
+    const { data } = await apiClient.post<AuthResponse>('/auth/login/verify-code', {
+      requestId,
+      code: code.replace(/\s/g, ''),
+    })
     return mapAuthResponse(data)
   },
 
-  async register(dto: RegisterDto): Promise<{ message: string }> {
+  async resendLoginCode(requestId: string): Promise<LoginChallengeResponse> {
+    if (USE_MOCK) {
+      await new Promise(r => setTimeout(r, 500))
+      return { requestId: 'mock-request-id-2', expiresInSeconds: 600, message: 'Новый код отправлен на email' }
+    }
+    const { data } = await apiClient.post<LoginChallengeResponse>('/auth/login/resend-code', { requestId })
+    return data
+  },
+
+  async register(dto: RegisterDto): Promise<EmailCodeResponse> {
     if (USE_MOCK) {
       await new Promise(r => setTimeout(r, 800))
-      return { message: 'Registration successful. Check your email to verify your account.' }
+      return { message: 'Registration successful. Check your email to verify your account.', expiresInSeconds: 86400 }
     }
-    const { data } = await apiClient.post<{ message: string }>('/auth/register', {
+    const { data } = await apiClient.post<EmailCodeResponse>('/auth/register', {
       ...dto,
       organizationId: dto.organizationId ? Number(dto.organizationId) : undefined,
     })
@@ -54,8 +91,20 @@ export const authApi = {
     return data
   },
 
-  async verifyEmailWithCode(code: string): Promise<{ message: string }> {
-    const { data } = await apiClient.post<{ message: string }>('/auth/verify-email-code', { code: code.replace(/\s/g, '') })
+  async verifyEmailWithCode(email: string, code: string): Promise<{ message: string }> {
+    const { data } = await apiClient.post<{ message: string }>('/auth/verify-email-code', {
+      email,
+      code: code.replace(/\s/g, ''),
+    })
+    return data
+  },
+
+  async resendEmailCode(email: string): Promise<EmailCodeResponse> {
+    if (USE_MOCK) {
+      await new Promise(r => setTimeout(r, 500))
+      return { message: 'Новый код отправлен на email', expiresInSeconds: 86400 }
+    }
+    const { data } = await apiClient.post<EmailCodeResponse>('/auth/verify-email-code/resend', { email })
     return data
   },
 

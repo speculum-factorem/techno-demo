@@ -52,6 +52,17 @@ app:
     default-users: true
   auth:
     verification-ttl-minutes: ${VERIFICATION_TTL_MINUTES:1440}
+    login-code-ttl-minutes: ${LOGIN_CODE_TTL_MINUTES:10}
+    login-code-max-attempts: ${LOGIN_CODE_MAX_ATTEMPTS:5}
+    email-code-max-attempts: ${EMAIL_CODE_MAX_ATTEMPTS:5}
+    login-code-resend-cooldown-seconds: ${LOGIN_CODE_RESEND_COOLDOWN_SECONDS:30}
+    email-code-resend-cooldown-seconds: ${EMAIL_CODE_RESEND_COOLDOWN_SECONDS:30}
+    login-code-resend-rate-limit:
+      requests: ${LOGIN_CODE_RESEND_RATE_LIMIT_REQUESTS:5}
+      window-seconds: ${LOGIN_CODE_RESEND_RATE_LIMIT_WINDOW_SECONDS:600}
+    email-code-resend-rate-limit:
+      requests: ${EMAIL_CODE_RESEND_RATE_LIMIT_REQUESTS:5}
+      window-seconds: ${EMAIL_CODE_RESEND_RATE_LIMIT_WINDOW_SECONDS:600}
     register-rate-limit:
       requests: ${REGISTER_RATE_LIMIT_REQUESTS:5}
       window-seconds: ${REGISTER_RATE_LIMIT_WINDOW_SECONDS:900}

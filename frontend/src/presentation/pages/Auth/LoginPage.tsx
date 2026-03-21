@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@application/store/hooks'
-import { login, clearError } from '@application/store/slices/authSlice'
+import { login, clearError, verifyLoginCode, clearLoginChallenge, setLoginChallenge } from '@application/store/slices/authSlice'
 import Button from '@presentation/components/common/Button/Button'
 import Input from '@presentation/components/common/Input/Input'
 import Alert from '@presentation/components/common/Alert/Alert'
+import { authApi } from '@infrastructure/api/AuthApi'
+import EmailCodeModal from './EmailCodeModal'
 import styles from './AuthPage.module.scss'
 
 const demoAccounts = [
@@ -16,13 +18,25 @@ const LoginPage: React.FC = () => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const location = useLocation()
-  const { loading, error, isAuthenticated } = useAppSelector(s => s.auth)
+  const {
+    loading,
+    error,
+    isAuthenticated,
+    loginRequestId,
+    loginChallengeMessage,
+    loginChallengeExpiresInSeconds,
+  } = useAppSelector(s => s.auth)
 
   const locationState = location.state as { registeredMessage?: string; prefillUsername?: string; prefillPassword?: string } | null
   const registeredMessage = locationState?.registeredMessage
 
   const [username, setUsername] = useState(locationState?.prefillUsername || '')
   const [password, setPassword] = useState(locationState?.prefillPassword || '')
+  const [codeModalOpen, setCodeModalOpen] = useState(false)
+  const [codeError, setCodeError] = useState('')
+  const [resendError, setResendError] = useState('')
+  const [resendLoading, setResendLoading] = useState(false)
+  const [validationError, setValidationError] = useState('')
 
   useEffect(() => {
     if (isAuthenticated) navigate('/app', { replace: true })
@@ -30,12 +44,27 @@ const LoginPage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    const normalizedUsername = username.trim()
+    if (!/^[a-zA-Z0-9._-]{3,50}$/.test(normalizedUsername)) {
+      setValidationError('Логин: 3-50 символов, только латиница, цифры и . _ -')
+      return
+    }
+    if (password.trim().length < 1) {
+      setValidationError('Введите пароль')
+      return
+    }
+    setValidationError('')
     dispatch(clearError())
-    await dispatch(login({ username, password }))
+    const result = await dispatch(login({ username: normalizedUsername, password }))
+    if (login.fulfilled.match(result)) {
+      setCodeError('')
+      setCodeModalOpen(true)
+    }
   }
 
   const fillDemo = (u: string, p: string) => {
     dispatch(clearError())
+    setValidationError('')
     setUsername(u)
     setPassword(p)
   }
@@ -82,6 +111,7 @@ const LoginPage: React.FC = () => {
           {registeredMessage && (
             <Alert type="success">{registeredMessage}</Alert>
           )}
+          {validationError && <Alert type="error">{validationError}</Alert>}
 
           {/* Demo quick-access */}
           <div className={styles.demoSection}>
@@ -146,6 +176,49 @@ const LoginPage: React.FC = () => {
           </p>
         </div>
       </div>
+
+      <EmailCodeModal
+        open={codeModalOpen}
+        title="Подтверждение входа"
+        description={loginChallengeMessage || 'На вашу почту отправлен 6-значный код подтверждения входа.'}
+        submitLabel="Подтвердить и войти"
+        loading={loading}
+        error={codeError}
+        expiresInSeconds={loginChallengeExpiresInSeconds}
+        canResend
+        resendLabel="Отправить код повторно"
+        resendLoading={resendLoading}
+        resendError={resendError}
+        onClose={() => {
+          setCodeModalOpen(false)
+          setCodeError('')
+          setResendError('')
+          dispatch(clearLoginChallenge())
+        }}
+        onResend={async () => {
+          if (!loginRequestId) return
+          setResendLoading(true)
+          setResendError('')
+          try {
+            const response = await authApi.resendLoginCode(loginRequestId)
+            dispatch(setLoginChallenge(response))
+          } catch (err: any) {
+            setResendError(err.response?.data?.message || 'Не удалось отправить код повторно')
+          } finally {
+            setResendLoading(false)
+          }
+        }}
+        onSubmit={async (code) => {
+          if (!loginRequestId) return
+          const result = await dispatch(verifyLoginCode({ requestId: loginRequestId, code }))
+          if (verifyLoginCode.rejected.match(result)) {
+            setCodeError((result.payload as string) || 'Неверный код')
+            return
+          }
+          setCodeError('')
+          setCodeModalOpen(false)
+        }}
+      />
     </div>
   )
 }

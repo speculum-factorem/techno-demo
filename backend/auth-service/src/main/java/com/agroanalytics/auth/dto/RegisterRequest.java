@@ -16,6 +16,7 @@ public class RegisterRequest {
 
     @NotBlank(message = "Username is required")
     @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
+    @Pattern(regexp = "^[a-zA-Z0-9._-]{3,50}$", message = "Username contains invalid characters")
     private String username;
 
     @NotBlank(message = "Email is required")
@@ -24,6 +25,7 @@ public class RegisterRequest {
 
     @NotBlank(message = "Full name is required")
     @Size(min = 2, max = 120, message = "Full name must be between 2 and 120 characters")
+    @Pattern(regexp = "^[A-Za-zА-Яа-яЁё\\s-]{2,120}$", message = "Full name contains invalid characters")
     private String fullName;
 
     @NotBlank(message = "Password is required")

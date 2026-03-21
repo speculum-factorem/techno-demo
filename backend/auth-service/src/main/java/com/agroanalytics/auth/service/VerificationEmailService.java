@@ -50,4 +50,30 @@ public class VerificationEmailService {
         // Dev/local fallback so flow remains testable without SMTP.
         log.info("Email verification for {} — code: {} — link: {}", toEmail, verificationCode, verifyLink);
     }
+
+    public void sendLoginCodeEmail(String toEmail, String verificationCode) {
+        String subject = "Код входа в AgroAnalytics";
+        String body = "Здравствуйте!\n\n"
+                + "Получен запрос на вход в ваш аккаунт AgroAnalytics.\n\n"
+                + "Код подтверждения входа: " + verificationCode + "\n\n"
+                + "Введите этот код в модальном окне авторизации.\n\n"
+                + "Если это были не вы, смените пароль и проигнорируйте это письмо.";
+
+        if (mailSender.isPresent()) {
+            try {
+                SimpleMailMessage message = new SimpleMailMessage();
+                message.setFrom(mailFrom);
+                message.setTo(toEmail);
+                message.setSubject(subject);
+                message.setText(body);
+                mailSender.get().send(message);
+                return;
+            } catch (MailException ex) {
+                log.warn("Failed to send login code email to {} via SMTP, fallback to logs: {}", toEmail, ex.getMessage());
+            }
+        }
+
+        // Dev/local fallback so flow remains testable without SMTP.
+        log.info("Login verification for {} — code: {}", toEmail, verificationCode);
+    }
 }

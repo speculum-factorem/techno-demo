@@ -1,20 +1,27 @@
 .page {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   min-height: 100vh;
+  width: 100vw;
   background: #f8f9fa;
+
+  @media (max-width: 700px) {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ===================== LEFT PANEL ===================== */
 
 .leftPanel {
-  display: none;
-  width: 420px;
-  min-width: 380px;
+  display: flex;
+  width: 100%;
+  min-width: 0;
   background: linear-gradient(160deg, #1a73e8 0%, #0d5bba 60%, #34a853 100%);
   color: #fff;
   position: relative;
   overflow: hidden;
-  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
 
   &::before {
     content: '';
@@ -40,10 +47,13 @@
     pointer-events: none;
   }
 
-  @media (min-width: 900px) {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  @media (max-width: 900px) {
+    width: 100%;
+    min-height: 280px;
+  }
+
+  @media (max-width: 700px) {
+    min-height: 240px;
   }
 }
 
@@ -204,25 +214,34 @@
 /* ===================== RIGHT PANEL ===================== */
 
 .rightPanel {
-  flex: 1;
+  width: 100%;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 32px 20px;
+  align-items: stretch;
+  justify-content: stretch;
+  padding: 0;
   min-height: 100vh;
+
+  @media (max-width: 700px) {
+    width: 100%;
+    min-height: auto;
+  }
 }
 
 .formCard {
   background: #fff;
-  border-radius: 20px;
-  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.08), 0 1px 4px rgba(0, 0, 0, 0.04);
+  border-radius: 0;
+  box-shadow: none;
   padding: 40px 36px;
   width: 100%;
-  max-width: 440px;
+  max-width: none;
+  min-height: 100vh;
+
+  @media (max-width: 700px) {
+    min-height: auto;
+  }
 
   @media (max-width: 480px) {
     padding: 28px 20px;
-    border-radius: 16px;
   }
 }
 

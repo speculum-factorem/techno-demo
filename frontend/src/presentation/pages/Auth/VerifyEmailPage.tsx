@@ -48,7 +48,12 @@ const VerifyEmailPage: React.FC = () => {
     setStatus('loading')
     setMessage('')
     try {
-      const res = await authApi.verifyEmailWithCode(digits)
+      if (!emailHint) {
+        setStatus('error')
+        setMessage('Не удалось определить email. Зарегистрируйтесь заново или используйте ссылку из письма.')
+        return
+      }
+      const res = await authApi.verifyEmailWithCode(emailHint, digits)
       setStatus('success')
       setMessage(res.message)
     } catch (err: any) {

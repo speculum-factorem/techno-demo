@@ -1,9 +1,10 @@
 package com.agroanalytics.auth.service;
 
 import com.agroanalytics.auth.dto.LoginRequest;
-import com.agroanalytics.auth.dto.LoginResponse;
+import com.agroanalytics.auth.dto.LoginChallengeResponse;
 import com.agroanalytics.auth.dto.RegisterRequest;
 import com.agroanalytics.auth.model.User;
+import com.agroanalytics.auth.repository.LoginVerificationCodeRepository;
 import com.agroanalytics.auth.repository.OrganizationInviteCodeRepository;
 import com.agroanalytics.auth.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +43,9 @@ class AuthServiceTest {
     private com.agroanalytics.auth.repository.EmailVerificationTokenRepository emailVerificationTokenRepository;
 
     @Mock
+    private LoginVerificationCodeRepository loginVerificationCodeRepository;
+
+    @Mock
     private OrganizationInviteCodeRepository organizationInviteCodeRepository;
 
     @InjectMocks
@@ -53,7 +57,7 @@ class AuthServiceTest {
     }
 
     @Test
-    void login_validCredentials_returnsTokens() {
+    void login_validCredentials_returnsChallenge() {
         User user = User.builder()
                 .id(1L)
                 .username("admin")
@@ -64,15 +68,10 @@ class AuthServiceTest {
                 .build();
         when(userRepository.findByUsername("admin")).thenReturn(Optional.of(user));
         when(passwordEncoder.matches("admin", user.getPasswordHash())).thenReturn(true);
-        when(jwtService.generateToken(anyString(), any())).thenReturn("access-token");
-        when(jwtService.generateRefreshToken(anyString())).thenReturn("refresh-token");
-        when(jwtService.getExpiration()).thenReturn(86400L);
-
         LoginRequest request = new LoginRequest("admin", "admin");
-        LoginResponse response = authService.login(request);
+        LoginChallengeResponse response = authService.login(request);
 
-        assertThat(response.getAccessToken()).isEqualTo("access-token");
-        assertThat(response.getRefreshToken()).isEqualTo("refresh-token");
+        assertThat(response.getRequestId()).isNotBlank();
     }
 
     @Test

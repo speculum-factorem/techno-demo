@@ -2,9 +2,13 @@ package com.agroanalytics.auth.controller;
 
 import com.agroanalytics.auth.dto.LoginRequest;
 import com.agroanalytics.auth.dto.LoginResponse;
+import com.agroanalytics.auth.dto.LoginChallengeResponse;
 import com.agroanalytics.auth.dto.RefreshTokenRequest;
+import com.agroanalytics.auth.dto.ResendEmailCodeRequest;
+import com.agroanalytics.auth.dto.ResendLoginCodeRequest;
 import com.agroanalytics.auth.dto.RegisterRequest;
 import com.agroanalytics.auth.dto.VerifyEmailCodeRequest;
+import com.agroanalytics.auth.dto.VerifyLoginCodeRequest;
 import com.agroanalytics.auth.model.User;
 import com.agroanalytics.auth.service.AuthService;
 import com.agroanalytics.auth.service.RegistrationRateLimiter;
@@ -34,23 +38,37 @@ public class AuthController {
     @Operation(summary = "Вход", description = "Авторизация по логину и паролю")
     @ApiResponse(responseCode = "200", description = "Успешный вход")
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
-        LoginResponse response = authService.login(request);
+    public ResponseEntity<LoginChallengeResponse> login(@Valid @RequestBody LoginRequest request) {
+        LoginChallengeResponse response = authService.login(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Подтверждение кода входа", description = "Проверка 6-значного кода из email и выдача JWT")
+    @PostMapping("/login/verify-code")
+    public ResponseEntity<LoginResponse> verifyLoginCode(@Valid @RequestBody VerifyLoginCodeRequest request) {
+        LoginResponse response = authService.verifyLoginCode(request);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/login/resend-code")
+    public ResponseEntity<LoginChallengeResponse> resendLoginCode(@Valid @RequestBody ResendLoginCodeRequest request) {
+        LoginChallengeResponse response = authService.resendLoginCode(request.getRequestId());
         return ResponseEntity.ok(response);
     }
 
     @Operation(summary = "Регистрация", description = "Регистрация нового пользователя")
     @ApiResponse(responseCode = "201", description = "Учётная запись создана, требуется подтверждение email")
     @PostMapping("/register")
-    public ResponseEntity<Map<String, String>> register(
+    public ResponseEntity<Map<String, Object>> register(
             @Valid @RequestBody RegisterRequest request,
             HttpServletRequest httpRequest
     ) {
         String clientKey = httpRequest.getRemoteAddr();
         registrationRateLimiter.checkLimit(clientKey == null ? "unknown" : clientKey);
-        authService.register(request);
+        long expiresInSeconds = authService.register(request);
         return ResponseEntity.status(201).body(Map.of(
-                "message", "Регистрация успешна. На почту отправлен код подтверждения (6 цифр) и ссылка."
+                "message", "Регистрация успешна. На почту отправлен код подтверждения (6 цифр) и ссылка.",
+                "expiresInSeconds", expiresInSeconds
         ));
     }
 
@@ -64,8 +82,17 @@ public class AuthController {
     @Operation(summary = "Подтверждение email по коду", description = "Ввод 6-значного кода из письма")
     @PostMapping("/verify-email-code")
     public ResponseEntity<Map<String, String>> verifyEmailByCode(@Valid @RequestBody VerifyEmailCodeRequest request) {
-        authService.verifyEmailByCode(request.getCode());
+        authService.verifyEmailByCode(request.getEmail(), request.getCode());
         return ResponseEntity.ok(Map.of("message", "Email verified successfully"));
+    }
+
+    @PostMapping("/verify-email-code/resend")
+    public ResponseEntity<Map<String, Object>> resendEmailCode(@Valid @RequestBody ResendEmailCodeRequest request) {
+        long expiresInSeconds = authService.resendEmailVerificationCode(request.getEmail());
+        return ResponseEntity.ok(Map.of(
+                "message", "Новый код подтверждения отправлен на email",
+                "expiresInSeconds", expiresInSeconds
+        ));
     }
 
     @PostMapping("/logout")

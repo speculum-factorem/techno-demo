@@ -1,7 +1,7 @@
 package com.agroanalytics.auth.controller;
 
 import com.agroanalytics.auth.dto.LoginRequest;
-import com.agroanalytics.auth.dto.LoginResponse;
+import com.agroanalytics.auth.dto.LoginChallengeResponse;
 import com.agroanalytics.auth.dto.RegisterRequest;
 import com.agroanalytics.auth.model.User;
 import com.agroanalytics.auth.service.AuthService;
@@ -42,10 +42,10 @@ class AuthControllerTest {
     @Test
     void login_success_returns200() throws Exception {
         LoginRequest request = new LoginRequest("admin", "admin");
-        LoginResponse response = LoginResponse.builder()
-                .accessToken("token")
-                .refreshToken("refresh")
-                .expiresIn(86400)
+        LoginChallengeResponse response = LoginChallengeResponse.builder()
+                .requestId("request-123")
+                .expiresInSeconds(600)
+                .message("Код для входа отправлен на email")
                 .build();
 
         when(authService.login(any(LoginRequest.class))).thenReturn(response);
@@ -54,8 +54,7 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").value("token"))
-                .andExpect(jsonPath("$.refreshToken").value("refresh"));
+                .andExpect(jsonPath("$.requestId").value("request-123"));
     }
 
     @Test
@@ -81,7 +80,7 @@ class AuthControllerTest {
         request.setPersonalDataConsent(true);
 
         doNothing().when(registrationRateLimiter).checkLimit(any());
-        doNothing().when(authService).register(any(RegisterRequest.class));
+        when(authService.register(any(RegisterRequest.class))).thenReturn(86400L);
 
         mockMvc.perform(post("/api/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -125,11 +124,11 @@ class AuthControllerTest {
 
     @Test
     void verifyEmailByCode_success_returns200() throws Exception {
-        doNothing().when(authService).verifyEmailByCode("123456");
+        doNothing().when(authService).verifyEmailByCode("user@test.com", "123456");
 
         mockMvc.perform(post("/api/auth/verify-email-code")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"code\":\"123456\"}"))
+                        .content("{\"email\":\"user@test.com\",\"code\":\"123456\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.message").value("Email verified successfully"));
     }

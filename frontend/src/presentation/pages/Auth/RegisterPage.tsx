@@ -6,6 +6,8 @@ import Button from '@presentation/components/common/Button/Button'
 import Input from '@presentation/components/common/Input/Input'
 import Alert from '@presentation/components/common/Alert/Alert'
 import PrivacyPolicyModal from '@presentation/components/legal/PrivacyPolicyModal'
+import { authApi } from '@infrastructure/api/AuthApi'
+import EmailCodeModal from './EmailCodeModal'
 import styles from './AuthPage.module.scss'
 
 const STEPS = ['Аккаунт', 'Персональные данные', 'Организация']
@@ -27,6 +29,12 @@ const RegisterPage: React.FC = () => {
   const [consentError, setConsentError] = useState('')
   const [privacyOpen, setPrivacyOpen] = useState(false)
   const [passwordError, setPasswordError] = useState('')
+  const [formatError, setFormatError] = useState('')
+  const [codeModalOpen, setCodeModalOpen] = useState(false)
+  const [codeError, setCodeError] = useState('')
+  const [codeExpiresInSeconds, setCodeExpiresInSeconds] = useState<number | null>(null)
+  const [resendError, setResendError] = useState('')
+  const [resendLoading, setResendLoading] = useState(false)
 
   useEffect(() => {
     if (isAuthenticated) navigate('/app', { replace: true })
@@ -40,10 +48,42 @@ const RegisterPage: React.FC = () => {
     return ''
   }
 
+  const validateStep0 = () => {
+    const normalizedUsername = username.trim()
+    const normalizedEmail = email.trim()
+    if (!/^[a-zA-Z0-9._-]{3,50}$/.test(normalizedUsername)) {
+      return 'Логин: 3-50 символов, только латиница, цифры и . _ -'
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+      return 'Введите корректный email'
+    }
+    return ''
+  }
+
+  const validateStep1 = () => {
+    const normalizedFullName = fullName.trim()
+    if (!/^[A-Za-zА-Яа-яЁё\s-]{2,120}$/.test(normalizedFullName)) {
+      return 'ФИО: 2-120 символов, только буквы, пробел и дефис'
+    }
+    return ''
+  }
+
   const nextStep = () => {
     dispatch(clearError())
-    if (step === 0 && (!username || username.length < 3)) return
+    setFormatError('')
+    if (step === 0) {
+      const err = validateStep0()
+      if (err) {
+        setFormatError(err)
+        return
+      }
+    }
     if (step === 1) {
+      const profileErr = validateStep1()
+      if (profileErr) {
+        setFormatError(profileErr)
+        return
+      }
       const err = validatePassword(password)
       if (err) { setPasswordError(err); return }
       if (password !== confirmPassword) { setPasswordError('Пароли не совпадают'); return }
@@ -55,6 +95,11 @@ const RegisterPage: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (step < STEPS.length - 1) { nextStep(); return }
+    setFormatError('')
+    if (inviteCode && !/^[a-zA-Z0-9\-_.]{1,100}$/.test(inviteCode.trim())) {
+      setFormatError('Invite-код содержит недопустимые символы')
+      return
+    }
     if (!personalDataConsent) {
       setConsentError('Необходимо согласие на обработку персональных данных')
       return
@@ -68,7 +113,10 @@ const RegisterPage: React.FC = () => {
       personalDataConsent: true,
     }))
     if (register.fulfilled.match(result)) {
-      navigate('/auth/verify-email', { state: { email } })
+      setCodeError('')
+      setResendError('')
+      setCodeExpiresInSeconds((result.payload as { expiresInSeconds?: number }).expiresInSeconds ?? null)
+      setCodeModalOpen(true)
     }
   }
 
@@ -127,6 +175,7 @@ const RegisterPage: React.FC = () => {
           </div>
 
           {error && <Alert type="error" onClose={() => dispatch(clearError())}>{error}</Alert>}
+          {formatError && <Alert type="error">{formatError}</Alert>}
 
           <form onSubmit={handleSubmit} className={styles.form}>
             {step === 0 && (
@@ -245,6 +294,49 @@ const RegisterPage: React.FC = () => {
       </div>
 
       <PrivacyPolicyModal open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
+      <EmailCodeModal
+        open={codeModalOpen}
+        title="Подтверждение регистрации"
+        description={`Мы отправили 6-значный код на ${email}. Введите его, чтобы завершить регистрацию.`}
+        submitLabel="Подтвердить регистрацию"
+        loading={loading}
+        error={codeError}
+        expiresInSeconds={codeExpiresInSeconds}
+        canResend
+        resendLabel="Отправить код повторно"
+        resendLoading={resendLoading}
+        resendError={resendError}
+        onClose={() => {
+          setCodeModalOpen(false)
+          setCodeError('')
+          setResendError('')
+        }}
+        onResend={async () => {
+          setResendLoading(true)
+          setResendError('')
+          try {
+            const response = await authApi.resendEmailCode(email)
+            setCodeExpiresInSeconds(response.expiresInSeconds ?? null)
+          } catch (err: any) {
+            setResendError(err.response?.data?.message || 'Не удалось отправить код повторно')
+          } finally {
+            setResendLoading(false)
+          }
+        }}
+        onSubmit={async (code) => {
+          try {
+            await authApi.verifyEmailWithCode(email, code)
+            setCodeError('')
+            setCodeModalOpen(false)
+            navigate('/auth/login', {
+              replace: true,
+              state: { registeredMessage: 'Email подтвержден. Теперь можно войти.' },
+            })
+          } catch (err: any) {
+            setCodeError(err.response?.data?.message || 'Неверный или просроченный код')
+          }
+        }}
+      />
     </div>
   )
 }
