@@ -15,7 +15,12 @@ interface NavGroup {
   items: NavItem[]
 }
 
-const Sidebar: React.FC = () => {
+interface SidebarProps {
+  open?: boolean
+  onClose?: () => void
+}
+
+const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
   const { unreadCount } = useAppSelector(s => s.alerts)
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({})
 
@@ -69,7 +74,7 @@ const Sidebar: React.FC = () => {
   }
 
   return (
-    <nav className={styles.sidebar}>
+    <nav className={`${styles.sidebar} ${open ? styles.open : ''}`}>
       <div className={styles.nav}>
         {groups.map(group => (
           <div key={group.title} className={styles.group}>
@@ -89,6 +94,7 @@ const Sidebar: React.FC = () => {
                     className={({ isActive }) =>
                       `${styles.navItem} ${isActive ? styles.active : ''}`
                     }
+                    onClick={onClose}
                   >
                     <span className={`material-icons-round ${styles.icon}`}>{item.icon}</span>
                     <span className={styles.label}>{item.label}</span>

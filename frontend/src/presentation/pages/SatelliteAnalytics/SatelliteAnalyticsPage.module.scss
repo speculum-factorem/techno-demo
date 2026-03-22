@@ -1,9 +1,22 @@
-.page { padding: 28px 32px; max-width: 1200px; margin: 0 auto; }
-.header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
-.title { font-size: 1.55rem; font-weight: 800; color: #202124; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; .material-icons-round { color: #1a73e8; font-size: 28px; } }
+.page {
+  padding: 28px 32px; max-width: 1200px; margin: 0 auto;
+  @media (max-width: 768px) { padding: 20px 16px; }
+  @media (max-width: 480px) { padding: 16px 12px; }
+}
+.header {
+  display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap;
+  @media (max-width: 768px) { flex-direction: column; }
+}
+.title {
+  font-size: 1.55rem; font-weight: 800; color: #202124; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; .material-icons-round { color: #1a73e8; font-size: 28px; }
+  @media (max-width: 480px) { font-size: 1.25rem; }
+}
 .sub { font-size: 0.9rem; color: #5f6368; margin: 0; }
 
-.controls { display: flex; gap: 12px; align-items: flex-end; margin-bottom: 16px; flex-wrap: wrap; }
+.controls {
+  display: flex; gap: 12px; align-items: flex-end; margin-bottom: 16px; flex-wrap: wrap;
+  @media (max-width: 600px) { flex-direction: column; align-items: stretch; }
+}
 .controlGroup { display: flex; flex-direction: column; gap: 5px; label { font-size: 0.78rem; font-weight: 600; color: #5f6368; } }
 .select { padding: 9px 12px; border: 1.5px solid #e8eaed; border-radius: 8px; font-size: 0.88rem; color: #202124; background: #fff; outline: none; min-width: 200px; cursor: pointer; &:focus { border-color: #1a73e8; } }
 .modeBtns { display: flex; gap: 6px; }
@@ -20,7 +33,10 @@
 .mapTitle { font-size: 0.95rem; font-weight: 700; color: #202124; }
 .mapDate { font-size: 0.8rem; color: #9aa0a6; }
 
-.mapGrid { display: grid; grid-template-columns: repeat(12, 1fr); grid-template-rows: repeat(8, 1fr); gap: 2px; padding: 12px; background: #1a1a2e; border-radius: 0; aspect-ratio: 3/2; }
+.mapGrid {
+  display: grid; grid-template-columns: repeat(12, 1fr); grid-template-rows: repeat(8, 1fr); gap: 2px; padding: 12px; background: #1a1a2e; border-radius: 0; aspect-ratio: 3/2;
+  overflow-x: auto;
+}
 .mapCell { border-radius: 2px; cursor: crosshair; transition: opacity .1s; &:hover { opacity: 0.8; outline: 1px solid rgba(255,255,255,0.5); } }
 
 .legend { display: flex; gap: 8px; padding: 12px 16px; flex-wrap: wrap; }

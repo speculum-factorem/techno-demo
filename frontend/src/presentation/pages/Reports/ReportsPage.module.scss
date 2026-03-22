@@ -1,6 +1,16 @@
-.page { padding: 28px 32px; max-width: 1200px; margin: 0 auto; }
-.header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
-.title { font-size: 1.55rem; font-weight: 800; color: #202124; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; .material-icons-round { color: #1a73e8; font-size: 28px; } }
+.page {
+  padding: 28px 32px; max-width: 1200px; margin: 0 auto;
+  @media (max-width: 768px) { padding: 20px 16px; }
+  @media (max-width: 480px) { padding: 16px 12px; }
+}
+.header {
+  display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap;
+  @media (max-width: 768px) { flex-direction: column; }
+}
+.title {
+  font-size: 1.55rem; font-weight: 800; color: #202124; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; .material-icons-round { color: #1a73e8; font-size: 28px; }
+  @media (max-width: 480px) { font-size: 1.25rem; }
+}
 .sub { font-size: 0.9rem; color: #5f6368; margin: 0; }
 .scheduleBtn { display: flex; align-items: center; gap: 6px; padding: 10px 18px; background: #34a853; color: #fff; border: none; border-radius: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer; &:hover { background: #2d7a45; } }
 
@@ -32,7 +42,10 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 
 .scheduledList { display: flex; flex-direction: column; gap: 10px; }
-.scheduledCard { background: #fff; border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 6px rgba(0,0,0,.07); display: flex; gap: 14px; align-items: center; }
+.scheduledCard {
+  background: #fff; border-radius: 12px; padding: 16px 18px; box-shadow: 0 1px 6px rgba(0,0,0,.07); display: flex; gap: 14px; align-items: center;
+  @media (max-width: 600px) { flex-direction: column; align-items: flex-start; padding: 12px 14px; }
+}
 .scheduledIcon { width: 40px; height: 40px; border-radius: 10px; background: #f1f3f4; display: flex; align-items: center; justify-content: center; .material-icons-round { font-size: 22px; } }
 .scheduledBody { flex: 1; min-width: 0; }
 .scheduledName { font-size: 0.92rem; font-weight: 700; color: #202124; margin-bottom: 5px; }
@@ -41,7 +54,10 @@
 .addScheduleBtn { display: flex; align-items: center; gap: 6px; padding: 12px 18px; background: #e8f0fe; color: #1a73e8; border: 2px dashed #1a73e8; border-radius: 12px; font-size: 0.88rem; font-weight: 600; cursor: pointer; justify-content: center; transition: all .15s; &:hover { background: #1a73e8; color: #fff; } }
 
 .historyList { display: flex; flex-direction: column; gap: 8px; background: #fff; border-radius: 14px; box-shadow: 0 1px 6px rgba(0,0,0,.07); overflow: hidden; }
-.historyItem { display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #f1f3f4; &:last-child { border-bottom: none; } }
+.historyItem {
+  display: flex; align-items: center; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #f1f3f4; &:last-child { border-bottom: none; }
+  @media (max-width: 600px) { flex-direction: column; align-items: flex-start; padding: 10px 14px; }
+}
 .historyBody { flex: 1; min-width: 0; }
 .historyName { font-size: 0.9rem; font-weight: 700; color: #202124; display: block; }
 .historyMeta { font-size: 0.78rem; color: #9aa0a6; }
@@ -55,7 +71,10 @@
 .closeBtn { background: none; border: none; cursor: pointer; color: #5f6368; display: flex; align-items: center; padding: 4px; border-radius: 6px; &:hover { background: #f1f3f4; } }
 .modalBody { padding: 20px 24px; display: flex; flex-direction: column; gap: 16px; }
 .formGroup { display: flex; flex-direction: column; gap: 5px; label { font-size: 0.8rem; font-weight: 600; color: #5f6368; } }
-.formRow { display: flex; gap: 12px; > * { flex: 1; } }
+.formRow {
+  display: flex; gap: 12px; > * { flex: 1; }
+  @media (max-width: 480px) { flex-direction: column; }
+}
 .input { padding: 9px 12px; border: 1.5px solid #e8eaed; border-radius: 8px; font-size: 0.88rem; color: #202124; background: #fff; outline: none; font-family: inherit; &:focus { border-color: #1a73e8; } }
 .select { padding: 9px 12px; border: 1.5px solid #e8eaed; border-radius: 8px; font-size: 0.88rem; color: #202124; background: #fff; outline: none; cursor: pointer; &:focus { border-color: #1a73e8; } }
 .modalActions { display: flex; gap: 10px; justify-content: flex-end; }

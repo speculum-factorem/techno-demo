@@ -4,7 +4,11 @@ import { useAppDispatch, useAppSelector } from '@application/store/hooks'
 import { logout } from '@application/store/slices/authSlice'
 import styles from './Header.module.scss'
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  onMenuClick?: () => void
+}
+
+const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const { user } = useAppSelector(s => s.auth)
@@ -19,6 +23,9 @@ const Header: React.FC = () => {
   return (
     <header className={styles.header}>
       <div className={styles.left}>
+        <button className={styles.menuBtn} onClick={onMenuClick} aria-label="Меню">
+          <span className="material-icons-round">menu</span>
+        </button>
         <Link to="/app" className={styles.logo}>
           <span className={`material-icons-round ${styles.logoIcon}`}>eco</span>
           <div className={styles.logoText}>

@@ -1,6 +1,16 @@
-.page { padding: 28px 32px; max-width: 1200px; margin: 0 auto; }
-.header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap; }
-.title { font-size: 1.55rem; font-weight: 800; color: #202124; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; .material-icons-round { color: #1a73e8; font-size: 28px; } }
+.page {
+  padding: 28px 32px; max-width: 1200px; margin: 0 auto;
+  @media (max-width: 768px) { padding: 20px 16px; }
+  @media (max-width: 480px) { padding: 16px 12px; }
+}
+.header {
+  display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 24px; gap: 16px; flex-wrap: wrap;
+  @media (max-width: 768px) { flex-direction: column; }
+}
+.title {
+  font-size: 1.55rem; font-weight: 800; color: #202124; margin: 0 0 4px; display: flex; align-items: center; gap: 10px; .material-icons-round { color: #1a73e8; font-size: 28px; }
+  @media (max-width: 480px) { font-size: 1.25rem; }
+}
 .sub { font-size: 0.9rem; color: #5f6368; margin: 0; }
 .addBtn { display: flex; align-items: center; gap: 6px; padding: 10px 18px; background: #1a73e8; color: #fff; border: none; border-radius: 10px; font-size: 0.9rem; font-weight: 600; cursor: pointer; &:hover { background: #1557b0; } }
 
@@ -15,9 +25,15 @@
 .chip { padding: 5px 12px; border: 1.5px solid #e8eaed; border-radius: 16px; font-size: 0.8rem; cursor: pointer; background: #fff; color: #5f6368; transition: all .15s; &:hover { border-color: #1a73e8; } }
 .activeChip { font-weight: 600; }
 
-.userTable { background: #fff; border-radius: 14px; box-shadow: 0 1px 6px rgba(0,0,0,.07); overflow: hidden; }
-.tableHeader { display: grid; grid-template-columns: 2fr 1.5fr 1.5fr 1.2fr 1fr 80px; gap: 12px; padding: 12px 18px; background: #f8f9fa; font-size: 0.78rem; font-weight: 700; color: #9aa0a6; text-transform: uppercase; letter-spacing: .4px; }
-.tableRow { display: grid; grid-template-columns: 2fr 1.5fr 1.5fr 1.2fr 1fr 80px; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #f1f3f4; cursor: pointer; align-items: center; transition: background .12s; &:last-child { border-bottom: none; } &:hover { background: #f8f9fa; } }
+.userTable { background: #fff; border-radius: 14px; box-shadow: 0 1px 6px rgba(0,0,0,.07); overflow: hidden; overflow-x: auto; }
+.tableHeader {
+  display: grid; grid-template-columns: 2fr 1.5fr 1.5fr 1.2fr 1fr 80px; gap: 12px; padding: 12px 18px; background: #f8f9fa; font-size: 0.78rem; font-weight: 700; color: #9aa0a6; text-transform: uppercase; letter-spacing: .4px;
+  min-width: 700px;
+}
+.tableRow {
+  display: grid; grid-template-columns: 2fr 1.5fr 1.5fr 1.2fr 1fr 80px; gap: 12px; padding: 14px 18px; border-bottom: 1px solid #f1f3f4; cursor: pointer; align-items: center; transition: background .12s; &:last-child { border-bottom: none; } &:hover { background: #f8f9fa; }
+  min-width: 700px;
+}
 .rowInactive { opacity: 0.55; }
 .userCell { display: flex; align-items: center; gap: 10px; }
 .avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.82rem; font-weight: 800; flex-shrink: 0; }
@@ -43,7 +59,10 @@
 .permActions { display: flex; gap: 4px; flex-wrap: wrap; }
 .permBadge { padding: 2px 6px; background: #e8f0fe; color: #1a73e8; border-radius: 4px; font-size: 0.68rem; font-weight: 700; }
 
-.matrixWrapper { background: #fff; border-radius: 14px; box-shadow: 0 1px 6px rgba(0,0,0,.07); overflow-x: auto; padding: 20px; }
+.matrixWrapper {
+  background: #fff; border-radius: 14px; box-shadow: 0 1px 6px rgba(0,0,0,.07); overflow-x: auto; padding: 20px;
+  @media (max-width: 768px) { padding: 12px; }
+}
 .matrix { width: 100%; border-collapse: collapse; th, td { padding: 10px 14px; text-align: center; border-bottom: 1px solid #f1f3f4; } th { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: .4px; } }
 .resName { text-align: left !important; font-size: 0.88rem; font-weight: 600; color: #202124; }
 .matrixCell { vertical-align: middle; }

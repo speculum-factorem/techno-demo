@@ -25,6 +25,7 @@
   padding: 0 24px;
   height: 64px;
   @include flex(row, center, space-between, 24px);
+  @media (max-width: 480px) { padding: 0 12px; gap: 12px; }
 }
 
 .brand {
@@ -41,6 +42,7 @@
   border-left: 1px solid $outline;
   padding-left: 8px;
   margin-left: 4px;
+  @media (max-width: 480px) { display: none; }
 }
 
 .navLinks {
@@ -59,7 +61,10 @@
   &:hover { background: $surface-variant; color: $text-primary; }
 }
 
-.navActions { @include flex(row, center, flex-end, 8px); }
+.navActions {
+  @include flex(row, center, flex-end, 8px);
+  @media (max-width: 600px) { .btnOutline { display: none; } }
+}
 
 .btnOutline {
   padding: 8px 18px;
@@ -282,6 +287,8 @@
   max-width: 1200px;
   margin: 0 auto;
   padding: 80px 24px;
+  @media (max-width: 768px) { padding: 48px 16px; }
+  @media (max-width: 480px) { padding: 32px 12px; }
 }
 
 .sectionMeta {
@@ -463,6 +470,8 @@
   padding: 80px 24px;
   text-align: center;
   @include flex(column, center, center, 20px);
+  @media (max-width: 768px) { padding: 48px 16px; }
+  @media (max-width: 480px) { padding: 32px 12px; }
 
   h2 { font-size: clamp(28px, 4vw, 48px); font-weight: 800; color: #fff; margin: 0; }
   p { font-size: $font-size-md; color: rgba(255,255,255,0.8); margin: 0; }
@@ -518,6 +527,7 @@
   @include flex(row, center, space-between, 16px);
   flex-wrap: wrap;
   gap: 16px;
+  @media (max-width: 600px) { flex-direction: column; align-items: center; text-align: center; }
 }
 
 .footerBrand { @include flex(row, center, flex-start, 12px); }

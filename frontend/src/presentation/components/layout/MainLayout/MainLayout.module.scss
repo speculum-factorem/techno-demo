@@ -9,9 +9,30 @@
   margin-left: $sidebar-width;
   margin-top: $header-height;
   min-height: calc(100vh - #{$header-height});
+
+  @media (max-width: 768px) {
+    margin-left: 0;
+  }
 }
 
 .content {
   padding: 24px;
   max-width: 1440px;
+
+  @media (max-width: 600px) {
+    padding: 16px 12px;
+  }
+}
+
+.overlay {
+  display: none;
+
+  @media (max-width: 768px) {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 89;
+    background: rgba(0, 0, 0, 0.4);
+    backdrop-filter: blur(2px);
+  }
 }

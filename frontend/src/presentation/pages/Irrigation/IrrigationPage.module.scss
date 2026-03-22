@@ -2,8 +2,14 @@
 @use '@presentation/styles/mixins' as *;
 
 .page { @include flex(column, stretch, flex-start, 24px); }
-.header { @include flex(row, center, space-between, 16px); }
-.title { font-size: $font-size-xl; font-weight: 700; color: $text-primary; }
+.header {
+  @include flex(row, center, space-between, 16px);
+  @media (max-width: 768px) { flex-direction: column; align-items: flex-start; }
+}
+.title {
+  font-size: $font-size-xl; font-weight: 700; color: $text-primary;
+  @media (max-width: 480px) { font-size: $font-size-lg; }
+}
 .subtitle { font-size: $font-size-sm; color: $text-secondary; margin-top: 2px; }
 
 .statsGrid {
@@ -11,6 +17,7 @@
   grid-template-columns: repeat(4, 1fr);
   gap: 16px;
   @media (max-width: 900px) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 480px) { grid-template-columns: 1fr; }
 }
 
 .statCard {

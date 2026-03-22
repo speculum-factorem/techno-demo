@@ -16,12 +16,43 @@
   z-index: 100;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   min-width: 0;
+
+  @media (max-width: 600px) {
+    padding: 0 10px;
+  }
 }
 
 .left {
   @include flex(row, center, flex-start, 16px);
   min-width: 0;
   flex: 1 1 auto;
+
+  @media (max-width: 768px) {
+    gap: 8px;
+  }
+}
+
+.menuBtn {
+  display: none;
+  @include flex(row, center, center);
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: none;
+  background: none;
+  border-radius: $radius-full;
+  color: $text-secondary;
+  cursor: pointer;
+  transition: background $transition-fast;
+
+  &:hover {
+    background: $surface-variant;
+    color: $text-primary;
+  }
+
+  @media (max-width: 768px) {
+    display: flex;
+  }
 }
 
 .logo {
@@ -44,6 +75,11 @@
 .logoIcon {
   font-size: 28px !important;
   color: $secondary;
+  flex-shrink: 0;
+
+  @media (max-width: 400px) {
+    font-size: 24px !important;
+  }
 }
 
 .logoText {
@@ -153,6 +189,11 @@
   overflow: hidden;
   z-index: 200;
   animation: fadeIn 0.15s ease;
+
+  @media (max-width: 400px) {
+    min-width: 220px;
+    right: -8px;
+  }
 }
 
 @keyframes fadeIn {
@@ -174,6 +215,7 @@
 .dropdownEmail {
   font-size: $font-size-sm;
   color: $text-secondary;
+  word-break: break-all;
 }
 
 .dropdownDivider {
@@ -239,5 +281,11 @@
   .badge {
     top: 2px;
     right: 2px;
+  }
+}
+
+@media (max-width: 400px) {
+  .logoText {
+    display: none;
   }
 }

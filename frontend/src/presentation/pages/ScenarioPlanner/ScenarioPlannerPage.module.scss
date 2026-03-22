@@ -2,33 +2,43 @@
 @use '@presentation/styles/mixins' as *;
 
 .page { @include flex(column, flex-start, stretch, 14px); }
-.header { @include flex(row, space-between, flex-end, 14px); }
-.title { font-size: $font-size-xl; font-weight: 700; }
+.header {
+  @include flex(row, space-between, flex-end, 14px);
+  @media (max-width: 768px) { flex-direction: column; align-items: flex-start; }
+}
+.title {
+  font-size: $font-size-xl; font-weight: 700;
+  @media (max-width: 480px) { font-size: $font-size-lg; }
+}
 .subtitle { color: $text-secondary; }
 
 .controls {
   display: grid;
   grid-template-columns: 1fr 280px;
   gap: 10px;
+  @media (max-width: 768px) { grid-template-columns: 1fr; }
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+  @media (max-width: 1100px) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 600px) { grid-template-columns: 1fr; }
 }
 
 .sectionTitle { font-size: $font-size-md; margin-bottom: 8px; }
 .recommended { margin-bottom: 10px; }
 .error { color: $danger; }
 
-.table { @include flex(column, flex-start, stretch, 6px); }
+.table { @include flex(column, flex-start, stretch, 6px); overflow-x: auto; }
 .rowHeader, .row {
   display: grid;
   grid-template-columns: 1.2fr 1fr 1fr 1fr 1fr 100px;
   gap: 8px;
   padding: 8px 10px;
   border-radius: $radius-md;
+  min-width: 600px;
 }
 .rowHeader { background: $surface-variant; font-weight: 600; }
 .row { border: 1px solid $outline; }

@@ -6,6 +6,10 @@
   background: linear-gradient(135deg, #e8f0fe 0%, #e6f4ea 100%);
   @include flex(row, center, center);
   padding: 24px;
+
+  @media (max-width: 480px) {
+    padding: 12px;
+  }
 }
 
 .card {
@@ -16,6 +20,11 @@
   width: 100%;
   max-width: 420px;
   @include flex(column, stretch, flex-start, 20px);
+
+  @media (max-width: 480px) {
+    padding: 28px 20px;
+    border-radius: $radius-lg;
+  }
 }
 
 .logo {
@@ -26,6 +35,10 @@
 .logoIcon {
   font-size: 48px !important;
   color: $secondary;
+
+  @media (max-width: 480px) {
+    font-size: 38px !important;
+  }
 }
 
 .logoTitle {

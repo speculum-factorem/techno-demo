@@ -3,16 +3,30 @@
 
 .dashboard {
   @include flex(column, stretch, flex-start, 24px);
+
+  @media (max-width: 600px) {
+    gap: 16px;
+  }
 }
 
 .header {
   @include flex(row, center, space-between);
+
+  @media (max-width: 500px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
 }
 
 .title {
   font-size: $font-size-xl;
   font-weight: 700;
   color: $text-primary;
+
+  @media (max-width: 500px) {
+    font-size: $font-size-lg;
+  }
 }
 
 .subtitle {
@@ -34,11 +48,19 @@
   gap: 16px;
 
   @media (max-width: 1100px) { grid-template-columns: repeat(2, 1fr); }
+  @media (max-width: 500px) {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
 }
 
 .kpiCard {
   @include flex(row, center, flex-start, 16px);
   transition: all $transition-fast;
+
+  @media (max-width: 500px) {
+    gap: 12px;
+  }
 }
 
 .kpiCardDanger { border-color: rgba($danger, 0.3); }
@@ -52,6 +74,11 @@
   flex-shrink: 0;
 
   .material-icons-round { font-size: 24px !important; }
+
+  @media (max-width: 500px) {
+    width: 42px;
+    height: 42px;
+  }
 }
 
 .kpiContent { flex: 1; min-width: 0; }
@@ -61,6 +88,10 @@
   font-weight: 700;
   color: $text-primary;
   line-height: 1.1;
+
+  @media (max-width: 500px) {
+    font-size: $font-size-xl;
+  }
 }
 
 .kpiLabel {
@@ -95,6 +126,10 @@
   @include flex(row, center, space-between);
   padding: 16px 20px;
   border-bottom: 1px solid $outline;
+
+  @media (max-width: 500px) {
+    padding: 12px 14px;
+  }
 }
 
 .cardTitle {
@@ -137,6 +172,12 @@
 
   &:last-child { border-bottom: none; }
   &:hover { background: $surface-variant; }
+
+  @media (max-width: 500px) {
+    padding: 12px 14px;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
 }
 
 .fieldInfo { flex: 1; min-width: 0; }
@@ -157,6 +198,12 @@
 .fieldStats {
   @include flex(row, center, flex-end, 8px);
   flex-shrink: 0;
+
+  @media (max-width: 500px) {
+    width: 100%;
+    justify-content: flex-start;
+    margin-top: 4px;
+  }
 }
 
 .statItem {
@@ -185,6 +232,10 @@
   &:last-child { border-bottom: none; }
   &:hover { background: $surface-variant; }
   &.unread { background: rgba($primary, 0.02); }
+
+  @media (max-width: 500px) {
+    padding: 10px 12px;
+  }
 }
 
 .alertIcon { font-size: 18px !important; margin-top: 1px; flex-shrink: 0; }
