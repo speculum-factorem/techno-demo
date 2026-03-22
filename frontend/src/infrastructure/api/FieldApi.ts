@@ -1,5 +1,12 @@
 import apiClient from './ApiClient'
-import { Field, CreateFieldDto, FieldPassport, FieldSatellite, FieldFinance } from '@domain/entities/Field'
+import {
+  Field,
+  CreateFieldDto,
+  FieldPassport,
+  FieldSatellite,
+  FieldFinance,
+  PassportEntryCategory,
+} from '@domain/entities/Field'
 
 type FieldApiDto = {
   id: string
@@ -85,6 +92,94 @@ export const fieldApi = {
   async getPassport(fieldId: string): Promise<FieldPassport> {
     const { data } = await apiClient.get<FieldPassport>(`/fields/${fieldId}/passport`)
     return data
+  },
+
+  async addPassportEntry(
+    fieldId: string,
+    payload: {
+      category: PassportEntryCategory
+      date: string
+      type: string
+      description?: string
+      amount?: number
+      unit?: string
+      cost?: number
+    },
+  ): Promise<FieldPassport['operations'][number]> {
+    const { data } = await apiClient.post(`/fields/${fieldId}/passport/entries`, {
+      category: payload.category,
+      date: payload.date,
+      type: payload.type,
+      description: payload.description,
+      amount: payload.amount,
+      unit: payload.unit,
+      cost: payload.cost,
+    })
+    return data
+  },
+
+  async updatePassportEntry(
+    fieldId: string,
+    entryId: string,
+    payload: {
+      category: PassportEntryCategory
+      date: string
+      type: string
+      description?: string
+      amount?: number
+      unit?: string
+      cost?: number
+    },
+  ): Promise<FieldPassport['operations'][number]> {
+    const { data } = await apiClient.put(`/fields/${fieldId}/passport/entries/${entryId}`, {
+      category: payload.category,
+      date: payload.date,
+      type: payload.type,
+      description: payload.description,
+      amount: payload.amount,
+      unit: payload.unit,
+      cost: payload.cost,
+    })
+    return data
+  },
+
+  async deletePassportEntry(fieldId: string, entryId: string): Promise<void> {
+    await apiClient.delete(`/fields/${fieldId}/passport/entries/${entryId}`)
+  },
+
+  async addSeasonResult(
+    fieldId: string,
+    payload: {
+      season: string
+      cropType?: string
+      yieldActual?: number
+      yieldPlan?: number
+      revenueActual?: number
+      costActual?: number
+    },
+  ): Promise<FieldPassport['results'][number]> {
+    const { data } = await apiClient.post(`/fields/${fieldId}/passport/seasons`, payload)
+    return data
+  },
+
+  async updateSeasonResult(
+    fieldId: string,
+    resultId: string,
+    payload: {
+      season: string
+      cropType?: string
+      yieldActual?: number
+      yieldPlan?: number
+      revenueActual?: number
+      costActual?: number
+    },
+  ): Promise<FieldPassport['results'][number]> {
+    const { data } = await apiClient.put(`/fields/${fieldId}/passport/seasons/${resultId}`, payload)
+    return data
+  },
+
+  async deleteSeasonResult(fieldId: string, resultId: string): Promise<void> {
+    await apiClient.delete(`/fields/${fieldId}/passport/seasons/${resultId}`)
   },
 
   async getSatellite(fieldId: string, days = 14): Promise<FieldSatellite> {

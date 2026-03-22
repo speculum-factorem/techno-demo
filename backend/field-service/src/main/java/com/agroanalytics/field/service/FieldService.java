@@ -5,7 +5,14 @@ import com.agroanalytics.field.dto.FieldFinanceDto;
 import com.agroanalytics.field.dto.FieldDto;
 import com.agroanalytics.field.dto.FieldPassportDto;
 import com.agroanalytics.field.dto.FieldSatelliteDto;
+import com.agroanalytics.field.dto.PassportEntryWriteDto;
+import com.agroanalytics.field.dto.SeasonResultWriteDto;
 import com.agroanalytics.field.model.Field;
+import com.agroanalytics.field.model.FieldPassportEntry;
+import com.agroanalytics.field.model.FieldPassportSeasonResult;
+import com.agroanalytics.field.model.PassportEntryCategory;
+import com.agroanalytics.field.repository.FieldPassportEntryRepository;
+import com.agroanalytics.field.repository.FieldPassportSeasonResultRepository;
 import com.agroanalytics.field.repository.FieldRepository;
 import com.agroanalytics.field.security.RequestActor;
 import lombok.RequiredArgsConstructor;
@@ -21,6 +28,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import java.time.LocalDate;
 import java.util.ArrayList;
 
@@ -32,6 +40,8 @@ public class FieldService {
     private static final String FIELD_EVENTS_TOPIC = "field-events";
 
     private final FieldRepository fieldRepository;
+    private final FieldPassportEntryRepository passportEntryRepository;
+    private final FieldPassportSeasonResultRepository passportSeasonRepository;
     private final KafkaTemplate<String, Object> kafkaTemplate;
 
     public List<FieldDto> getAllFields(RequestActor actor) {
@@ -60,71 +70,28 @@ public class FieldService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Field not found"));
         assertCanAccess(field, actor);
 
-        List<FieldPassportDto.OperationRecord> operations = List.of(
-                FieldPassportDto.OperationRecord.builder().date(LocalDate.now().minusDays(28)).type("SOIL_PREP")
-                        .description("Предпосевная обработка почвы").amount(1.0).unit("операция").cost(14500.0).build(),
-                FieldPassportDto.OperationRecord.builder().date(LocalDate.now().minusDays(22)).type("SEEDING")
-                        .description("Посев культуры").amount(field.getArea()).unit("га").cost(21000.0).build(),
-                FieldPassportDto.OperationRecord.builder().date(LocalDate.now().minusDays(8)).type("IRRIGATION")
-                        .description("Плановый полив").amount(420.0).unit("м3").cost(6300.0).build()
-        );
+        List<FieldPassportEntry> entries = passportEntryRepository.findByFieldIdOrderByOperationDateDescSortOrderAsc(id);
+        List<FieldPassportDto.OperationRecord> operations = entries.stream()
+                .filter(e -> e.getCategory() == PassportEntryCategory.OPERATION)
+                .map(this::toPassportOperationDto)
+                .collect(Collectors.toList());
+        List<FieldPassportDto.OperationRecord> fertilizers = entries.stream()
+                .filter(e -> e.getCategory() == PassportEntryCategory.FERTILIZER)
+                .map(this::toPassportOperationDto)
+                .collect(Collectors.toList());
+        List<FieldPassportDto.OperationRecord> treatments = entries.stream()
+                .filter(e -> e.getCategory() == PassportEntryCategory.TREATMENT)
+                .map(this::toPassportOperationDto)
+                .collect(Collectors.toList());
 
-        List<FieldPassportDto.OperationRecord> fertilizers = List.of(
-                FieldPassportDto.OperationRecord.builder().date(LocalDate.now().minusDays(18)).type("NPK")
-                        .description("Внесение NPK 16:16:16").amount(210.0).unit("кг").cost(17200.0).build(),
-                FieldPassportDto.OperationRecord.builder().date(LocalDate.now().minusDays(10)).type("UREA")
-                        .description("Карбамид").amount(95.0).unit("кг").cost(7600.0).build()
-        );
-
-        List<FieldPassportDto.OperationRecord> treatments = List.of(
-                FieldPassportDto.OperationRecord.builder().date(LocalDate.now().minusDays(14)).type("HERBICIDE")
-                        .description("Гербицидная обработка").amount(24.0).unit("л").cost(9400.0).build(),
-                FieldPassportDto.OperationRecord.builder().date(LocalDate.now().minusDays(6)).type("FUNGICIDE")
-                        .description("Фунгицидная обработка").amount(18.0).unit("л").cost(8700.0).build()
-        );
-
-        double cropArea = field.getArea() != null ? field.getArea() : 10.0;
-        String cropKey = field.getCropType() != null ? field.getCropType().toLowerCase() : "wheat";
-        double yieldBase = switch (cropKey) {
-            case "corn"       -> 6.8;
-            case "sunflower"  -> 2.0;
-            case "barley"     -> 3.5;
-            case "soy"        -> 1.8;
-            case "sugar_beet" -> 30.0;
-            default           -> 4.3;
-        };
-        double pricePerTon = switch (cropKey) {
-            case "corn"       -> 11000.0;
-            case "sunflower"  -> 28000.0;
-            case "barley"     -> 10500.0;
-            case "soy"        -> 34000.0;
-            case "sugar_beet" -> 3200.0;
-            default           -> 13500.0;
-        };
-        double costBase = cropArea * 11850.0;
-
-        List<FieldPassportDto.ResultRecord> results = List.of(
-                FieldPassportDto.ResultRecord.builder()
-                        .season("2024/2025")
-                        .cropType(field.getCropType())
-                        .yieldActual(round2(yieldBase * 1.05))
-                        .yieldPlan(round2(yieldBase))
-                        .revenueActual(round2(cropArea * yieldBase * 1.05 * pricePerTon))
-                        .costActual(round2(costBase * 0.94))
-                        .build(),
-                FieldPassportDto.ResultRecord.builder()
-                        .season("2023/2024")
-                        .cropType(field.getCropType())
-                        .yieldActual(round2(yieldBase * 0.96))
-                        .yieldPlan(round2(yieldBase))
-                        .revenueActual(round2(cropArea * yieldBase * 0.96 * pricePerTon))
-                        .costActual(round2(costBase * 0.92))
-                        .build()
-        );
+        List<FieldPassportDto.ResultRecord> results = passportSeasonRepository
+                .findByFieldIdOrderBySortOrderDescSeasonDesc(id).stream()
+                .map(this::toSeasonResultDto)
+                .collect(Collectors.toList());
 
         double totalCost = concatCosts(operations, fertilizers, treatments);
         double totalFertilizer = fertilizers.stream().mapToDouble(v -> v.getAmount() == null ? 0.0 : v.getAmount()).sum();
-        double totalWater = operations.stream()
+        double totalWater = Stream.concat(Stream.concat(operations.stream(), fertilizers.stream()), treatments.stream())
                 .filter(v -> "IRRIGATION".equals(v.getType()))
                 .mapToDouble(v -> v.getAmount() == null ? 0.0 : v.getAmount())
                 .sum();
@@ -142,6 +109,148 @@ public class FieldService {
                         .totalWaterM3(totalWater)
                         .operationsCount(operations.size() + fertilizers.size() + treatments.size())
                         .build())
+                .build();
+    }
+
+    @Transactional
+    public FieldPassportDto.OperationRecord addPassportEntry(UUID fieldId, PassportEntryWriteDto dto, RequestActor actor) {
+        Field field = fieldRepository.findById(fieldId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Field not found"));
+        assertCanAccess(field, actor);
+
+        int nextOrder = passportEntryRepository.findByFieldIdOrderByOperationDateDescSortOrderAsc(fieldId).stream()
+                .filter(e -> e.getCategory() == dto.getCategory())
+                .mapToInt(FieldPassportEntry::getSortOrder)
+                .max()
+                .orElse(-1) + 1;
+
+        FieldPassportEntry saved = passportEntryRepository.save(FieldPassportEntry.builder()
+                .fieldId(fieldId)
+                .category(dto.getCategory())
+                .operationDate(dto.getDate())
+                .operationType(dto.getType())
+                .description(dto.getDescription())
+                .amount(dto.getAmount())
+                .unit(dto.getUnit())
+                .cost(dto.getCost())
+                .sortOrder(nextOrder)
+                .build());
+
+        return toPassportOperationDto(saved);
+    }
+
+    @Transactional
+    public FieldPassportDto.OperationRecord updatePassportEntry(UUID fieldId, UUID entryId, PassportEntryWriteDto dto, RequestActor actor) {
+        Field field = fieldRepository.findById(fieldId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Field not found"));
+        assertCanAccess(field, actor);
+        FieldPassportEntry entry = passportEntryRepository.findById(entryId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Passport entry not found"));
+        if (!entry.getFieldId().equals(fieldId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Passport entry not found");
+        }
+
+        entry.setCategory(dto.getCategory());
+        entry.setOperationDate(dto.getDate());
+        entry.setOperationType(dto.getType());
+        entry.setDescription(dto.getDescription());
+        entry.setAmount(dto.getAmount());
+        entry.setUnit(dto.getUnit());
+        entry.setCost(dto.getCost());
+
+        return toPassportOperationDto(passportEntryRepository.save(entry));
+    }
+
+    @Transactional
+    public void deletePassportEntry(UUID fieldId, UUID entryId, RequestActor actor) {
+        Field field = fieldRepository.findById(fieldId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Field not found"));
+        assertCanAccess(field, actor);
+        if (passportEntryRepository.countByFieldIdAndId(fieldId, entryId) == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Passport entry not found");
+        }
+        passportEntryRepository.deleteById(entryId);
+    }
+
+    @Transactional
+    public FieldPassportDto.ResultRecord addSeasonResult(UUID fieldId, SeasonResultWriteDto dto, RequestActor actor) {
+        Field field = fieldRepository.findById(fieldId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Field not found"));
+        assertCanAccess(field, actor);
+
+        int nextOrder = passportSeasonRepository.findByFieldIdOrderBySortOrderDescSeasonDesc(fieldId).stream()
+                .mapToInt(FieldPassportSeasonResult::getSortOrder)
+                .max()
+                .orElse(-1) + 1;
+
+        FieldPassportSeasonResult saved = passportSeasonRepository.save(FieldPassportSeasonResult.builder()
+                .fieldId(fieldId)
+                .season(dto.getSeason())
+                .cropType(dto.getCropType())
+                .yieldActual(dto.getYieldActual())
+                .yieldPlan(dto.getYieldPlan())
+                .revenueActual(dto.getRevenueActual())
+                .costActual(dto.getCostActual())
+                .sortOrder(nextOrder)
+                .build());
+
+        return toSeasonResultDto(saved);
+    }
+
+    @Transactional
+    public FieldPassportDto.ResultRecord updateSeasonResult(UUID fieldId, UUID resultId, SeasonResultWriteDto dto, RequestActor actor) {
+        Field field = fieldRepository.findById(fieldId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Field not found"));
+        assertCanAccess(field, actor);
+        FieldPassportSeasonResult row = passportSeasonRepository.findById(resultId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Season result not found"));
+        if (!row.getFieldId().equals(fieldId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Season result not found");
+        }
+
+        row.setSeason(dto.getSeason());
+        row.setCropType(dto.getCropType());
+        row.setYieldActual(dto.getYieldActual());
+        row.setYieldPlan(dto.getYieldPlan());
+        row.setRevenueActual(dto.getRevenueActual());
+        row.setCostActual(dto.getCostActual());
+
+        return toSeasonResultDto(passportSeasonRepository.save(row));
+    }
+
+    @Transactional
+    public void deleteSeasonResult(UUID fieldId, UUID resultId, RequestActor actor) {
+        Field field = fieldRepository.findById(fieldId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Field not found"));
+        assertCanAccess(field, actor);
+        if (passportSeasonRepository.countByFieldIdAndId(fieldId, resultId) == 0) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Season result not found");
+        }
+        passportSeasonRepository.deleteById(resultId);
+    }
+
+    private FieldPassportDto.OperationRecord toPassportOperationDto(FieldPassportEntry e) {
+        return FieldPassportDto.OperationRecord.builder()
+                .id(e.getId().toString())
+                .category(e.getCategory().name())
+                .date(e.getOperationDate())
+                .type(e.getOperationType())
+                .description(e.getDescription())
+                .amount(e.getAmount())
+                .unit(e.getUnit())
+                .cost(e.getCost())
+                .build();
+    }
+
+    private FieldPassportDto.ResultRecord toSeasonResultDto(FieldPassportSeasonResult r) {
+        return FieldPassportDto.ResultRecord.builder()
+                .id(r.getId().toString())
+                .season(r.getSeason())
+                .cropType(r.getCropType())
+                .yieldActual(r.getYieldActual())
+                .yieldPlan(r.getYieldPlan())
+                .revenueActual(r.getRevenueActual())
+                .costActual(r.getCostActual())
                 .build();
     }
 
@@ -316,6 +425,8 @@ public class FieldService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Field not found"));
         assertCanAccess(field, actor);
 
+        passportEntryRepository.deleteByFieldId(id);
+        passportSeasonRepository.deleteByFieldId(id);
         fieldRepository.delete(field);
 
         Map<String, Object> payload = new HashMap<>();

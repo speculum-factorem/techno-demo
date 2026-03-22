@@ -27,6 +27,8 @@ from satellite_stac import build_grid_for_field, build_series, list_available_da
 from apscheduler.schedulers.background import BackgroundScheduler
 
 import report_exports
+import integration_checks
+from integration_checks import IntegrationCheckError
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -1216,6 +1218,23 @@ def list_integrations():
     return [_integration_row_to_api(r) for r in rows]
 
 
+def _integration_connect_metrics(db) -> dict:
+    hdr = _field_service_headers()
+    fc, fgeo = 0, 0
+    data = _safe_get_json(f"{FIELD_SERVICE_URL.rstrip('/')}/api/fields", headers=hdr)
+    if isinstance(data, list):
+        fc = len(data)
+        for f in data:
+            try:
+                lat, lng = f.get("lat"), f.get("lng")
+                if lat is not None and lng is not None:
+                    fgeo += 1
+            except Exception:
+                pass
+    tc = db.query(IoTTelemetryRecord).count()
+    return {"field_count": fc, "fields_with_geo_count": fgeo, "telemetry_count": tc}
+
+
 @app.post("/integrations/{integration_id}/connect")
 def connect_integration(integration_id: str):
     _seed_integrations_if_empty()
@@ -1224,14 +1243,22 @@ def connect_integration(integration_id: str):
         row = db.query(AppIntegrationRecord).filter(AppIntegrationRecord.id == integration_id).first()
         if not row:
             raise HTTPException(status_code=404, detail="Интеграция не найдена")
+        cfg = json.loads(row.config_json or "{}")
+        metrics = _integration_connect_metrics(db)
+        try:
+            synced, msg = integration_checks.verify_integration_connect(row.type, cfg, metrics)
+        except IntegrationCheckError as e:
+            row.status = "error"
+            db.commit()
+            raise HTTPException(status_code=400, detail=str(e))
         row.status = "connected"
         row.last_sync = now
-        row.records_synced = int(row.records_synced or 0) + 42
+        row.records_synced = int(synced)
         db.commit()
         db.refresh(row)
         payload = _integration_row_to_api(row)
         iname = row.name
-    _audit("integration_connect", f"Connected integration {integration_id}", "Integration", integration_id, iname)
+    _audit("integration_connect", f"{integration_id}: {msg}", "Integration", integration_id, iname)
     return payload
 
 
@@ -1244,6 +1271,7 @@ def disconnect_integration(integration_id: str):
             raise HTTPException(status_code=404, detail="Интеграция не найдена")
         row.status = "disconnected"
         row.last_sync = None
+        row.records_synced = 0
         db.commit()
         db.refresh(row)
         payload = _integration_row_to_api(row)
@@ -1924,63 +1952,61 @@ def get_field_dataset(field_id: str, n_samples: int = 500):
 
 
 def _seed_integrations_if_empty():
-    """Каталог интеграций для UI (персистентность в analyticsdb)."""
+    """Каталог интеграций для UI. Стартовое состояние — не подключено; счётчики обновляются при успешном connect."""
     seed = [
         {
             "id": "i1", "type": "1c_erp", "name": "1С:Агро / ERP",
-            "description": "Двусторонняя синхронизация справочников, себестоимости, складских остатков и актов выполненных работ",
-            "icon": "1c_erp", "status": "connected", "records_synced": 248,
-            "config": {"host": "erp.agro.ru", "port": "8080", "database": "agro_prod"},
+            "description": "Проверка TCP-доступности хоста из конфига (укажите реальный адрес HTTP-сервиса 1С)",
+            "icon": "1c_erp",
+            "config": {"host": "", "port": "80"},
             "features": ["Синхронизация полей", "Импорт затрат", "Экспорт урожая", "Акты работ"],
         },
         {
-            "id": "i2", "type": "weather_api", "name": "OpenWeatherMap API",
-            "description": "Актуальные метеоданные и прогноз погоды для полей",
-            "icon": "cloud", "status": "connected", "records_synced": 12800,
-            "config": {"api_key": "••••••••••••••••", "endpoint": "api.openweathermap.org"},
-            "features": ["Текущая погода", "Прогноз", "Исторические данные", "Радар осадков"],
+            "id": "i2", "type": "weather_api", "name": "Погода (Open-Meteo)",
+            "description": "Тот же источник, что и weather-service: проверка доступности API и учёт полей",
+            "icon": "cloud",
+            "config": {"endpoint": "open-meteo"},
+            "features": ["Текущая погода", "Прогноз", "Исторические ряды"],
         },
         {
-            "id": "i3", "type": "iot_gateway", "name": "IoT Gateway (MQTT)",
-            "description": "Датчики почвы, метеостанции и контроллеры полива через MQTT",
-            "icon": "device_hub", "status": "connected", "records_synced": 94200,
-            "config": {"broker": "mqtt.agro.internal", "port": "1883", "topic": "sensors/#"},
-            "features": ["Датчики почвы", "Метеостанции", "Контроллеры полива", "Телеметрия"],
+            "id": "i3", "type": "iot_gateway", "name": "IoT / телеметрия",
+            "description": "Связь с записями POST /iot/telemetry в analyticsdb",
+            "icon": "device_hub",
+            "config": {"ingest": "/api/analytics/iot/telemetry"},
+            "features": ["Датчики почвы", "Метеостанции", "Телеметрия в БД"],
         },
         {
-            "id": "i4", "type": "geo_import", "name": "GIS / Shapefile Import",
-            "description": "Импорт границ полей из Shapefile, GeoJSON, KML",
-            "icon": "map", "status": "disconnected", "records_synced": 0,
+            "id": "i4", "type": "geo_import", "name": "GIS / геоданные полей",
+            "description": "Учёт полей с координатами lat/lng из field-service",
+            "icon": "map",
             "config": {},
-            "features": ["Shapefile (.shp)", "GeoJSON", "KML / KMZ", "WGS84 / СК-42"],
+            "features": ["Shapefile / GeoJSON (через field-service)", "WGS84"],
         },
         {
             "id": "i5", "type": "telegram", "name": "Telegram Bot",
-            "description": "Уведомления и дайджесты в Telegram",
-            "icon": "send", "status": "error", "records_synced": 0,
-            "config": {"bot_token": "••••••••••••", "chat_id": "-100123456789"},
-            "features": ["Алерты", "Дайджесты", "Команды бота", "Групповые чаты"],
+            "description": "Проверка токена бота (TELEGRAM_BOT_TOKEN в окружении сервиса)",
+            "icon": "send",
+            "config": {},
+            "features": ["Алерты", "Дайджесты"],
         },
         {
             "id": "i6", "type": "email_smtp", "name": "Email / SMTP",
-            "description": "Отчёты и уведомления по электронной почте",
-            "icon": "email", "status": "connected", "records_synced": 156,
-            "config": {"host": "smtp.agro.ru", "port": "587", "from": "noreply@agro.ru"},
-            "features": ["Отчёты PDF/Excel", "Алерты по правилам", "Приглашения", "Дайджесты"],
+            "description": "Проверка входа на SMTP (MAIL_* в окружении; опционально host/port в конфиге)",
+            "icon": "email",
+            "config": {},
+            "features": ["Отчёты PDF/Excel", "Алерты по правилам", "Приглашения"],
         },
     ]
     with SessionLocal() as db:
         if db.query(AppIntegrationRecord).count() > 0:
             return
-        now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
         for s in seed:
             cfg = json.dumps(s["config"], ensure_ascii=False)
             feat = json.dumps(s["features"], ensure_ascii=False)
-            last = now if s["status"] == "connected" else (None if s["status"] == "disconnected" else "2026-03-19T18:00:00Z")
             db.add(AppIntegrationRecord(
                 id=s["id"], type=s["type"], name=s["name"], description=s["description"],
-                icon=s["icon"], status=s["status"], last_sync=last,
-                records_synced=int(s["records_synced"]), config_json=cfg, features_json=feat,
+                icon=s["icon"], status="disconnected", last_sync=None,
+                records_synced=0, config_json=cfg, features_json=feat,
             ))
         db.commit()
 
@@ -2000,60 +2026,97 @@ def _integration_row_to_api(row: AppIntegrationRecord) -> dict:
     }
 
 
-def _seed_ops_data_if_empty():
-    with SessionLocal() as db:
-        if db.query(OpsWorkTaskRecord).count() == 0:
-            now = datetime.utcnow().isoformat()
-            db.add(OpsWorkTaskRecord(
-                id="t1", title="Полив пшеничного поля А-1", description="Провести плановый полив капельным методом",
-                category="irrigation", priority="high", status="in_progress", field_id="f1", field_name="Поле А-1",
-                assignee="Иванов И.И.", assignee_role="operator", deadline=datetime.utcnow().date().isoformat(),
-                checklist_json=json.dumps([{"id": "c1", "text": "Проверить давление в системе", "done": False}], ensure_ascii=False),
-                estimated_hours=4.0, created_at=now, updated_at=now
-            ))
-        if db.query(OpsEquipmentRecord).count() == 0:
-            now = datetime.utcnow().isoformat()
-            db.add(OpsEquipmentRecord(
-                id="d1", name="Датчик почвы А-1-01", type="soil_sensor", field_id="f1", field_name="Поле А-1",
-                status="online", battery=86, signal=91, last_ping=now, firmware="2.1.4",
-                install_date=(datetime.utcnow().date() - timedelta(days=200)).isoformat(),
-                telemetry_json=json.dumps({"temperature": 18.2, "humidity": 65, "soilMoisture": 42, "lat": 47.21, "lng": 39.73}, ensure_ascii=False),
-                sla_json=json.dumps({"uptime": 99.2, "dataQuality": 98.5, "missedReadings": 3}, ensure_ascii=False),
-                alerts_json="[]"
-            ))
-        if db.query(OpsNotificationRuleRecord).count() == 0:
-            db.add(OpsNotificationRuleRecord(
-                id="r1", name="Критический дефицит влаги", description="Сигнал при низкой влажности почвы",
-                enabled=True, condition_logic="AND",
-                conditions_json=json.dumps([{"field": "soilMoisture", "operator": "lt", "value": 15, "unit": "%"}], ensure_ascii=False),
-                channels_json=json.dumps(["app", "email"], ensure_ascii=False),
-                recipients_json=json.dumps(["admin@agro.ru"], ensure_ascii=False),
-                field_ids_json=json.dumps(["f1", "f2"], ensure_ascii=False),
-                cooldown_minutes=60, created_by="system", created_at=datetime.utcnow().date().isoformat(), trigger_count=0
-            ))
-        if db.query(OpsScheduledReportRecord).count() == 0:
-            now = datetime.utcnow()
-            wk = (now + timedelta(days=7)).strftime("%Y-%m-%d")
-            mo = (now + timedelta(days=30)).strftime("%Y-%m-%d")
-            db.add(OpsScheduledReportRecord(
-                id="sch_" + uuid4().hex[:10], template_id="r1", name="Недельный дайджест", frequency="weekly",
-                format="pdf", channel="email",
-                recipients_json=json.dumps(["admin@agro.ru", "manager@agro.ru"], ensure_ascii=False),
-                next_run=wk, created_at=now.isoformat(),
-            ))
-            db.add(OpsScheduledReportRecord(
-                id="sch_" + uuid4().hex[:10], template_id="r2", name="Финансовая сводка", frequency="monthly",
-                format="excel", channel="email",
-                recipients_json=json.dumps(["cfo@agro.ru"], ensure_ascii=False),
-                next_run=mo, created_at=now.isoformat(),
-            ))
-            db.add(OpsScheduledReportRecord(
-                id="sch_" + uuid4().hex[:10], template_id="r8", name="Отчёт для руководства", frequency="monthly",
-                format="pdf", channel="email",
-                recipients_json=json.dumps(["ceo@agro.ru"], ensure_ascii=False),
-                next_run=mo, created_at=now.isoformat(),
-            ))
-        db.commit()
+def _telemetry_dict_from_payload(payload: IoTTelemetryInput) -> dict:
+    d: dict = {}
+    if payload.temperature is not None:
+        d["temperature"] = payload.temperature
+    if payload.humidity is not None:
+        d["humidity"] = payload.humidity
+    if payload.soilMoisture is not None:
+        d["soilMoisture"] = payload.soilMoisture
+    if payload.precipitation is not None:
+        d["precipitation"] = payload.precipitation
+    if payload.windSpeed is not None:
+        d["windSpeed"] = payload.windSpeed
+    if payload.solarRadiation is not None:
+        d["solarRadiation"] = payload.solarRadiation
+    if payload.lat is not None:
+        d["lat"] = payload.lat
+    if payload.lng is not None:
+        d["lng"] = payload.lng
+    return d
+
+
+def _upsert_equipment_from_telemetry_payload(db, payload: IoTTelemetryInput, ping_iso: str) -> None:
+    dev_id = (payload.deviceId or "").strip() or f"field-{payload.fieldId}"
+    tel = _telemetry_dict_from_payload(payload)
+    fn = (payload.fieldName or "").strip() or f"Поле {payload.fieldId}"
+    name = f"{payload.deviceId}" if (payload.deviceId or "").strip() else f"Телеметрия · {fn}"
+    dev_type = "soil_sensor" if payload.soilMoisture is not None else "weather_station"
+    row = db.query(OpsEquipmentRecord).filter(OpsEquipmentRecord.id == dev_id).first()
+    sla = {"uptime": 100.0, "dataQuality": 100.0, "missedReadings": 0}
+    if row:
+        row.telemetry_json = json.dumps(tel, ensure_ascii=False)
+        row.last_ping = ping_iso
+        row.field_id = payload.fieldId
+        row.field_name = fn
+        row.name = name[:200]
+        row.type = dev_type
+        row.status = "online"
+        row.sla_json = json.dumps(sla, ensure_ascii=False)
+    else:
+        db.add(OpsEquipmentRecord(
+            id=dev_id[:120],
+            name=name[:200],
+            type=dev_type,
+            field_id=payload.fieldId,
+            field_name=fn[:200],
+            status="online",
+            battery=100,
+            signal=100,
+            last_ping=ping_iso,
+            firmware="telemetry",
+            install_date=datetime.utcnow().date().isoformat(),
+            telemetry_json=json.dumps(tel, ensure_ascii=False),
+            sla_json=json.dumps(sla, ensure_ascii=False),
+            alerts_json="[]",
+        ))
+
+
+def _reconcile_equipment_from_recent_iot(db, limit: int = 1000) -> None:
+    """Восстанавливает карточки устройств из последних записей телеметрии (например после деплоя)."""
+    recs = (
+        db.query(IoTTelemetryRecord)
+        .order_by(IoTTelemetryRecord.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+    seen: set = set()
+    for rec in recs:
+        dev_id = (rec.device_id or "").strip() or f"field-{rec.field_id}"
+        key = (dev_id, rec.field_id)
+        if key in seen:
+            continue
+        seen.add(key)
+        ping = (
+            rec.created_at.strftime("%Y-%m-%dT%H:%M:%SZ")
+            if rec.created_at
+            else datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        )
+        p = IoTTelemetryInput(
+            fieldId=rec.field_id,
+            fieldName=rec.field_name,
+            deviceId=rec.device_id,
+            temperature=rec.temperature,
+            humidity=rec.humidity,
+            soilMoisture=rec.soil_moisture,
+            precipitation=rec.precipitation,
+            windSpeed=rec.wind_speed,
+            solarRadiation=rec.solar_radiation,
+            lat=rec.lat,
+            lng=rec.lng,
+        )
+        _upsert_equipment_from_telemetry_payload(db, p, ping)
 
 
 def _scheduled_row_to_api(r: OpsScheduledReportRecord) -> dict:
@@ -2097,6 +2160,7 @@ def _audit(action: str, details: str, entity_type: str = "", entity_id: str = ""
 
 @app.post("/iot/telemetry")
 def ingest_iot_telemetry(payload: IoTTelemetryInput):
+    ping = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
     with SessionLocal() as db:
         rec = IoTTelemetryRecord(
             field_id=payload.fieldId,
@@ -2112,6 +2176,12 @@ def ingest_iot_telemetry(payload: IoTTelemetryInput):
             lng=payload.lng,
         )
         db.add(rec)
+        db.flush()
+        if rec.created_at:
+            ping = rec.created_at.isoformat()
+            if not ping.endswith("Z"):
+                ping += "Z"
+        _upsert_equipment_from_telemetry_payload(db, payload, ping)
         db.commit()
     if payload.soilMoisture is not None:
         _update_field_moisture(payload.fieldId, payload.soilMoisture)
@@ -2121,7 +2191,6 @@ def ingest_iot_telemetry(payload: IoTTelemetryInput):
 
 @app.get("/ops/work-tasks")
 def ops_get_tasks():
-    _seed_ops_data_if_empty()
     with SessionLocal() as db:
         rows = db.query(OpsWorkTaskRecord).order_by(OpsWorkTaskRecord.updated_at.desc()).all()
         return [{
@@ -2171,8 +2240,9 @@ def ops_update_task(task_id: str, task: dict):
 
 @app.get("/ops/equipment")
 def ops_get_equipment():
-    _seed_ops_data_if_empty()
     with SessionLocal() as db:
+        _reconcile_equipment_from_recent_iot(db)
+        db.commit()
         rows = db.query(OpsEquipmentRecord).all()
         return [{
             "id": r.id, "name": r.name, "type": r.type, "fieldId": r.field_id, "fieldName": r.field_name, "status": r.status,
@@ -2193,7 +2263,6 @@ def ops_get_audit():
 
 @app.get("/ops/notification-rules")
 def ops_get_rules():
-    _seed_ops_data_if_empty()
     with SessionLocal() as db:
         rows = db.query(OpsNotificationRuleRecord).all()
         return [{
@@ -2258,7 +2327,6 @@ def ops_delete_rule(rule_id: str):
 
 @app.get("/ops/reports/history")
 def ops_reports_history():
-    _seed_ops_data_if_empty()
     with SessionLocal() as db:
         rows = db.query(OpsReportRecord).order_by(OpsReportRecord.created_at.desc()).all()
         return [{"id": r.id, "name": r.name, "format": r.format, "date": r.created_at, "size": f"{r.size_mb:.1f} МБ", "user": r.created_by} for r in rows]
@@ -2296,7 +2364,6 @@ def ops_report_download(report_id: str):
 
 @app.get("/ops/reports/scheduled")
 def ops_reports_scheduled():
-    _seed_ops_data_if_empty()
     with SessionLocal() as db:
         rows = db.query(OpsScheduledReportRecord).order_by(OpsScheduledReportRecord.next_run.asc()).all()
     return [_scheduled_row_to_api(r) for r in rows]

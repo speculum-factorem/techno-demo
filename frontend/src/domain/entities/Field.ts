@@ -41,7 +41,11 @@ export interface CreateFieldDto {
   expectedHarvestDate?: string
 }
 
+export type PassportEntryCategory = 'OPERATION' | 'FERTILIZER' | 'TREATMENT'
+
 export interface FieldPassportOperation {
+  id?: string
+  category?: PassportEntryCategory
   date: string
   type: string
   description: string
@@ -51,12 +55,13 @@ export interface FieldPassportOperation {
 }
 
 export interface FieldPassportResult {
+  id?: string
   season: string
-  cropType: string
-  yieldActual: number
-  yieldPlan: number
-  revenueActual: number
-  costActual: number
+  cropType?: string
+  yieldActual?: number
+  yieldPlan?: number
+  revenueActual?: number
+  costActual?: number
 }
 
 export interface FieldPassport {

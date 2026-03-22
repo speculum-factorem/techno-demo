@@ -51,6 +51,82 @@
   min-width: 500px;
 }
 
+.passportHint { color: $text-secondary; font-size: $font-size-sm; margin: 0 0 10px; }
+.formError { color: $danger; font-size: $font-size-sm; margin: 0 0 8px; }
+.emptyHint { color: $text-secondary; font-size: $font-size-sm; margin: 8px 0 0; }
+
+.passportForm {
+  margin-bottom: 12px;
+  padding: 12px;
+  background: rgba(0, 0, 0, 0.02);
+  border-radius: $radius-md;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.formLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: $font-size-sm;
+  color: $text-secondary;
+}
+.formInput {
+  padding: 8px 10px;
+  border-radius: $radius-md;
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  font-size: $font-size-sm;
+  background: $surface;
+}
+.formActions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.rowPassport {
+  display: grid;
+  grid-template-columns: 92px 100px 1fr 120px 100px minmax(140px, 1fr);
+  gap: 8px;
+  background: $surface-variant;
+  border-radius: $radius-md;
+  padding: 8px 10px;
+  font-size: $font-size-sm;
+  align-items: center;
+  min-width: 720px;
+}
+.rowSeason {
+  display: grid;
+  grid-template-columns: 100px 1fr 130px 130px minmax(140px, 1fr);
+  gap: 8px;
+  background: $surface-variant;
+  border-radius: $radius-md;
+  padding: 8px 10px;
+  font-size: $font-size-sm;
+  align-items: center;
+  min-width: 680px;
+}
+.catCell { font-size: 11px; font-weight: 600; color: $text-secondary; }
+.rowActions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.linkBtn {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: $font-size-sm;
+  color: $primary;
+  cursor: pointer;
+  text-decoration: underline;
+}
+.linkBtnDanger {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: $font-size-sm;
+  color: $danger;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
 .financeTop {
   display: grid;
   grid-template-columns: repeat(5, minmax(0, 1fr));

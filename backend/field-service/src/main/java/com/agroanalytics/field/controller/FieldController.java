@@ -5,6 +5,8 @@ import com.agroanalytics.field.dto.FieldFinanceDto;
 import com.agroanalytics.field.dto.FieldDto;
 import com.agroanalytics.field.dto.FieldPassportDto;
 import com.agroanalytics.field.dto.FieldSatelliteDto;
+import com.agroanalytics.field.dto.PassportEntryWriteDto;
+import com.agroanalytics.field.dto.SeasonResultWriteDto;
 import com.agroanalytics.field.security.RequestActor;
 import com.agroanalytics.field.service.FieldService;
 import jakarta.validation.Valid;
@@ -62,6 +64,82 @@ public class FieldController {
             @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
         RequestActor actor = RequestActor.fromHeaders(orgIdHeader, roleHeader, internalToken, internalApiToken);
         return ResponseEntity.ok(fieldService.getFieldPassport(id, actor));
+    }
+
+    @Operation(summary = "Добавить запись в паспорт поля (операция / удобрение / СЗР)")
+    @PostMapping("/{id}/passport/entries")
+    public ResponseEntity<FieldPassportDto.OperationRecord> addPassportEntry(
+            @PathVariable UUID id,
+            @Valid @RequestBody PassportEntryWriteDto dto,
+            @RequestHeader(value = "X-Organization-Id", required = false) String orgIdHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader,
+            @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
+        RequestActor actor = RequestActor.fromHeaders(orgIdHeader, roleHeader, internalToken, internalApiToken);
+        return ResponseEntity.status(HttpStatus.CREATED).body(fieldService.addPassportEntry(id, dto, actor));
+    }
+
+    @Operation(summary = "Обновить запись паспорта")
+    @PutMapping("/{id}/passport/entries/{entryId}")
+    public ResponseEntity<FieldPassportDto.OperationRecord> updatePassportEntry(
+            @PathVariable UUID id,
+            @PathVariable UUID entryId,
+            @Valid @RequestBody PassportEntryWriteDto dto,
+            @RequestHeader(value = "X-Organization-Id", required = false) String orgIdHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader,
+            @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
+        RequestActor actor = RequestActor.fromHeaders(orgIdHeader, roleHeader, internalToken, internalApiToken);
+        return ResponseEntity.ok(fieldService.updatePassportEntry(id, entryId, dto, actor));
+    }
+
+    @Operation(summary = "Удалить запись паспорта")
+    @DeleteMapping("/{id}/passport/entries/{entryId}")
+    public ResponseEntity<Void> deletePassportEntry(
+            @PathVariable UUID id,
+            @PathVariable UUID entryId,
+            @RequestHeader(value = "X-Organization-Id", required = false) String orgIdHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader,
+            @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
+        RequestActor actor = RequestActor.fromHeaders(orgIdHeader, roleHeader, internalToken, internalApiToken);
+        fieldService.deletePassportEntry(id, entryId, actor);
+        return ResponseEntity.noContent().build();
+    }
+
+    @Operation(summary = "Добавить строку результатов по сезону")
+    @PostMapping("/{id}/passport/seasons")
+    public ResponseEntity<FieldPassportDto.ResultRecord> addSeasonResult(
+            @PathVariable UUID id,
+            @Valid @RequestBody SeasonResultWriteDto dto,
+            @RequestHeader(value = "X-Organization-Id", required = false) String orgIdHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader,
+            @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
+        RequestActor actor = RequestActor.fromHeaders(orgIdHeader, roleHeader, internalToken, internalApiToken);
+        return ResponseEntity.status(HttpStatus.CREATED).body(fieldService.addSeasonResult(id, dto, actor));
+    }
+
+    @Operation(summary = "Обновить результаты сезона")
+    @PutMapping("/{id}/passport/seasons/{resultId}")
+    public ResponseEntity<FieldPassportDto.ResultRecord> updateSeasonResult(
+            @PathVariable UUID id,
+            @PathVariable UUID resultId,
+            @Valid @RequestBody SeasonResultWriteDto dto,
+            @RequestHeader(value = "X-Organization-Id", required = false) String orgIdHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader,
+            @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
+        RequestActor actor = RequestActor.fromHeaders(orgIdHeader, roleHeader, internalToken, internalApiToken);
+        return ResponseEntity.ok(fieldService.updateSeasonResult(id, resultId, dto, actor));
+    }
+
+    @Operation(summary = "Удалить строку сезона")
+    @DeleteMapping("/{id}/passport/seasons/{resultId}")
+    public ResponseEntity<Void> deleteSeasonResult(
+            @PathVariable UUID id,
+            @PathVariable UUID resultId,
+            @RequestHeader(value = "X-Organization-Id", required = false) String orgIdHeader,
+            @RequestHeader(value = "X-User-Role", required = false) String roleHeader,
+            @RequestHeader(value = "X-Internal-Token", required = false) String internalToken) {
+        RequestActor actor = RequestActor.fromHeaders(orgIdHeader, roleHeader, internalToken, internalApiToken);
+        fieldService.deleteSeasonResult(id, resultId, actor);
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/{id}/satellite")

@@ -26,6 +26,9 @@ public class FieldPassportDto {
     @AllArgsConstructor
     @Builder
     public static class OperationRecord {
+        private String id;
+        /** OPERATION, FERTILIZER, TREATMENT */
+        private String category;
         private LocalDate date;
         private String type;
         private String description;
@@ -39,6 +42,7 @@ public class FieldPassportDto {
     @AllArgsConstructor
     @Builder
     public static class ResultRecord {
+        private String id;
         private String season;
         private String cropType;
         private Double yieldActual;
