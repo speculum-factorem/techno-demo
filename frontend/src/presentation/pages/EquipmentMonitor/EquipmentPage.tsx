@@ -37,8 +37,38 @@ const EMPTY_FORM = {
   humidity: '',
   soilMoisture: '',
 }
-
 type FormState = typeof EMPTY_FORM
+
+// Protocol connection state
+type ProtoType = 'http_poll' | 'webhook' | 'mqtt' | 'modbus_tcp'
+const PROTO_LABELS: Record<ProtoType, string> = {
+  http_poll: 'HTTP Polling',
+  webhook: 'Webhook Push',
+  mqtt: 'MQTT',
+  modbus_tcp: 'Modbus TCP',
+}
+const PROTO_ICONS: Record<ProtoType, string> = {
+  http_poll: 'http', webhook: 'webhook', mqtt: 'router', modbus_tcp: 'settings_ethernet',
+}
+
+const EMPTY_PROTO_CFG = {
+  // HTTP
+  url: '',
+  auth_header: '',
+  field_temperature: 'temperature',
+  field_humidity: 'humidity',
+  field_soilMoisture: 'soilMoisture',
+  field_lat: 'lat',
+  field_lng: 'lng',
+  // MQTT
+  broker_host: '',
+  broker_port: '1883',
+  topic: '#',
+  // Modbus
+  host: '',
+  port: '502',
+  unit_id: '1',
+}
 
 const SignalBar: React.FC<{ value: number }> = ({ value }) => {
   const color = value > 70 ? '#34a853' : value > 40 ? '#f9ab00' : '#ea4335'
@@ -77,10 +107,19 @@ const EquipmentPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null)
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null)
 
-  // Modal state
+  // Modal
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
+  const [addMode, setAddMode] = useState<'manual' | 'protocol'>('manual')
   const [form, setForm] = useState<FormState>(EMPTY_FORM)
+
+  // Protocol connection
+  const [proto, setProto] = useState<ProtoType>('http_poll')
+  const [protoCfg, setProtoCfg] = useState({ ...EMPTY_PROTO_CFG })
+  const [probing, setProbing] = useState(false)
+  const [probeResult, setProbeResult] = useState<{
+    ok: boolean; message: string; telemetry?: Record<string, number>
+  } | null>(null)
 
   const load = () => {
     setLoading(true)
@@ -106,9 +145,7 @@ const EquipmentPage: React.FC = () => {
     online: devices.filter(d => d.status === 'online').length,
     warning: devices.filter(d => d.status === 'warning').length,
     error: devices.filter(d => d.status === 'error').length,
-    offline: devices.filter(d => d.status === 'offline').length,
   }
-
   const avgUptime = devices.length
     ? (devices.reduce((s, d) => s + (d.sla?.uptime ?? 100), 0) / devices.length).toFixed(1) : '0.0'
   const avgQuality = devices.length
@@ -117,6 +154,10 @@ const EquipmentPage: React.FC = () => {
   const openAdd = () => {
     setEditingId(null)
     setForm({ ...EMPTY_FORM, fieldId: fields[0]?.id ?? '' })
+    setAddMode('manual')
+    setProto('http_poll')
+    setProtoCfg({ ...EMPTY_PROTO_CFG })
+    setProbeResult(null)
     setError(null)
     setModalOpen(true)
   }
@@ -125,22 +166,80 @@ const EquipmentPage: React.FC = () => {
     setSelected(null)
     setEditingId(d.id)
     setForm({
-      name: d.name,
-      type: d.type,
-      fieldId: d.fieldId,
-      status: d.status,
-      battery: d.battery,
-      signal: d.signal,
-      firmware: d.firmware,
-      installDate: d.installDate,
-      lat: String(d.telemetry?.lat ?? ''),
-      lng: String(d.telemetry?.lng ?? ''),
+      name: d.name, type: d.type, fieldId: d.fieldId, status: d.status,
+      battery: d.battery, signal: d.signal, firmware: d.firmware, installDate: d.installDate,
+      lat: String(d.telemetry?.lat ?? ''), lng: String(d.telemetry?.lng ?? ''),
       temperature: d.telemetry?.temperature !== undefined ? String(d.telemetry.temperature) : '',
       humidity: d.telemetry?.humidity !== undefined ? String(d.telemetry.humidity) : '',
       soilMoisture: d.telemetry?.soilMoisture !== undefined ? String(d.telemetry.soilMoisture) : '',
     })
+    setAddMode('manual')
+    setProbeResult(null)
     setError(null)
     setModalOpen(true)
+  }
+
+  const setF = (key: keyof FormState, val: string | number) =>
+    setForm(prev => ({ ...prev, [key]: val }))
+
+  const setPCfg = (key: keyof typeof EMPTY_PROTO_CFG, val: string) =>
+    setProtoCfg(prev => ({ ...prev, [key]: val }))
+
+  // Build config object for probe from protoCfg
+  const buildProbeConfig = () => {
+    if (proto === 'http_poll') {
+      const fieldMap: Record<string, string> = {}
+      if (protoCfg.field_temperature) fieldMap.temperature = protoCfg.field_temperature
+      if (protoCfg.field_humidity) fieldMap.humidity = protoCfg.field_humidity
+      if (protoCfg.field_soilMoisture) fieldMap.soilMoisture = protoCfg.field_soilMoisture
+      if (protoCfg.field_lat) fieldMap.lat = protoCfg.field_lat
+      if (protoCfg.field_lng) fieldMap.lng = protoCfg.field_lng
+      return { url: protoCfg.url, auth_header: protoCfg.auth_header, field_map: fieldMap }
+    }
+    if (proto === 'mqtt') {
+      return { broker_host: protoCfg.broker_host, broker_port: protoCfg.broker_port, topic: protoCfg.topic }
+    }
+    if (proto === 'modbus_tcp') {
+      return { host: protoCfg.host, port: protoCfg.port, unit_id: protoCfg.unit_id }
+    }
+    return {}
+  }
+
+  const handleProbe = async () => {
+    setProbing(true)
+    setProbeResult(null)
+    try {
+      const res = await opsApi.probeDevice(proto, buildProbeConfig())
+      const tel = res.telemetry || {}
+      // Auto-fill telemetry fields
+      if (tel.temperature !== undefined) setF('temperature', String(tel.temperature))
+      if (tel.humidity !== undefined) setF('humidity', String(tel.humidity))
+      if (tel.soilMoisture !== undefined) setF('soilMoisture', String(tel.soilMoisture))
+      if (tel.lat) setF('lat', String(tel.lat))
+      if (tel.lng) setF('lng', String(tel.lng))
+
+      const parts: string[] = []
+      if (tel.temperature !== undefined) parts.push(`t=${tel.temperature}°C`)
+      if (tel.humidity !== undefined) parts.push(`влажн=${tel.humidity}%`)
+      if (tel.soilMoisture !== undefined) parts.push(`почва=${tel.soilMoisture}%`)
+
+      setProbeResult({
+        ok: true,
+        message: parts.length > 0
+          ? `Подключено. Получены данные: ${parts.join(', ')}`
+          : (res.message || 'Подключено успешно'),
+        telemetry: tel,
+      })
+      // Switch to manual tab so user can fill in name/field
+      setAddMode('manual')
+    } catch (err: any) {
+      setProbeResult({
+        ok: false,
+        message: err.response?.data?.detail || err.message || 'Ошибка подключения',
+      })
+    } finally {
+      setProbing(false)
+    }
   }
 
   const handleSave = async (e: React.FormEvent) => {
@@ -155,29 +254,20 @@ const EquipmentPage: React.FC = () => {
       ...(form.humidity !== '' ? { humidity: Number(form.humidity) } : {}),
       ...(form.soilMoisture !== '' ? { soilMoisture: Number(form.soilMoisture) } : {}),
     }
-
     const payload = {
-      name: form.name.trim(),
-      type: form.type,
-      fieldId: form.fieldId,
-      fieldName: selectedField?.name ?? '',
-      status: form.status,
-      battery: form.battery,
-      signal: form.signal,
-      firmware: form.firmware.trim() || '1.0.0',
-      installDate: form.installDate,
-      telemetry,
+      name: form.name.trim(), type: form.type, fieldId: form.fieldId,
+      fieldName: selectedField?.name ?? '', status: form.status,
+      battery: form.battery, signal: form.signal,
+      firmware: form.firmware.trim() || '1.0.0', installDate: form.installDate, telemetry,
     }
-    setSaving(true)
-    setError(null)
+    setSaving(true); setError(null)
     try {
       if (editingId) {
         await opsApi.updateEquipment(editingId, payload)
       } else {
         await opsApi.createEquipment(payload as any)
       }
-      setModalOpen(false)
-      load()
+      setModalOpen(false); load()
     } catch (err: any) {
       setError(err.response?.data?.detail || err.response?.data?.message || 'Не удалось сохранить устройство')
     } finally {
@@ -188,16 +278,11 @@ const EquipmentPage: React.FC = () => {
   const handleDelete = async (id: string) => {
     try {
       await opsApi.deleteEquipment(id)
-      setDeleteConfirm(null)
-      setSelected(null)
-      load()
+      setDeleteConfirm(null); setSelected(null); load()
     } catch (err: any) {
       alert(err.response?.data?.detail || 'Не удалось удалить устройство')
     }
   }
-
-  const setF = (key: keyof FormState, val: string | number) =>
-    setForm(prev => ({ ...prev, [key]: val }))
 
   return (
     <div className={styles.page}>
@@ -253,9 +338,7 @@ const EquipmentPage: React.FC = () => {
             onClick={() => setFilterType('all')}>Все</button>
           {ALL_TYPES.map(t => (
             <button key={t} className={`${styles.chip} ${filterType === t ? styles.activeChip : ''}`}
-              onClick={() => setFilterType(t)}>
-              {TYPE_LABELS[t]}
-            </button>
+              onClick={() => setFilterType(t)}>{TYPE_LABELS[t]}</button>
           ))}
         </div>
       </div>
@@ -263,8 +346,7 @@ const EquipmentPage: React.FC = () => {
       {/* Device grid */}
       {loading && devices.length === 0 ? (
         <div className={styles.emptyState}>
-          <span className="material-icons-round">hourglass_empty</span>
-          <p>Загрузка...</p>
+          <span className="material-icons-round">hourglass_empty</span><p>Загрузка...</p>
         </div>
       ) : filtered.length === 0 ? (
         <div className={styles.emptyState}>
@@ -379,20 +461,14 @@ const EquipmentPage: React.FC = () => {
                   <div className={styles.slaRow}>
                     <span>Аптайм</span>
                     <div className={styles.slaBar}>
-                      <div style={{
-                        width: `${selected.sla?.uptime ?? 100}%`,
-                        background: (selected.sla?.uptime ?? 100) > 95 ? '#34a853' : '#f9ab00',
-                      }} />
+                      <div style={{ width: `${selected.sla?.uptime ?? 100}%`, background: (selected.sla?.uptime ?? 100) > 95 ? '#34a853' : '#f9ab00' }} />
                     </div>
                     <strong>{selected.sla?.uptime ?? 100}%</strong>
                   </div>
                   <div className={styles.slaRow}>
                     <span>Кач. данных</span>
                     <div className={styles.slaBar}>
-                      <div style={{
-                        width: `${selected.sla?.dataQuality ?? 100}%`,
-                        background: (selected.sla?.dataQuality ?? 100) > 95 ? '#34a853' : '#f9ab00',
-                      }} />
+                      <div style={{ width: `${selected.sla?.dataQuality ?? 100}%`, background: (selected.sla?.dataQuality ?? 100) > 95 ? '#34a853' : '#f9ab00' }} />
                     </div>
                     <strong>{selected.sla?.dataQuality ?? 100}%</strong>
                   </div>
@@ -461,139 +537,311 @@ const EquipmentPage: React.FC = () => {
               </button>
             </div>
             <div className={styles.modalBody}>
-              <form onSubmit={handleSave} className={styles.addForm}>
-                {error && (
-                  <div className={styles.formError}>
-                    <span className="material-icons-round">error</span> {error}
-                  </div>
-                )}
-
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Название *</label>
-                    <input className={styles.formInput} value={form.name}
-                      onChange={e => setF('name', e.target.value)}
-                      placeholder="Датчик влажности #1" required />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Тип устройства *</label>
-                    <select className={styles.formSelect} value={form.type}
-                      onChange={e => setF('type', e.target.value as DeviceType)}>
-                      {ALL_TYPES.map(t => (
-                        <option key={t} value={t}>{TYPE_LABELS[t]}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Поле *</label>
-                    <select className={styles.formSelect} value={form.fieldId}
-                      onChange={e => setF('fieldId', e.target.value)}>
-                      <option value="">— выберите поле —</option>
-                      {fields.map(f => (
-                        <option key={f.id} value={f.id}>{f.name}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Статус</label>
-                    <select className={styles.formSelect} value={form.status}
-                      onChange={e => setF('status', e.target.value as DeviceStatus)}>
-                      {ALL_STATUSES.map(s => (
-                        <option key={s} value={s}>{STATUS_LABELS[s]}</option>
-                      ))}
-                    </select>
-                  </div>
-                </div>
-
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>
-                      Заряд батареи: <strong>{form.battery}%</strong>
-                    </label>
-                    <input type="range" min={0} max={100} value={form.battery}
-                      onChange={e => setF('battery', Number(e.target.value))}
-                      className={styles.formRange} />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>
-                      Уровень сигнала: <strong>{form.signal}%</strong>
-                    </label>
-                    <input type="range" min={0} max={100} value={form.signal}
-                      onChange={e => setF('signal', Number(e.target.value))}
-                      className={styles.formRange} />
-                  </div>
-                </div>
-
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Версия прошивки</label>
-                    <input className={styles.formInput} value={form.firmware}
-                      onChange={e => setF('firmware', e.target.value)}
-                      placeholder="1.0.0" />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Дата установки</label>
-                    <input className={styles.formInput} type="date" value={form.installDate}
-                      onChange={e => setF('installDate', e.target.value)} />
-                  </div>
-                </div>
-
-                <div className={styles.formSectionTitle}>
-                  <span className="material-icons-round">location_on</span> Координаты
-                  <span className={styles.formSectionHint}>(заполнится автоматически из поля если оставить пустым)</span>
-                </div>
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Широта</label>
-                    <input className={styles.formInput} type="number" step="any" value={form.lat}
-                      onChange={e => setF('lat', e.target.value)}
-                      placeholder="47.2200" />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Долгота</label>
-                    <input className={styles.formInput} type="number" step="any" value={form.lng}
-                      onChange={e => setF('lng', e.target.value)}
-                      placeholder="39.7000" />
-                  </div>
-                </div>
-
-                <div className={styles.formSectionTitle}>
-                  <span className="material-icons-round">sensors</span> Начальная телеметрия
-                  <span className={styles.formSectionHint}>(необязательно)</span>
-                </div>
-                <div className={styles.formRow}>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Температура (°C)</label>
-                    <input className={styles.formInput} type="number" step="0.1" value={form.temperature}
-                      onChange={e => setF('temperature', e.target.value)} placeholder="22.5" />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Влажность воздуха (%)</label>
-                    <input className={styles.formInput} type="number" step="0.1" value={form.humidity}
-                      onChange={e => setF('humidity', e.target.value)} placeholder="65" />
-                  </div>
-                  <div className={styles.formGroup}>
-                    <label className={styles.formLabel}>Влажность почвы (%)</label>
-                    <input className={styles.formInput} type="number" step="0.1" value={form.soilMoisture}
-                      onChange={e => setF('soilMoisture', e.target.value)} placeholder="55" />
-                  </div>
-                </div>
-
-                <div className={styles.formActions}>
-                  <button type="button" className={styles.cancelBtn} onClick={() => setModalOpen(false)}>
-                    Отмена
+              {/* Mode tabs — only when adding */}
+              {!editingId && (
+                <div className={styles.modeTabs}>
+                  <button
+                    className={`${styles.modeTab} ${addMode === 'manual' ? styles.modeTabActive : ''}`}
+                    onClick={() => setAddMode('manual')}>
+                    <span className="material-icons-round">edit_note</span> Вручную
                   </button>
-                  <button type="submit" className={styles.saveBtn} disabled={saving}>
-                    {saving
-                      ? <><span className="material-icons-round" style={{ animation: 'spin 1s linear infinite', fontSize: 16 }}>autorenew</span> Сохранение...</>
-                      : <><span className="material-icons-round" style={{ fontSize: 16 }}>save</span> {editingId ? 'Сохранить' : 'Добавить'}</>
+                  <button
+                    className={`${styles.modeTab} ${addMode === 'protocol' ? styles.modeTabActive : ''}`}
+                    onClick={() => setAddMode('protocol')}>
+                    <span className="material-icons-round">cable</span> По протоколу
+                  </button>
+                </div>
+              )}
+
+              {/* Protocol connection panel */}
+              {addMode === 'protocol' && (
+                <div className={styles.protoPanel}>
+                  {/* Protocol selector */}
+                  <div className={styles.protoSelector}>
+                    {(Object.keys(PROTO_LABELS) as ProtoType[]).map(p => (
+                      <button key={p}
+                        className={`${styles.protoBtn} ${proto === p ? styles.protoBtnActive : ''}`}
+                        onClick={() => { setProto(p); setProbeResult(null) }}>
+                        <span className="material-icons-round">{PROTO_ICONS[p]}</span>
+                        {PROTO_LABELS[p]}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* HTTP Polling config */}
+                  {proto === 'http_poll' && (
+                    <div className={styles.addForm}>
+                      <div className={styles.formGroup}>
+                        <label className={styles.formLabel}>URL датчика *</label>
+                        <input className={styles.formInput} value={protoCfg.url}
+                          onChange={e => setPCfg('url', e.target.value)}
+                          placeholder="http://192.168.1.100/api/data" />
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label className={styles.formLabel}>Заголовок авторизации</label>
+                        <input className={styles.formInput} value={protoCfg.auth_header}
+                          onChange={e => setPCfg('auth_header', e.target.value)}
+                          placeholder="Authorization: Bearer <token>  или  X-API-Key: <key>" />
+                      </div>
+                      <div className={styles.formSectionTitle}>
+                        <span className="material-icons-round">account_tree</span>
+                        Маппинг полей JSON
+                        <span className={styles.formSectionHint}>(путь в ответе датчика, например data.temp)</span>
+                      </div>
+                      <div className={styles.formRow}>
+                        <div className={styles.formGroup}>
+                          <label className={styles.formLabel}>Температура</label>
+                          <input className={styles.formInput} value={protoCfg.field_temperature}
+                            onChange={e => setPCfg('field_temperature', e.target.value)} placeholder="temperature" />
+                        </div>
+                        <div className={styles.formGroup}>
+                          <label className={styles.formLabel}>Влажность воздуха</label>
+                          <input className={styles.formInput} value={protoCfg.field_humidity}
+                            onChange={e => setPCfg('field_humidity', e.target.value)} placeholder="humidity" />
+                        </div>
+                      </div>
+                      <div className={styles.formRow}>
+                        <div className={styles.formGroup}>
+                          <label className={styles.formLabel}>Влажность почвы</label>
+                          <input className={styles.formInput} value={protoCfg.field_soilMoisture}
+                            onChange={e => setPCfg('field_soilMoisture', e.target.value)} placeholder="soilMoisture" />
+                        </div>
+                        <div className={styles.formGroup}>
+                          <label className={styles.formLabel}>Широта / Долгота</label>
+                          <div style={{ display: 'flex', gap: 6 }}>
+                            <input className={styles.formInput} value={protoCfg.field_lat}
+                              onChange={e => setPCfg('field_lat', e.target.value)} placeholder="lat" />
+                            <input className={styles.formInput} value={protoCfg.field_lng}
+                              onChange={e => setPCfg('field_lng', e.target.value)} placeholder="lng" />
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* MQTT config */}
+                  {proto === 'mqtt' && (
+                    <div className={styles.addForm}>
+                      <div className={styles.formRow}>
+                        <div className={styles.formGroup}>
+                          <label className={styles.formLabel}>Адрес брокера *</label>
+                          <input className={styles.formInput} value={protoCfg.broker_host}
+                            onChange={e => setPCfg('broker_host', e.target.value)}
+                            placeholder="mqtt.example.com или 192.168.1.10" />
+                        </div>
+                        <div className={styles.formGroup} style={{ maxWidth: 100 }}>
+                          <label className={styles.formLabel}>Порт</label>
+                          <input className={styles.formInput} value={protoCfg.broker_port}
+                            onChange={e => setPCfg('broker_port', e.target.value)} placeholder="1883" />
+                        </div>
+                      </div>
+                      <div className={styles.formGroup}>
+                        <label className={styles.formLabel}>Топик</label>
+                        <input className={styles.formInput} value={protoCfg.topic}
+                          onChange={e => setPCfg('topic', e.target.value)} placeholder="sensors/field1/#" />
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Modbus TCP config */}
+                  {proto === 'modbus_tcp' && (
+                    <div className={styles.addForm}>
+                      <div className={styles.formRow}>
+                        <div className={styles.formGroup}>
+                          <label className={styles.formLabel}>IP-адрес устройства *</label>
+                          <input className={styles.formInput} value={protoCfg.host}
+                            onChange={e => setPCfg('host', e.target.value)} placeholder="192.168.1.20" />
+                        </div>
+                        <div className={styles.formGroup} style={{ maxWidth: 100 }}>
+                          <label className={styles.formLabel}>Порт</label>
+                          <input className={styles.formInput} value={protoCfg.port}
+                            onChange={e => setPCfg('port', e.target.value)} placeholder="502" />
+                        </div>
+                        <div className={styles.formGroup} style={{ maxWidth: 80 }}>
+                          <label className={styles.formLabel}>Unit ID</label>
+                          <input className={styles.formInput} value={protoCfg.unit_id}
+                            onChange={e => setPCfg('unit_id', e.target.value)} placeholder="1" />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Webhook info */}
+                  {proto === 'webhook' && (
+                    <div className={styles.protoInfo}>
+                      <span className="material-icons-round" style={{ color: '#1a73e8' }}>info</span>
+                      <span>Webhook позволяет датчику самостоятельно отправлять данные POST-запросом на ваш сервер. После нажатия «Проверить» вы получите URL для настройки датчика.</span>
+                    </div>
+                  )}
+
+                  {/* Probe result */}
+                  {probeResult && (
+                    <div className={styles.probeResult} style={{
+                      background: probeResult.ok ? '#e6f4ea' : '#fce8e6',
+                      color: probeResult.ok ? '#1e7e34' : '#c5221f',
+                    }}>
+                      <span className="material-icons-round">
+                        {probeResult.ok ? 'check_circle' : 'error'}
+                      </span>
+                      <span>{probeResult.message}</span>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    className={styles.probeBtn}
+                    onClick={handleProbe}
+                    disabled={probing}>
+                    {probing
+                      ? <><span className="material-icons-round" style={{ animation: 'spin 1s linear infinite', fontSize: 16 }}>autorenew</span> Подключение...</>
+                      : <><span className="material-icons-round">cable</span> Проверить подключение</>
                     }
                   </button>
+
+                  {probeResult?.ok && (
+                    <p className={styles.probeHint}>
+                      ✓ Данные получены и заполнены в форму. Перейдите на вкладку «Вручную» чтобы указать название, тип и поле.
+                    </p>
+                  )}
                 </div>
-              </form>
+              )}
+
+              {/* Manual form */}
+              {addMode === 'manual' && (
+                <form onSubmit={handleSave} className={styles.addForm}>
+                  {error && (
+                    <div className={styles.formError}>
+                      <span className="material-icons-round">error</span> {error}
+                    </div>
+                  )}
+                  {probeResult?.ok && (
+                    <div className={styles.probeResult} style={{ background: '#e6f4ea', color: '#1e7e34' }}>
+                      <span className="material-icons-round">check_circle</span>
+                      <span>Данные получены с устройства и заполнены автоматически</span>
+                    </div>
+                  )}
+
+                  <div className={styles.formRow}>
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>Название *</label>
+                      <input className={styles.formInput} value={form.name}
+                        onChange={e => setF('name', e.target.value)}
+                        placeholder="Датчик влажности #1" required />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>Тип устройства *</label>
+                      <select className={styles.formSelect} value={form.type}
+                        onChange={e => setF('type', e.target.value as DeviceType)}>
+                        {ALL_TYPES.map(t => (
+                          <option key={t} value={t}>{TYPE_LABELS[t]}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className={styles.formRow}>
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>Поле *</label>
+                      <select className={styles.formSelect} value={form.fieldId}
+                        onChange={e => setF('fieldId', e.target.value)}>
+                        <option value="">— выберите поле —</option>
+                        {fields.map(f => (
+                          <option key={f.id} value={f.id}>{f.name}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>Статус</label>
+                      <select className={styles.formSelect} value={form.status}
+                        onChange={e => setF('status', e.target.value as DeviceStatus)}>
+                        {ALL_STATUSES.map(s => (
+                          <option key={s} value={s}>{STATUS_LABELS[s]}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className={styles.formRow}>
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>Заряд батареи: <strong>{form.battery}%</strong></label>
+                      <input type="range" min={0} max={100} value={form.battery}
+                        onChange={e => setF('battery', Number(e.target.value))} className={styles.formRange} />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>Уровень сигнала: <strong>{form.signal}%</strong></label>
+                      <input type="range" min={0} max={100} value={form.signal}
+                        onChange={e => setF('signal', Number(e.target.value))} className={styles.formRange} />
+                    </div>
+                  </div>
+
+                  <div className={styles.formRow}>
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>Версия прошивки</label>
+                      <input className={styles.formInput} value={form.firmware}
+                        onChange={e => setF('firmware', e.target.value)} placeholder="1.0.0" />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>Дата установки</label>
+                      <input className={styles.formInput} type="date" value={form.installDate}
+                        onChange={e => setF('installDate', e.target.value)} />
+                    </div>
+                  </div>
+
+                  <div className={styles.formSectionTitle}>
+                    <span className="material-icons-round">location_on</span> Координаты
+                    <span className={styles.formSectionHint}>(заполнится из поля если оставить пустым)</span>
+                  </div>
+                  <div className={styles.formRow}>
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>Широта</label>
+                      <input className={styles.formInput} type="number" step="any" value={form.lat}
+                        onChange={e => setF('lat', e.target.value)} placeholder="47.2200" />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>Долгота</label>
+                      <input className={styles.formInput} type="number" step="any" value={form.lng}
+                        onChange={e => setF('lng', e.target.value)} placeholder="39.7000" />
+                    </div>
+                  </div>
+
+                  <div className={styles.formSectionTitle}>
+                    <span className="material-icons-round">sensors</span> Телеметрия
+                    <span className={styles.formSectionHint}>{probeResult?.ok ? '(заполнено автоматически)' : '(необязательно)'}</span>
+                  </div>
+                  <div className={styles.formRow}>
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>Температура (°C)</label>
+                      <input className={styles.formInput} type="number" step="0.1" value={form.temperature}
+                        onChange={e => setF('temperature', e.target.value)} placeholder="22.5"
+                        style={probeResult?.ok && form.temperature ? { borderColor: '#34a853' } : {}} />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>Влажность воздуха (%)</label>
+                      <input className={styles.formInput} type="number" step="0.1" value={form.humidity}
+                        onChange={e => setF('humidity', e.target.value)} placeholder="65"
+                        style={probeResult?.ok && form.humidity ? { borderColor: '#34a853' } : {}} />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label className={styles.formLabel}>Влажность почвы (%)</label>
+                      <input className={styles.formInput} type="number" step="0.1" value={form.soilMoisture}
+                        onChange={e => setF('soilMoisture', e.target.value)} placeholder="55"
+                        style={probeResult?.ok && form.soilMoisture ? { borderColor: '#34a853' } : {}} />
+                    </div>
+                  </div>
+
+                  <div className={styles.formActions}>
+                    <button type="button" className={styles.cancelBtn} onClick={() => setModalOpen(false)}>
+                      Отмена
+                    </button>
+                    <button type="submit" className={styles.saveBtn} disabled={saving}>
+                      {saving
+                        ? <><span className="material-icons-round" style={{ animation: 'spin 1s linear infinite', fontSize: 16 }}>autorenew</span> Сохранение...</>
+                        : <><span className="material-icons-round" style={{ fontSize: 16 }}>save</span> {editingId ? 'Сохранить' : 'Добавить'}</>
+                      }
+                    </button>
+                  </div>
+                </form>
+              )}
             </div>
           </div>
         </div>

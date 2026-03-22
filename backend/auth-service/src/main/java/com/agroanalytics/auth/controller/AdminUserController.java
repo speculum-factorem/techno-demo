@@ -67,8 +67,8 @@ public class AdminUserController {
             @RequestHeader(value = "X-User-Id", required = false) String xUserId,
             @RequestHeader(value = "Authorization", required = false) String authorization
     ) {
-        User admin = adminRbacService.requireAdminByUsername(resolveUsername(xUserId, authorization));
-        return adminInviteService.createInvite(admin, body);
+        User user = adminRbacService.requireAnyActiveUserByUsername(resolveUsername(xUserId, authorization));
+        return adminInviteService.createInvite(user, body);
     }
 
     @GetMapping("/invites")
@@ -77,8 +77,8 @@ public class AdminUserController {
             @RequestHeader(value = "X-User-Id", required = false) String xUserId,
             @RequestHeader(value = "Authorization", required = false) String authorization
     ) {
-        User admin = adminRbacService.requireAdminByUsername(resolveUsername(xUserId, authorization));
-        return adminInviteService.listInvites(admin, organizationId);
+        User user = adminRbacService.requireAnyActiveUserByUsername(resolveUsername(xUserId, authorization));
+        return adminInviteService.listInvites(user, organizationId);
     }
 
     @DeleteMapping("/invites/{code}")
@@ -87,8 +87,8 @@ public class AdminUserController {
             @RequestHeader(value = "X-User-Id", required = false) String xUserId,
             @RequestHeader(value = "Authorization", required = false) String authorization
     ) {
-        User admin = adminRbacService.requireAdminByUsername(resolveUsername(xUserId, authorization));
-        adminInviteService.revokeInvite(admin, code);
+        User user = adminRbacService.requireAnyActiveUserByUsername(resolveUsername(xUserId, authorization));
+        adminInviteService.revokeInvite(user, code);
     }
 
     private String resolveUsername(String xUserId, String authorization) {

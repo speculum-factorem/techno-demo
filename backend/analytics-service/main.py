@@ -2573,6 +2573,89 @@ def delete_sensor_connector(connector_id: str):
     return {"status": "deleted", "id": connector_id}
 
 
+@app.post("/sensors/probe")
+def probe_sensor_connection(body: dict = Body(...)):
+    """One-shot probe without persisting a connector. Returns telemetry if fetchable."""
+    import socket as _socket
+    protocol = (body.get("protocol") or "").strip()
+    cfg = body.get("config") or {}
+
+    if protocol == "http_poll":
+        url = (cfg.get("url") or "").strip()
+        if not url:
+            raise HTTPException(status_code=400, detail="URL не задан")
+        auth_header = cfg.get("auth_header", "") or ""
+        field_map = cfg.get("field_map") or {}
+        headers: dict = {}
+        if auth_header.strip():
+            if ":" in auth_header:
+                k, v = auth_header.split(":", 1)
+                headers[k.strip()] = v.strip()
+            else:
+                headers["Authorization"] = auth_header.strip()
+        try:
+            resp = requests.get(url, headers=headers, timeout=15)
+            resp.raise_for_status()
+            try:
+                data = resp.json()
+            except Exception:
+                raise ValueError(f"Ответ не является JSON: {resp.text[:200]}")
+        except Exception as exc:
+            raise HTTPException(status_code=400, detail=f"Ошибка запроса к датчику: {exc}")
+
+        def _extract(obj, path):
+            if not path:
+                return None
+            for key in str(path).split("."):
+                if isinstance(obj, dict):
+                    obj = obj.get(key)
+                else:
+                    return None
+            try:
+                return float(obj) if obj is not None else None
+            except (TypeError, ValueError):
+                return None
+
+        tel: dict = {}
+        for field in ("temperature", "humidity", "soilMoisture", "precipitation",
+                       "windSpeed", "solarRadiation", "lat", "lng"):
+            path = field_map.get(field) or field
+            v = _extract(data, path)
+            if v is not None:
+                tel[field] = v
+        return {"status": "connected", "telemetry": tel, "raw": data}
+
+    elif protocol == "mqtt":
+        broker = (cfg.get("broker_host") or "").strip()
+        port = int(cfg.get("broker_port") or 1883)
+        if not broker:
+            raise HTTPException(status_code=400, detail="Укажите адрес MQTT-брокера")
+        try:
+            with _socket.create_connection((broker, port), timeout=8):
+                pass
+            return {"status": "connected", "telemetry": {}, "message": f"MQTT-брокер {broker}:{port} доступен"}
+        except OSError as exc:
+            raise HTTPException(status_code=400, detail=f"MQTT-брокер недоступен {broker}:{port}: {exc}")
+
+    elif protocol == "modbus_tcp":
+        host = (cfg.get("host") or "").strip()
+        port = int(cfg.get("port") or 502)
+        if not host:
+            raise HTTPException(status_code=400, detail="Укажите IP-адрес Modbus-устройства")
+        try:
+            with _socket.create_connection((host, port), timeout=8):
+                pass
+            return {"status": "connected", "telemetry": {}, "message": f"Modbus TCP {host}:{port} доступен"}
+        except OSError as exc:
+            raise HTTPException(status_code=400, detail=f"Modbus TCP недоступен {host}:{port}: {exc}")
+
+    elif protocol == "webhook":
+        return {"status": "connected", "telemetry": {}, "message": "Webhook endpoint активен"}
+
+    else:
+        raise HTTPException(status_code=400, detail=f"Неизвестный протокол: {protocol}")
+
+
 @app.post("/sensors/connectors/{connector_id}/test")
 def test_sensor_connector(connector_id: str):
     """Test the sensor connection. For http_poll: actually fetch URL. For webhook/mqtt: validate config."""

@@ -37,6 +37,14 @@ export const opsApi = {
     (await apiClient.put<Device>(`/analytics/ops/equipment/${encodeURIComponent(id)}`, payload)).data,
   deleteEquipment: async (id: string) =>
     (await apiClient.delete(`/analytics/ops/equipment/${encodeURIComponent(id)}`)).data,
+
+  probeDevice: async (protocol: string, config: Record<string, any>) =>
+    (await apiClient.post<{
+      status: string
+      telemetry: Record<string, number>
+      message?: string
+      raw?: any
+    }>('/analytics/sensors/probe', { protocol, config })).data,
   getAuditLog: async () => (await apiClient.get<AuditEntry[]>('/analytics/ops/audit-log')).data,
 
   getRules: async () => (await apiClient.get<NotificationRule[]>('/analytics/ops/notification-rules')).data,

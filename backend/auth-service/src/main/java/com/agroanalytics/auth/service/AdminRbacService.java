@@ -35,6 +35,18 @@ public class AdminRbacService {
         return u;
     }
 
+    public User requireAnyActiveUserByUsername(String username) {
+        if (username == null || username.isBlank()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Не указан пользователь");
+        }
+        User u = userRepository.findByUsername(username.trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED));
+        if (!u.isActive()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Учётная запись заблокирована");
+        }
+        return u;
+    }
+
     public List<RbacUserResponse> listUsers(User admin) {
         List<User> list;
         if (admin.getOrganizationId() == null) {
