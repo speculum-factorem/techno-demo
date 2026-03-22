@@ -178,6 +178,14 @@ services:
       FIELD_SERVICE_URL: http://field-service:8082
       OPEN_METEO_BASE_URL: https://api.open-meteo.com
       INTERNAL_API_TOKEN: ${INTERNAL_API_TOKEN:?INTERNAL_API_TOKEN is required}
+      REPORTS_STORAGE_DIR: /data/reports
+      MAIL_HOST: ${MAIL_HOST:-}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+    volumes:
+      - analytics_reports:/data/reports
     depends_on:
       postgres:
         condition: service_healthy
@@ -298,3 +306,4 @@ volumes:
   postgres_data:
   kafka_kraft_data:
   grafana_data:
+  analytics_reports:

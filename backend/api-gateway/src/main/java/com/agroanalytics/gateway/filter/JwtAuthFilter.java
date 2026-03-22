@@ -20,7 +20,6 @@ import reactor.core.publisher.Mono;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
-import java.util.List;
 
 @Component
 public class JwtAuthFilter implements GlobalFilter, Ordered {
@@ -28,8 +27,6 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthFilter.class);
 
     private static final String BEARER_PREFIX = "Bearer ";
-    private static final List<String> PUBLIC_PATHS = List.of("/api/auth/");
-
     @Value("${jwt.secret}")
     private String jwtSecret;
 
@@ -39,7 +36,7 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         String path = request.getURI().getPath();
 
         // Skip authentication for public paths
-        if (isPublicPath(path)) {
+        if (isPublicAuthPath(path)) {
             logger.debug("Skipping JWT validation for public path: {}", path);
             return chain.filter(exchange);
         }
@@ -87,8 +84,21 @@ public class JwtAuthFilter implements GlobalFilter, Ordered {
         }
     }
 
-    private boolean isPublicPath(String path) {
-        return PUBLIC_PATHS.stream().anyMatch(path::startsWith);
+    /**
+     * Только публичные эндпоинты auth. Остальные /api/auth/* (me, change-password, admin/*) требуют JWT.
+     * Остальные сервисы (/api/fields, …) тоже требуют JWT.
+     */
+    private boolean isPublicAuthPath(String path) {
+        if (!path.startsWith("/api/auth/")) {
+            return false;
+        }
+        if (path.startsWith("/api/auth/admin")) {
+            return false;
+        }
+        if (path.equals("/api/auth/me") || path.equals("/api/auth/change-password")) {
+            return false;
+        }
+        return true;
     }
 
     private Claims parseToken(String token) {

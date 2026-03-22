@@ -1,45 +1,20 @@
-import React, { useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import styles from './IntegrationsPage.module.scss'
 import { Integration, IntegrationStatus, IntegrationType } from '@domain/entities/Integration'
+import { integrationsApi } from '@infrastructure/api/IntegrationsApi'
 
-const MOCK_INTEGRATIONS: Integration[] = [
-  {
-    id: 'i1', type: '1c_erp', name: '1С:Агро / ERP', description: 'Двусторонняя синхронизация справочников, себестоимости, складских остатков и актов выполненных работ',
-    icon: '1c_erp', status: 'connected', lastSync: '2026-03-20T10:52:00Z', recordsSynced: 248,
-    config: { host: 'erp.agro.ru', port: '8080', database: 'agro_prod' },
-    features: ['Синхронизация полей', 'Импорт затрат', 'Экспорт урожая', 'Акты работ'],
-  },
-  {
-    id: 'i2', type: 'weather_api', name: 'OpenWeatherMap API', description: 'Актуальные метеоданные и 16-дневный прогноз погоды с часовым разрешением для всех полей',
-    icon: 'cloud', status: 'connected', lastSync: '2026-03-20T14:00:00Z', recordsSynced: 12800,
-    config: { api_key: '••••••••••••••••', endpoint: 'api.openweathermap.org' },
-    features: ['Текущая погода', '16-дневный прогноз', 'Исторические данные', 'Радар осадков'],
-  },
-  {
-    id: 'i3', type: 'iot_gateway', name: 'IoT Gateway (MQTT)', description: 'Подключение датчиков почвы, метеостанций и контроллеров полива через MQTT-брокер',
-    icon: 'device_hub', status: 'connected', lastSync: '2026-03-20T14:20:00Z', recordsSynced: 94200,
-    config: { broker: 'mqtt.agro.internal', port: '1883', topic: 'sensors/#' },
-    features: ['Датчики почвы', 'Метеостанции', 'Контроллеры полива', 'БПЛА телеметрия'],
-  },
-  {
-    id: 'i4', type: 'geo_import', name: 'GIS / Shapefile Import', description: 'Импорт границ полей и зон из Shapefile, GeoJSON, KML. Экспорт для ГИС-систем',
-    icon: 'map', status: 'disconnected',
-    config: {},
-    features: ['Shapefile (.shp)', 'GeoJSON', 'KML / KMZ', 'WGS84 / СК-42'],
-  },
-  {
-    id: 'i5', type: 'telegram', name: 'Telegram Bot', description: 'Уведомления и дайджесты напрямую в Telegram. Поддержка команд /status, /alerts, /report',
-    icon: 'send', status: 'error', lastSync: '2026-03-19T18:00:00Z',
-    config: { bot_token: '••••••••••••', chat_id: '-100123456789' },
-    features: ['Алерты в реальном времени', 'Еженедельные дайджесты', 'Команды бота', 'Групповые чаты'],
-  },
-  {
-    id: 'i6', type: 'email_smtp', name: 'Email / SMTP', description: 'Отправка отчётов, уведомлений и приглашений пользователей по электронной почте',
-    icon: 'email', status: 'connected', lastSync: '2026-03-20T11:47:00Z', recordsSynced: 156,
-    config: { host: 'smtp.agro.ru', port: '587', from: 'noreply@agro.ru' },
-    features: ['Отчёты PDF/Excel', 'Алерты по правилам', 'Приглашения', 'Дайджесты'],
-  },
-]
+function apiErrorMessage(err: unknown, fallback: string): string {
+  const e = err as { response?: { data?: Record<string, unknown> } }
+  const d = e.response?.data
+  if (!d || typeof d !== 'object') return fallback
+  const msg = d.message
+  if (typeof msg === 'string' && msg.trim()) return msg
+  const detail = d.detail
+  if (typeof detail === 'string' && detail.trim()) return detail
+  const er = d.error
+  if (typeof er === 'string' && er.trim()) return er
+  return fallback
+}
 
 const STATUS_LABELS: Record<IntegrationStatus, string> = {
   connected: 'Подключено', disconnected: 'Не подключено', error: 'Ошибка', pending: 'Ожидание',
@@ -56,21 +31,58 @@ const TYPE_ICONS: Record<IntegrationType, string> = {
 }
 
 const IntegrationsPage: React.FC = () => {
-  const [integrations, setIntegrations] = useState<Integration[]>(MOCK_INTEGRATIONS)
+  const [integrations, setIntegrations] = useState<Integration[]>([])
   const [selected, setSelected] = useState<Integration | null>(null)
   const [connecting, setConnecting] = useState<string | null>(null)
   const [showImport, setShowImport] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [loadError, setLoadError] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
 
-  const connect = (id: string) => {
-    setConnecting(id)
-    setTimeout(() => {
-      setIntegrations(prev => prev.map(i => i.id === id ? { ...i, status: 'connected', lastSync: new Date().toISOString(), recordsSynced: (i.recordsSynced || 0) + 42 } : i))
-      setConnecting(null)
-    }, 2000)
+  const loadList = useCallback(async () => {
+    setLoading(true)
+    setLoadError(null)
+    try {
+      const list = await integrationsApi.list()
+      setIntegrations(list)
+    } catch (err) {
+      setLoadError(apiErrorMessage(err, 'Не удалось загрузить интеграции'))
+      setIntegrations([])
+    } finally {
+      setLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    void loadList()
+  }, [loadList])
+
+  const mergeUpdated = (updated: Integration) => {
+    setIntegrations(prev => prev.map(i => (i.id === updated.id ? updated : i)))
+    setSelected(s => (s?.id === updated.id ? updated : s))
   }
 
-  const disconnect = (id: string) => {
-    setIntegrations(prev => prev.map(i => i.id === id ? { ...i, status: 'disconnected', lastSync: undefined } : i))
+  const connect = async (id: string) => {
+    setConnecting(id)
+    setActionError(null)
+    try {
+      const updated = await integrationsApi.connect(id)
+      mergeUpdated(updated)
+    } catch (err) {
+      setActionError(apiErrorMessage(err, 'Не удалось подключить'))
+    } finally {
+      setConnecting(null)
+    }
+  }
+
+  const disconnect = async (id: string) => {
+    setActionError(null)
+    try {
+      const updated = await integrationsApi.disconnect(id)
+      mergeUpdated(updated)
+    } catch (err) {
+      setActionError(apiErrorMessage(err, 'Не удалось отключить'))
+    }
   }
 
   const stats = {
@@ -92,6 +104,17 @@ const IntegrationsPage: React.FC = () => {
         </button>
       </div>
 
+      {loadError && (
+        <div className={styles.infoMsg} style={{ marginBottom: 16, borderColor: '#ea4335', background: '#fce8e6' }}>
+          <span className="material-icons-round" style={{ color: '#ea4335' }}>error_outline</span> {loadError}
+        </div>
+      )}
+      {actionError && (
+        <div className={styles.infoMsg} style={{ marginBottom: 16, borderColor: '#ea4335', background: '#fce8e6' }}>
+          <span className="material-icons-round" style={{ color: '#ea4335' }}>error_outline</span> {actionError}
+        </div>
+      )}
+
       {/* Stats */}
       <div className={styles.statsRow}>
         {[
@@ -109,8 +132,9 @@ const IntegrationsPage: React.FC = () => {
       </div>
 
       {/* Integration cards */}
+      {loading && <p className={styles.sub}>Загрузка…</p>}
       <div className={styles.intGrid}>
-        {integrations.map(intg => (
+        {!loading && integrations.map(intg => (
           <div key={intg.id} className={`${styles.intCard} ${styles[`status_${intg.status}`]}`} onClick={() => setSelected(intg)}>
             <div className={styles.intTop}>
               <div className={styles.intIcon}>
@@ -140,11 +164,11 @@ const IntegrationsPage: React.FC = () => {
             )}
             <div className={styles.intActions} onClick={e => e.stopPropagation()}>
               {intg.status === 'connected' ? (
-                <button className={styles.disconnectBtn} onClick={() => disconnect(intg.id)}>
+                <button className={styles.disconnectBtn} onClick={() => void disconnect(intg.id)}>
                   <span className="material-icons-round">link_off</span> Отключить
                 </button>
               ) : (
-                <button className={styles.connectBtn} onClick={() => connect(intg.id)} disabled={connecting === intg.id}>
+                <button className={styles.connectBtn} onClick={() => void connect(intg.id)} disabled={connecting === intg.id}>
                   {connecting === intg.id ? <span className={styles.spinner} /> : <span className="material-icons-round">cable</span>}
                   {intg.status === 'error' ? 'Переподключить' : 'Подключить'}
                 </button>
@@ -202,12 +226,12 @@ const IntegrationsPage: React.FC = () => {
               <div className={styles.modalActions}>
                 <button className={styles.cancelBtn} onClick={() => setSelected(null)}>Закрыть</button>
                 {selected.status === 'connected' ? (
-                  <button className={styles.disconnectBtn} onClick={() => { disconnect(selected.id); setSelected(null) }}>
+                  <button className={styles.disconnectBtn} onClick={() => { void disconnect(selected.id); setSelected(null) }}>
                     <span className="material-icons-round">link_off</span> Отключить
                   </button>
                 ) : (
-                  <button className={styles.saveBtn} onClick={() => { connect(selected.id); setSelected(null) }}>
-                    <span className="material-icons-round">cable</span> Подключить
+                  <button className={styles.saveBtn} onClick={() => { void connect(selected.id) }} disabled={connecting === selected.id}>
+                    <span className="material-icons-round">cable</span> {connecting === selected.id ? 'Подключение…' : 'Подключить'}
                   </button>
                 )}
               </div>

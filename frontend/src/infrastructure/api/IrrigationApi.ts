@@ -1,5 +1,4 @@
 import apiClient from './ApiClient'
-import { USE_MOCK } from './config'
 import { IrrigationTask, IrrigationStatus, IrrigationPriority } from '@domain/entities/Irrigation'
 
 // Raw DTO shape as returned by Java irrigation-service
@@ -48,21 +47,12 @@ const toTask = (dto: IrrigationTaskApiDto): IrrigationTask => ({
 export const irrigationApi = {
   /** Fetch irrigation tasks for a specific field from Java irrigation-service */
   async getTasksByField(fieldId: string): Promise<IrrigationTask[]> {
-    if (USE_MOCK) {
-      // In mock mode return empty list (tasks come from Kafka events in production)
-      await new Promise(r => setTimeout(r, 200))
-      return []
-    }
     const { data } = await apiClient.get<IrrigationTaskApiDto[]>(`/irrigation/fields/${fieldId}/tasks`)
     return data.map(toTask)
   },
 
   /** Update task status: 'scheduled' | 'active' | 'completed' | 'cancelled' | 'skipped' */
   async updateTaskStatus(taskId: string, status: IrrigationStatus): Promise<IrrigationTask> {
-    if (USE_MOCK) {
-      await new Promise(r => setTimeout(r, 200))
-      throw new Error('Mock mode: task status update not supported')
-    }
     const { data } = await apiClient.patch<IrrigationTaskApiDto>(
       `/irrigation/tasks/${taskId}/status?status=${status}`
     )

@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useState } from 'react'
 import styles from './ReportsPage.module.scss'
-import { opsApi, ReportHistoryItem } from '@infrastructure/api/OpsApi'
+import { opsApi, ReportHistoryItem, ScheduledReport } from '@infrastructure/api/OpsApi'
 
 interface ReportTemplate {
   id: string
@@ -32,22 +32,22 @@ const CATEGORY_COLORS: Record<string, string> = {
   analytics: '#1a73e8', finance: '#34a853', operations: '#f9ab00', compliance: '#9c27b0',
 }
 
-interface ScheduledReport {
-  id: string
-  templateId: string
-  name: string
-  frequency: 'weekly' | 'monthly'
-  nextRun: string
-  recipients: string[]
-  format: 'pdf' | 'excel'
-  channel: 'email' | 'telegram'
+function parseRecipients(raw: string): string[] {
+  return raw
+    .split(/[,;\n]+/)
+    .map(s => s.trim())
+    .filter(Boolean)
 }
 
-const MOCK_SCHEDULED: ScheduledReport[] = [
-  { id: 's1', templateId: 'r1', name: 'Недельный дайджест', frequency: 'weekly', nextRun: '2026-03-27', recipients: ['admin@agro.ru', 'manager@agro.ru'], format: 'pdf', channel: 'email' },
-  { id: 's2', templateId: 'r2', name: 'Финансовая сводка', frequency: 'monthly', nextRun: '2026-04-01', recipients: ['cfo@agro.ru'], format: 'excel', channel: 'email' },
-  { id: 's3', templateId: 'r8', name: 'Отчёт для руководства', frequency: 'monthly', nextRun: '2026-04-01', recipients: ['ceo@agro.ru'], format: 'pdf', channel: 'telegram' },
-]
+function apiErr(e: unknown, fallback: string): string {
+  const ex = e as { response?: { data?: { detail?: string; message?: string } } }
+  const d = ex.response?.data
+  const detail = d?.detail
+  if (typeof detail === 'string' && detail.trim()) return detail
+  const msg = d?.message
+  if (typeof msg === 'string' && msg.trim()) return msg
+  return fallback
+}
 
 const ReportsPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'templates' | 'scheduled' | 'history'>('templates')
@@ -55,21 +55,142 @@ const ReportsPage: React.FC = () => {
   const [generating, setGenerating] = useState<string | null>(null)
   const [showSchedule, setShowSchedule] = useState(false)
   const [history, setHistory] = useState<ReportHistoryItem[]>([])
+  const [scheduled, setScheduled] = useState<ScheduledReport[]>([])
+  const [listLoading, setListLoading] = useState(true)
+  const [listError, setListError] = useState<string | null>(null)
+  const [toast, setToast] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+
+  const [editingScheduleId, setEditingScheduleId] = useState<string | null>(null)
+  const [scheduleTemplateId, setScheduleTemplateId] = useState(TEMPLATES[0].id)
+  const [scheduleFrequency, setScheduleFrequency] = useState<'weekly' | 'monthly'>('weekly')
+  const [scheduleFormat, setScheduleFormat] = useState<'pdf' | 'excel'>('pdf')
+  const [scheduleRecipients, setScheduleRecipients] = useState('')
+  const [scheduleSaving, setScheduleSaving] = useState(false)
+  const [scheduleFormError, setScheduleFormError] = useState<string | null>(null)
+
+  const loadData = useCallback(async () => {
+    setListError(null)
+    setListLoading(true)
+    try {
+      const [h, sch] = await Promise.all([opsApi.getReportsHistory(), opsApi.getScheduledReports()])
+      setHistory(h)
+      setScheduled(sch)
+    } catch {
+      setListError('Не удалось загрузить отчёты или расписание. Проверьте API и авторизацию.')
+      setHistory([])
+      setScheduled([])
+    } finally {
+      setListLoading(false)
+    }
+  }, [])
 
   useEffect(() => {
-    opsApi.getReportsHistory().then(setHistory).catch(() => undefined)
-  }, [])
+    void loadData()
+  }, [loadData])
+
+  useEffect(() => {
+    if (!toast || toast.type !== 'ok') return
+    const t = window.setTimeout(() => setToast(null), 6000)
+    return () => window.clearTimeout(t)
+  }, [toast])
 
   const filtered = TEMPLATES.filter(t => filterCat === 'all' || t.category === filterCat)
 
-  const generate = (id: string, format: string) => {
-    setGenerating(id)
-    const template = TEMPLATES.find(t => t.id === id)
-    opsApi.generateReport(template?.name || 'Отчёт', format as 'pdf' | 'excel').finally(() => {
-      opsApi.getReportsHistory().then(setHistory).catch(() => undefined)
+  const uniqueRecipientCount = useMemo(() => {
+    const s = new Set<string>()
+    scheduled.forEach(x => x.recipients.forEach(r => s.add(r.toLowerCase())))
+    return s.size
+  }, [scheduled])
+
+  const openNewScheduleModal = () => {
+    setEditingScheduleId(null)
+    setScheduleTemplateId(TEMPLATES[0].id)
+    setScheduleFrequency('weekly')
+    setScheduleFormat('pdf')
+    setScheduleRecipients('')
+    setScheduleFormError(null)
+    setShowSchedule(true)
+  }
+
+  const openEditSchedule = (s: ScheduledReport) => {
+    setEditingScheduleId(s.id)
+    setScheduleTemplateId(s.templateId)
+    setScheduleFrequency(s.frequency)
+    setScheduleFormat(s.format)
+    setScheduleRecipients(s.recipients.join(', '))
+    setScheduleFormError(null)
+    setShowSchedule(true)
+  }
+
+  const saveSchedule = async () => {
+    setScheduleFormError(null)
+    const recipients = parseRecipients(scheduleRecipients)
+    if (recipients.length === 0) {
+      setScheduleFormError('Укажите хотя бы один email получателя')
+      return
+    }
+    const tpl = TEMPLATES.find(t => t.id === scheduleTemplateId)
+    const name = tpl?.name || 'Отчёт'
+    setScheduleSaving(true)
+    try {
+      if (editingScheduleId) {
+        await opsApi.updateScheduledReport(editingScheduleId, {
+          templateId: scheduleTemplateId,
+          name,
+          frequency: scheduleFrequency,
+          format: scheduleFormat,
+          channel: 'email',
+          recipients,
+        })
+        setToast({ type: 'ok', text: 'Расписание обновлено и сохранено на сервере.' })
+      } else {
+        await opsApi.createScheduledReport({
+          templateId: scheduleTemplateId,
+          name,
+          frequency: scheduleFrequency,
+          format: scheduleFormat,
+          channel: 'email',
+          recipients,
+        })
+        setToast({ type: 'ok', text: 'Расписание создано и сохранено на сервере.' })
+      }
+      setShowSchedule(false)
+      await loadData()
+    } catch (e) {
+      setScheduleFormError(apiErr(e, 'Не удалось сохранить'))
+    } finally {
+      setScheduleSaving(false)
+    }
+  }
+
+  const deleteSchedule = async (id: string) => {
+    if (!window.confirm('Удалить это расписание?')) return
+    try {
+      await opsApi.deleteScheduledReport(id)
+      setToast({ type: 'ok', text: 'Расписание удалено.' })
+      await loadData()
+    } catch (e) {
+      setToast({ type: 'err', text: apiErr(e, 'Не удалось удалить') })
+    }
+  }
+
+  const generate = async (templateId: string, format: 'pdf' | 'excel') => {
+    const key = `${templateId}:${format}`
+    setGenerating(key)
+    const template = TEMPLATES.find(t => t.id === templateId)
+    const name = template?.name || 'Отчёт'
+    try {
+      await opsApi.generateReport(name, format, templateId)
+      await loadData()
+      setToast({
+        type: 'ok',
+        text: `Отчёт «${name}» (${format.toUpperCase()}) сформирован и сохранён. Скачайте файл во вкладке «История».`,
+      })
+    } catch (e) {
+      setToast({ type: 'err', text: apiErr(e, 'Не удалось сгенерировать отчёт') })
+    } finally {
       setGenerating(null)
-      alert(`✅ Отчёт "${template?.name}" (${format.toUpperCase()}) сгенерирован и готов к скачиванию`)
-    })
+    }
   }
 
   return (
@@ -77,20 +198,44 @@ const ReportsPage: React.FC = () => {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}><span className="material-icons-round">description</span> Отчёты и экспорт</h1>
-          <p className={styles.sub}>PDF/Excel отчёты для руководства, плановые рассылки по Email и Telegram</p>
+          <p className={styles.sub}>PDF и Excel для руководства, плановые рассылки на email</p>
         </div>
-        <button className={styles.scheduleBtn} onClick={() => setShowSchedule(true)}>
+        <button type="button" className={styles.scheduleBtn} onClick={openNewScheduleModal}>
           <span className="material-icons-round">schedule_send</span> Настроить рассылку
         </button>
       </div>
+
+      {listError && (
+        <div className={styles.infoMsg} style={{ marginBottom: 16, borderColor: '#ea4335', background: '#fce8e6' }}>
+          <span className="material-icons-round" style={{ color: '#ea4335' }}>error_outline</span> {listError}
+        </div>
+      )}
+      {toast && (
+        <div
+          className={styles.infoMsg}
+          style={{
+            marginBottom: 16,
+            borderColor: toast.type === 'ok' ? '#34a853' : '#ea4335',
+            background: toast.type === 'ok' ? '#e6f4ea' : '#fce8e6',
+          }}
+        >
+          <span className="material-icons-round" style={{ color: toast.type === 'ok' ? '#34a853' : '#ea4335' }}>
+            {toast.type === 'ok' ? 'check_circle' : 'error_outline'}
+          </span>
+          {toast.text}
+          <button type="button" className={styles.iconBtn} style={{ marginLeft: 8 }} onClick={() => setToast(null)} aria-label="Закрыть">
+            <span className="material-icons-round">close</span>
+          </button>
+        </div>
+      )}
 
       {/* Quick stats */}
       <div className={styles.statsRow}>
         {[
           { label: 'Шаблонов', value: TEMPLATES.length, icon: 'description', color: '#1a73e8' },
-          { label: 'Плановых рассылок', value: MOCK_SCHEDULED.length, icon: 'schedule_send', color: '#34a853' },
-          { label: 'Сгенерировано', value: '48', icon: 'download_done', color: '#f9ab00' },
-          { label: 'Получателей', value: '7', icon: 'group', color: '#9c27b0' },
+          { label: 'Плановых рассылок', value: listLoading ? '…' : scheduled.length, icon: 'schedule_send', color: '#34a853' },
+          { label: 'В истории', value: listLoading ? '…' : history.length, icon: 'download_done', color: '#f9ab00' },
+          { label: 'Получателей (уник.)', value: listLoading ? '…' : uniqueRecipientCount, icon: 'group', color: '#9c27b0' },
         ].map(s => (
           <div key={s.label} className={styles.statCard}>
             <span className="material-icons-round" style={{ color: s.color }}>{s.icon}</span>
@@ -103,7 +248,7 @@ const ReportsPage: React.FC = () => {
       {/* Tabs */}
       <div className={styles.tabs}>
         {(['templates', 'scheduled', 'history'] as const).map(tab => (
-          <button key={tab} className={`${styles.tab} ${activeTab === tab ? styles.activeTab : ''}`} onClick={() => setActiveTab(tab)}>
+          <button key={tab} type="button" className={`${styles.tab} ${activeTab === tab ? styles.activeTab : ''}`} onClick={() => setActiveTab(tab)}>
             <span className="material-icons-round">
               {tab === 'templates' ? 'library_books' : tab === 'scheduled' ? 'schedule_send' : 'history'}
             </span>
@@ -115,9 +260,9 @@ const ReportsPage: React.FC = () => {
       {activeTab === 'templates' && (
         <>
           <div className={styles.catFilters}>
-            <button className={`${styles.catBtn} ${filterCat === 'all' ? styles.activeCatBtn : ''}`} onClick={() => setFilterCat('all')}>Все</button>
+            <button type="button" className={`${styles.catBtn} ${filterCat === 'all' ? styles.activeCatBtn : ''}`} onClick={() => setFilterCat('all')}>Все</button>
             {Object.keys(CATEGORY_LABELS).map(c => (
-              <button key={c} className={`${styles.catBtn} ${filterCat === c ? styles.activeCatBtn : ''}`}
+              <button key={c} type="button" className={`${styles.catBtn} ${filterCat === c ? styles.activeCatBtn : ''}`}
                 onClick={() => setFilterCat(c)}
                 style={filterCat === c ? { background: CATEGORY_COLORS[c] + '22', color: CATEGORY_COLORS[c], borderColor: CATEGORY_COLORS[c] } : {}}>
                 {CATEGORY_LABELS[c]}
@@ -145,14 +290,15 @@ const ReportsPage: React.FC = () => {
                   </div>
                   <div className={styles.templateActions}>
                     {t.formats.includes('pdf') && (
-                      <button className={`${styles.genBtn} ${styles.pdfBtn}`} onClick={() => generate(t.id, 'pdf')} disabled={generating === t.id}>
-                        {generating === t.id ? <span className={styles.spinner} /> : <span className="material-icons-round">picture_as_pdf</span>}
+                      <button type="button" className={`${styles.genBtn} ${styles.pdfBtn}`} onClick={() => void generate(t.id, 'pdf')} disabled={generating === `${t.id}:pdf`}>
+                        {generating === `${t.id}:pdf` ? <span className={styles.spinner} /> : <span className="material-icons-round">picture_as_pdf</span>}
                         PDF
                       </button>
                     )}
                     {t.formats.includes('excel') && (
-                      <button className={`${styles.genBtn} ${styles.xlsBtn}`} onClick={() => generate(t.id, 'excel')} disabled={generating === t.id}>
-                        <span className="material-icons-round">table_chart</span> Excel
+                      <button type="button" className={`${styles.genBtn} ${styles.xlsBtn}`} onClick={() => void generate(t.id, 'excel')} disabled={generating === `${t.id}:excel`}>
+                        {generating === `${t.id}:excel` ? <span className={styles.spinner} /> : <span className="material-icons-round">table_chart</span>}
+                        Excel
                       </button>
                     )}
                   </div>
@@ -165,7 +311,8 @@ const ReportsPage: React.FC = () => {
 
       {activeTab === 'scheduled' && (
         <div className={styles.scheduledList}>
-          {MOCK_SCHEDULED.map(s => (
+          {listLoading && <p className={styles.sub}>Загрузка…</p>}
+          {!listLoading && scheduled.map(s => (
             <div key={s.id} className={styles.scheduledCard}>
               <div className={styles.scheduledIcon}>
                 <span className="material-icons-round" style={{ color: s.format === 'pdf' ? '#ea4335' : '#34a853' }}>
@@ -177,17 +324,18 @@ const ReportsPage: React.FC = () => {
                 <div className={styles.scheduledMeta}>
                   <span><span className="material-icons-round" style={{ fontSize: 13 }}>refresh</span> {s.frequency === 'weekly' ? 'Еженедельно' : 'Ежемесячно'}</span>
                   <span><span className="material-icons-round" style={{ fontSize: 13 }}>event</span> Следующий: {s.nextRun}</span>
-                  <span><span className="material-icons-round" style={{ fontSize: 13 }}>{s.channel === 'email' ? 'email' : 'send'}</span> {s.channel === 'email' ? 'Email' : 'Telegram'}</span>
+                  <span><span className="material-icons-round" style={{ fontSize: 13 }}>email</span> Email</span>
                   <span><span className="material-icons-round" style={{ fontSize: 13 }}>group</span> {s.recipients.join(', ')}</span>
                 </div>
               </div>
               <div className={styles.scheduledActions}>
-                <button className={styles.iconBtn}><span className="material-icons-round">edit</span></button>
-                <button className={styles.iconBtn}><span className="material-icons-round">delete</span></button>
+                <button type="button" className={styles.iconBtn} title="Изменить" onClick={() => openEditSchedule(s)}><span className="material-icons-round">edit</span></button>
+                <button type="button" className={styles.iconBtn} title="Удалить" onClick={() => void deleteSchedule(s.id)}><span className="material-icons-round">delete</span></button>
               </div>
             </div>
           ))}
-          <button className={styles.addScheduleBtn} onClick={() => setShowSchedule(true)}>
+          {!listLoading && scheduled.length === 0 && <p className={styles.sub}>Нет плановых рассылок. Создайте через кнопку выше.</p>}
+          <button type="button" className={styles.addScheduleBtn} onClick={openNewScheduleModal}>
             <span className="material-icons-round">add</span> Добавить расписание
           </button>
         </div>
@@ -195,7 +343,9 @@ const ReportsPage: React.FC = () => {
 
       {activeTab === 'history' && (
         <div className={styles.historyList}>
-          {history.map((h) => (
+          {listLoading && <p className={styles.sub}>Загрузка…</p>}
+          {!listLoading && history.length === 0 && <p className={styles.sub}>История пуста — сгенерируйте отчёт на вкладке «Шаблоны».</p>}
+          {!listLoading && history.map(h => (
             <div key={h.id} className={styles.historyItem}>
               <span className="material-icons-round" style={{ color: h.format === 'pdf' ? '#ea4335' : '#34a853', fontSize: 22 }}>
                 {h.format === 'pdf' ? 'picture_as_pdf' : 'table_chart'}
@@ -204,41 +354,56 @@ const ReportsPage: React.FC = () => {
                 <span className={styles.historyName}>{h.name}</span>
                 <span className={styles.historyMeta}>{h.date} · {h.size} · {h.user}</span>
               </div>
-              <button className={styles.downloadBtn}><span className="material-icons-round">download</span></button>
+              <button type="button" className={styles.downloadBtn} title="Скачать PDF или Excel" onClick={() => void opsApi.downloadReportHistoryFile(h.id)}>
+                <span className="material-icons-round">download</span>
+              </button>
             </div>
           ))}
         </div>
       )}
 
       {showSchedule && (
-        <div className={styles.overlay} onClick={() => setShowSchedule(false)}>
+        <div className={styles.overlay} onClick={() => !scheduleSaving && setShowSchedule(false)}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <div className={styles.modalTitle}><span className="material-icons-round">schedule_send</span> Новая рассылка</div>
-              <button className={styles.closeBtn} onClick={() => setShowSchedule(false)}><span className="material-icons-round">close</span></button>
+              <div className={styles.modalTitle}>
+                <span className="material-icons-round">schedule_send</span>
+                {editingScheduleId ? 'Редактировать рассылку' : 'Новая рассылка'}
+              </div>
+              <button type="button" className={styles.closeBtn} disabled={scheduleSaving} onClick={() => setShowSchedule(false)}><span className="material-icons-round">close</span></button>
             </div>
             <div className={styles.modalBody}>
+              {scheduleFormError && (
+                <div className={styles.infoMsg} style={{ marginBottom: 12, borderColor: '#ea4335', background: '#fce8e6' }}>
+                  <span className="material-icons-round" style={{ color: '#ea4335' }}>error_outline</span> {scheduleFormError}
+                </div>
+              )}
               <div className={styles.formGroup}><label>Шаблон отчёта</label>
-                <select className={styles.select}>{TEMPLATES.map(t => <option key={t.id}>{t.name}</option>)}</select>
+                <select className={styles.select} value={scheduleTemplateId} onChange={e => setScheduleTemplateId(e.target.value)}>
+                  {TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                </select>
               </div>
               <div className={styles.formRow}>
                 <div className={styles.formGroup}><label>Периодичность</label>
-                  <select className={styles.select}><option>Еженедельно</option><option>Ежемесячно</option></select>
+                  <select className={styles.select} value={scheduleFrequency} onChange={e => setScheduleFrequency(e.target.value as 'weekly' | 'monthly')}>
+                    <option value="weekly">Еженедельно</option>
+                    <option value="monthly">Ежемесячно</option>
+                  </select>
                 </div>
                 <div className={styles.formGroup}><label>Формат</label>
-                  <select className={styles.select}><option>PDF</option><option>Excel</option></select>
+                  <select className={styles.select} value={scheduleFormat} onChange={e => setScheduleFormat(e.target.value as 'pdf' | 'excel')}>
+                    <option value="pdf">PDF</option>
+                    <option value="excel">Excel</option>
+                  </select>
                 </div>
               </div>
-              <div className={styles.formGroup}><label>Канал</label>
-                <select className={styles.select}><option>Email</option><option>Telegram</option></select>
-              </div>
-              <div className={styles.formGroup}><label>Получатели (через запятую)</label>
-                <input className={styles.input} placeholder="email1@agro.ru, email2@agro.ru" />
+              <div className={styles.formGroup}><label>Получатели (email через запятую)</label>
+                <input className={styles.input} placeholder="user1@company.ru, user2@company.ru" value={scheduleRecipients} onChange={e => setScheduleRecipients(e.target.value)} />
               </div>
               <div className={styles.modalActions}>
-                <button className={styles.cancelBtn} onClick={() => setShowSchedule(false)}>Отмена</button>
-                <button className={styles.saveBtn} onClick={() => setShowSchedule(false)}>
-                  <span className="material-icons-round">save</span> Создать расписание
+                <button type="button" className={styles.cancelBtn} disabled={scheduleSaving} onClick={() => setShowSchedule(false)}>Отмена</button>
+                <button type="button" className={styles.saveBtn} disabled={scheduleSaving} onClick={() => void saveSchedule()}>
+                  <span className="material-icons-round">save</span> {scheduleSaving ? 'Сохранение…' : editingScheduleId ? 'Сохранить' : 'Создать расписание'}
                 </button>
               </div>
             </div>

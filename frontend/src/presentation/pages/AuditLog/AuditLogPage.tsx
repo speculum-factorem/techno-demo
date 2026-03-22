@@ -3,21 +3,6 @@ import styles from './AuditLogPage.module.scss'
 import { AuditEntry, AuditAction } from '@domain/entities/AuditLog'
 import { opsApi } from '@infrastructure/api/OpsApi'
 
-const MOCK_LOG: AuditEntry[] = [
-  { id: 'a1', timestamp: '2026-03-20T14:18:32Z', userId: 'u1', userName: 'admin', userRole: 'Супер-администратор', action: 'recommendation_accept', entityType: 'Рекомендация', entityId: 'r12', entityName: 'Полив Поле А-1', details: 'Принята рекомендация полива 35 мм', ipAddress: '192.168.1.10', result: 'success' },
-  { id: 'a2', timestamp: '2026-03-20T14:05:11Z', userId: 'u2', userName: 'agronomist1', userRole: 'Агроном', action: 'forecast_run', entityType: 'Прогноз', entityId: 'fc88', entityName: 'Прогноз урожая Поле Б-2', details: 'Запущен прогноз RandomForest, 150 деревьев', ipAddress: '192.168.1.22', result: 'success' },
-  { id: 'a3', timestamp: '2026-03-20T13:44:07Z', userId: 'u1', userName: 'admin', userRole: 'Супер-администратор', action: 'user_role_change', entityType: 'Пользователь', entityId: 'u5', entityName: 'operator2', details: 'Роль изменена: viewer → operator', ipAddress: '192.168.1.10', result: 'success' },
-  { id: 'a4', timestamp: '2026-03-20T13:22:55Z', userId: 'u2', userName: 'agronomist1', userRole: 'Агроном', action: 'alert_rule_create', entityType: 'Правило', entityId: 'rule7', entityName: 'Дефицит влаги', details: 'Создано правило: soilMoisture < 20% → Email + App', ipAddress: '192.168.1.22', result: 'success' },
-  { id: 'a5', timestamp: '2026-03-20T12:58:44Z', userId: 'u3', userName: 'operator1', userRole: 'Механизатор', action: 'login', entityType: 'Сессия', entityId: '', entityName: '', details: 'Вход в систему', ipAddress: '10.0.0.55', result: 'success' },
-  { id: 'a6', timestamp: '2026-03-20T12:31:20Z', userId: 'u2', userName: 'agronomist1', userRole: 'Агроном', action: 'field_update', entityType: 'Поле', entityId: 'f3', entityName: 'Поле В-3', details: 'Обновлена культура: подсолнечник → соя', ipAddress: '192.168.1.22', result: 'success' },
-  { id: 'a7', timestamp: '2026-03-20T11:47:03Z', userId: 'u1', userName: 'admin', userRole: 'Супер-администратор', action: 'export_pdf', entityType: 'Отчёт', entityId: 'rep5', entityName: 'Недельный дайджест 13-19 марта', details: 'PDF 4.2 МБ сгенерирован и отправлен', ipAddress: '192.168.1.10', result: 'success' },
-  { id: 'a8', timestamp: '2026-03-20T11:15:38Z', userId: 'u4', userName: 'viewer1', userRole: 'Наблюдатель', action: 'recommendation_reject', entityType: 'Рекомендация', entityId: 'r10', entityName: 'Удобрение Поле Г-4', details: 'Нет прав на подтверждение рекомендаций', ipAddress: '10.0.0.88', result: 'failure' },
-  { id: 'a9', timestamp: '2026-03-20T10:52:19Z', userId: 'u2', userName: 'agronomist1', userRole: 'Агроном', action: 'integration_connect', entityType: 'Интеграция', entityId: 'int_1c', entityName: '1С:Агро', details: 'Подключение к 1С ERP. Синхронизировано 248 записей', ipAddress: '192.168.1.22', result: 'success' },
-  { id: 'a10', timestamp: '2026-03-20T10:30:00Z', userId: 'u1', userName: 'admin', userRole: 'Супер-администратор', action: 'user_invite', entityType: 'Пользователь', entityId: 'u6', entityName: 'newuser@agro.ru', details: 'Приглашение агронома, роль: agronomist', ipAddress: '192.168.1.10', result: 'success' },
-  { id: 'a11', timestamp: '2026-03-20T09:11:22Z', userId: 'u3', userName: 'operator1', userRole: 'Механизатор', action: 'settings_change', entityType: 'Настройки', entityId: 'dev_d4', entityName: 'Контроллер В-3', details: 'Попытка смены конфигурации клапана — нет прав', ipAddress: '10.0.0.55', result: 'failure' },
-  { id: 'a12', timestamp: '2026-03-19T18:04:55Z', userId: 'u2', userName: 'agronomist1', userRole: 'Агроном', action: 'export_excel', entityType: 'Отчёт', entityId: 'rep4', entityName: 'Финансовая сводка Q1', details: 'Excel файл 1.8 МБ скачан', ipAddress: '192.168.1.22', result: 'success' },
-]
-
 const ACTION_ICONS: Record<AuditAction, string> = {
   login: 'login', logout: 'logout',
   field_update: 'edit', field_create: 'add_circle', field_delete: 'delete',
@@ -49,7 +34,7 @@ const AuditLogPage: React.FC = () => {
   const [filterResult, setFilterResult] = useState<'all' | 'success' | 'failure'>('all')
 
   useEffect(() => {
-    opsApi.getAuditLog().then(setEntries).catch(() => setEntries(MOCK_LOG))
+    opsApi.getAuditLog().then(setEntries).catch(() => setEntries([]))
   }, [])
 
   const users = [...new Set(entries.map(e => e.userName))]

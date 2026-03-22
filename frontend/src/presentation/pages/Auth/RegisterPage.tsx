@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@application/store/hooks'
 import { clearError, register } from '@application/store/slices/authSlice'
 import Button from '@presentation/components/common/Button/Button'
@@ -15,6 +15,7 @@ const STEPS = ['Аккаунт', 'Персональные данные', 'Ор�
 const RegisterPage: React.FC = () => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const { loading, error, isAuthenticated } = useAppSelector(s => s.auth)
 
   const [step, setStep] = useState(0)
@@ -40,6 +41,11 @@ const RegisterPage: React.FC = () => {
   useEffect(() => {
     if (isAuthenticated) navigate('/app', { replace: true })
   }, [isAuthenticated, navigate])
+
+  useEffect(() => {
+    const inv = searchParams.get('invite')?.trim()
+    if (inv) setInviteCode(inv)
+  }, [searchParams])
 
   const validatePassword = (p: string) => {
     if (p.length < 8) return 'Минимум 8 символов'
@@ -238,6 +244,11 @@ const RegisterPage: React.FC = () => {
 
             {step === 2 && (
               <>
+                {inviteCode.trim() && (
+                  <Alert type="info">
+                    Активирована ссылка-приглашение: код подставлен. Укажите тот же email, что в письме (если приглашение было на конкретный адрес).
+                  </Alert>
+                )}
                 <Alert type="info">
                   Без invite-кода регистрация без привязки к организации. С кодом можно указать только его
                   (ID организации необязателен) или код и ID вместе — они должны совпадать.

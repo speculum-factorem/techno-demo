@@ -125,7 +125,7 @@ export const initializeAuth = createAsyncThunk(
       const user = await authApi.me()
       return { isAuthenticated: true, user, tokens }
     } catch {
-      // Backend unavailable or mock mode — fall back to cached user
+      // Backend unavailable — fall back to cached user
       if (rawUser) {
         const user = JSON.parse(rawUser) as User
         return { isAuthenticated: true, user, tokens }

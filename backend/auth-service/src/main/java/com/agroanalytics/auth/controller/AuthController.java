@@ -128,6 +128,9 @@ public class AuthController {
         }
 
         User user = userOpt.get();
+        if (!user.isActive()) {
+            return ResponseEntity.status(403).body(Map.of("error", "Account disabled"));
+        }
         LoginResponse.UserInfo userInfo = LoginResponse.UserInfo.builder()
                 .id(user.getId())
                 .username(user.getUsername())

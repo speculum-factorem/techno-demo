@@ -3,43 +3,6 @@ import styles from './NotificationRulesPage.module.scss'
 import { NotificationRule, RuleConditionField, RuleOperator, RuleChannel } from '@domain/entities/NotificationRule'
 import { opsApi } from '@infrastructure/api/OpsApi'
 
-const MOCK_RULES: NotificationRule[] = [
-  {
-    id: 'r1', name: 'Критический дефицит влаги', description: 'Сигнал, когда влажность почвы критически низкая', enabled: true,
-    conditions: [{ field: 'soilMoisture', operator: 'lt', value: 15, unit: '%' }],
-    conditionLogic: 'AND', channels: ['app', 'email', 'telegram'], recipients: ['admin@agro.ru', 'agro1@agro.ru'],
-    fieldIds: ['f1', 'f2', 'f3', 'f4'], cooldownMinutes: 60, createdBy: 'admin', createdAt: '2026-03-01',
-    lastTriggered: '2026-03-19T08:22:00Z', triggerCount: 4,
-  },
-  {
-    id: 'r2', name: 'Жара + засуха', description: 'Комбинация высокой температуры и сухости почвы',
-    enabled: true,
-    conditions: [
-      { field: 'temperature', operator: 'gt', value: 35, unit: '°C' },
-      { field: 'soilMoisture', operator: 'lt', value: 20, unit: '%' },
-    ],
-    conditionLogic: 'AND', channels: ['app', 'telegram'], recipients: ['admin@agro.ru'],
-    fieldIds: ['f2', 'f4'], cooldownMinutes: 120, createdBy: 'agronomist1', createdAt: '2026-03-05',
-    lastTriggered: '2026-03-15T14:11:00Z', triggerCount: 2,
-  },
-  {
-    id: 'r3', name: 'Сильный ветер', description: 'Уведомление при опасном ветре для опрыскивания',
-    enabled: false,
-    conditions: [{ field: 'windSpeed', operator: 'gt', value: 8, unit: 'м/с' }],
-    conditionLogic: 'AND', channels: ['app'], recipients: ['operator1@agro.ru'],
-    fieldIds: ['f1', 'f3'], cooldownMinutes: 30, createdBy: 'agronomist1', createdAt: '2026-03-10',
-    triggerCount: 0,
-  },
-  {
-    id: 'r4', name: 'Низкий NDVI', description: 'Деградация вегетации на полях',
-    enabled: true,
-    conditions: [{ field: 'ndvi', operator: 'lt', value: 0.4, unit: '' }],
-    conditionLogic: 'AND', channels: ['email'], recipients: ['admin@agro.ru', 'agro1@agro.ru', 'manager@agro.ru'],
-    fieldIds: ['f1', 'f2', 'f3', 'f4'], cooldownMinutes: 1440, createdBy: 'admin', createdAt: '2026-03-12',
-    lastTriggered: '2026-03-18T06:00:00Z', triggerCount: 1,
-  },
-]
-
 const FIELD_LABELS: Record<RuleConditionField, string> = {
   soilMoisture: 'Влажность почвы', temperature: 'Температура', humidity: 'Влажность воздуха',
   rainfall: 'Осадки', windSpeed: 'Скорость ветра', ndvi: 'NDVI',
@@ -72,7 +35,7 @@ const NotificationRulesPage: React.FC = () => {
   const [newLogic, setNewLogic] = useState<'AND' | 'OR'>('AND')
 
   useEffect(() => {
-    opsApi.getRules().then(setRules).catch(() => setRules(MOCK_RULES))
+    opsApi.getRules().then(setRules).catch(() => setRules([]))
   }, [])
 
   const toggleRule = (id: string) => {

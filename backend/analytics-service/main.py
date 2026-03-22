@@ -12,8 +12,9 @@ import numpy as np
 import pandas as pd
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response, FileResponse
 from pydantic import BaseModel
-from sqlalchemy import create_engine, Column, String, Float, Integer, Boolean, DateTime, Text
+from sqlalchemy import create_engine, Column, String, Float, Integer, Boolean, DateTime, Text, text
 from sqlalchemy.orm import declarative_base, sessionmaker
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.preprocessing import StandardScaler
@@ -21,6 +22,11 @@ from sklearn.pipeline import Pipeline
 import joblib
 import requests
 from uuid import uuid4
+
+from satellite_stac import build_grid_for_field, build_series, list_available_dates
+from apscheduler.schedulers.background import BackgroundScheduler
+
+import report_exports
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -239,6 +245,34 @@ class OpsReportRecord(Base):
     created_by = Column(String, nullable=False, default="system")
     size_mb = Column(Float, nullable=False, default=1.0)
     created_at = Column(String, nullable=False)
+    template_id = Column(String, nullable=False, default="")
+
+
+class OpsScheduledReportRecord(Base):
+    __tablename__ = "ops_scheduled_reports"
+    id = Column(String, primary_key=True)
+    template_id = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    frequency = Column(String, nullable=False)
+    format = Column(String, nullable=False)
+    channel = Column(String, nullable=False)
+    recipients_json = Column(Text, nullable=False, default="[]")
+    next_run = Column(String, nullable=False)
+    created_at = Column(String, nullable=False)
+
+
+class AppIntegrationRecord(Base):
+    __tablename__ = "app_integrations"
+    id = Column(String, primary_key=True)
+    type = Column(String, nullable=False)
+    name = Column(String, nullable=False)
+    description = Column(Text, nullable=False, default="")
+    icon = Column(String, nullable=False, default="")
+    status = Column(String, nullable=False, default="disconnected")
+    last_sync = Column(String, nullable=True)
+    records_synced = Column(Integer, nullable=False, default=0)
+    config_json = Column(Text, nullable=False, default="{}")
+    features_json = Column(Text, nullable=False, default="[]")
 
 
 class IoTTelemetryInput(BaseModel):
@@ -1026,19 +1060,127 @@ def _run_kafka_consumer():
             logger.error("Error processing weather event: %s", e)
 
 
+# ======================= SCHEDULED REPORTS =======================
+
+_report_scheduler: Optional[BackgroundScheduler] = None
+
+
+def _ensure_reports_schema() -> None:
+    try:
+        with engine.begin() as conn:
+            conn.execute(
+                text(
+                    "ALTER TABLE ops_report_history ADD COLUMN IF NOT EXISTS template_id VARCHAR(64) NOT NULL DEFAULT ''"
+                )
+            )
+    except Exception as exc:
+        logger.warning("reports schema migrate skipped: %s", exc)
+
+
+def _scheduled_reports_tick() -> None:
+    from datetime import date
+
+    today = date.today()
+    with SessionLocal() as db:
+        rows = list(db.query(OpsScheduledReportRecord).all())
+    for row in rows:
+        try:
+            nr_raw = (row.next_run or "").strip()[:10]
+            if len(nr_raw) < 10:
+                continue
+            nr = datetime.strptime(nr_raw, "%Y-%m-%d").date()
+        except ValueError:
+            logger.warning("Bad next_run for schedule %s: %s", row.id, row.next_run)
+            continue
+        if nr > today:
+            continue
+        if (row.channel or "").lower() != "email":
+            logger.warning(
+                "Schedule %s: канал «%s» не поддерживается (рассылка только на email). Удалите или пересоздайте расписание.",
+                row.id,
+                row.channel,
+            )
+            continue
+        try:
+            content, fname, _media = report_exports.build_report_bytes(
+                row.name, row.template_id or "", row.format
+            )
+            recipients = json.loads(row.recipients_json or "[]")
+            if not isinstance(recipients, list) or not recipients:
+                logger.warning("Schedule %s has no recipients, skipping", row.id)
+                continue
+            body = (
+                f"Плановый отчёт «{row.name}»\n"
+                f"Периодичность: {row.frequency}\n"
+                f"Вложение: {fname}"
+            )
+            clean = [str(x).strip() for x in recipients if str(x).strip()]
+            if not clean:
+                continue
+            report_exports.send_report_via_email(clean, f"Отчёт: {row.name}", body, content, fname)
+
+            report_id = "rep_" + uuid4().hex[:10]
+            report_exports.write_report_to_disk(report_id, row.format, content)
+            sz = max(round(len(content) / (1024 * 1024), 3), 0.01)
+            with SessionLocal() as db:
+                r2 = db.query(OpsScheduledReportRecord).filter(OpsScheduledReportRecord.id == row.id).first()
+                if r2:
+                    r2.next_run = _compute_next_run(r2.frequency)
+                db.add(
+                    OpsReportRecord(
+                        id=report_id,
+                        name=row.name,
+                        format=row.format if row.format in ("pdf", "excel") else "pdf",
+                        created_by="scheduler",
+                        size_mb=sz,
+                        created_at=datetime.utcnow().strftime("%Y-%m-%d %H:%M"),
+                        template_id=row.template_id or "",
+                    )
+                )
+                db.commit()
+            _audit(
+                "export_pdf" if row.format == "pdf" else "export_excel",
+                f"Scheduled report sent by email: {row.name}",
+                "ScheduledReport",
+                row.id,
+                row.name,
+            )
+            logger.info("Scheduled report sent: %s (%s)", row.name, row.id)
+        except Exception:
+            logger.exception("Scheduled report job failed for %s", row.id)
+
+
 # ======================= APP LIFECYCLE =======================
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    global _report_scheduler
     try:
         Base.metadata.create_all(bind=engine)
     except Exception as exc:
         logger.error("create_all failed (DB may be unavailable): %s", exc)
+    _ensure_reports_schema()
+    try:
+        _seed_integrations_if_empty()
+    except Exception as exc:
+        logger.warning("Integration seed skipped: %s", exc)
     yield_model.start_training_background()
     thread = threading.Thread(target=_run_kafka_consumer, daemon=True, name="kafka-consumer")
     thread.start()
-    logger.info("🚀 ML training (background) + Kafka consumer thread started")
+    _report_scheduler = BackgroundScheduler()
+    _report_scheduler.add_job(
+        _scheduled_reports_tick,
+        "interval",
+        minutes=1,
+        id="scheduled_reports",
+        max_instances=1,
+        coalesce=True,
+    )
+    _report_scheduler.start()
+    logger.info("🚀 ML training (background) + Kafka consumer + report scheduler started")
     yield
+    if _report_scheduler:
+        _report_scheduler.shutdown(wait=False)
     logger.info("🛑 Analytics service shutting down")
 
 
@@ -1064,6 +1206,117 @@ app.add_middleware(
 @app.get("/health")
 def health():
     return {"status": "ok", "model_trained": yield_model.is_trained}
+
+
+@app.get("/integrations")
+def list_integrations():
+    _seed_integrations_if_empty()
+    with SessionLocal() as db:
+        rows = db.query(AppIntegrationRecord).order_by(AppIntegrationRecord.id).all()
+    return [_integration_row_to_api(r) for r in rows]
+
+
+@app.post("/integrations/{integration_id}/connect")
+def connect_integration(integration_id: str):
+    _seed_integrations_if_empty()
+    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    with SessionLocal() as db:
+        row = db.query(AppIntegrationRecord).filter(AppIntegrationRecord.id == integration_id).first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Интеграция не найдена")
+        row.status = "connected"
+        row.last_sync = now
+        row.records_synced = int(row.records_synced or 0) + 42
+        db.commit()
+        db.refresh(row)
+        payload = _integration_row_to_api(row)
+        iname = row.name
+    _audit("integration_connect", f"Connected integration {integration_id}", "Integration", integration_id, iname)
+    return payload
+
+
+@app.post("/integrations/{integration_id}/disconnect")
+def disconnect_integration(integration_id: str):
+    _seed_integrations_if_empty()
+    with SessionLocal() as db:
+        row = db.query(AppIntegrationRecord).filter(AppIntegrationRecord.id == integration_id).first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Интеграция не найдена")
+        row.status = "disconnected"
+        row.last_sync = None
+        db.commit()
+        db.refresh(row)
+        payload = _integration_row_to_api(row)
+        iname = row.name
+    _audit("integration_disconnect", f"Disconnected integration {integration_id}", "Integration", integration_id, iname)
+    return payload
+
+
+def _satellite_field_context(field_id: str):
+    ctx = _resolve_field_context(field_id)
+    lat, lng = ctx.get("lat"), ctx.get("lng")
+    if lat is None or lng is None:
+        raise HTTPException(status_code=400, detail="У поля не заданы координаты (lat/lng)")
+    area = float(ctx.get("area") or 50.0)
+    return ctx, float(lat), float(lng), area
+
+
+@app.get("/satellite/field/{field_id}/dates")
+def satellite_field_dates(field_id: str, days: int = 120):
+    """Даты съёмок Sentinel-2 L2A (Planetary Computer) для bbox поля."""
+    ctx, lat, lng, area = _satellite_field_context(field_id)
+    try:
+        dates = list_available_dates(lat, lng, area, days)
+        return {"fieldId": field_id, "fieldName": ctx["fieldName"], "dates": dates}
+    except Exception as e:
+        logger.exception("satellite dates failed for %s", field_id)
+        raise HTTPException(status_code=502, detail=f"Не удалось получить STAC: {e!s}")
+
+
+@app.get("/satellite/field/{field_id}/series")
+def satellite_field_series(field_id: str, days: int = 120, max_points: int = 8):
+    """Средние NDVI/NDMI по сценам (до max_points последних дат)."""
+    ctx, lat, lng, area = _satellite_field_context(field_id)
+    mp = max(3, min(20, max_points))
+    try:
+        points = build_series(lat, lng, area, days=days, max_points=mp)
+        return {"fieldId": field_id, "fieldName": ctx["fieldName"], "points": points}
+    except Exception as e:
+        logger.exception("satellite series failed for %s", field_id)
+        raise HTTPException(status_code=502, detail=f"Не удалось рассчитать ряд: {e!s}")
+
+
+@app.get("/satellite/field/{field_id}/grid")
+def satellite_field_grid(
+    field_id: str,
+    date: str,
+    index: str = "ndvi",
+    grid_w: int = 12,
+    grid_h: int = 8,
+):
+    """Сетка значений NDVI или NDMI из реального растра Sentinel-2."""
+    idx = (index or "ndvi").lower()
+    if idx not in ("ndvi", "ndmi"):
+        raise HTTPException(status_code=400, detail="index должен быть ndvi или ndmi")
+    gw = max(4, min(32, grid_w))
+    gh = max(4, min(24, grid_h))
+    ctx, lat, lng, area = _satellite_field_context(field_id)
+    try:
+        payload = build_grid_for_field(lat, lng, area, date, idx, grid_w=gw, grid_h=gh)
+        return {
+            "fieldId": field_id,
+            "fieldName": ctx["fieldName"],
+            "date": date,
+            "index": idx,
+            **payload,
+        }
+    except LookupError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    except Exception as e:
+        logger.exception("satellite grid failed for %s", field_id)
+        raise HTTPException(status_code=502, detail=f"Не удалось прочитать сцену: {e!s}")
 
 
 @app.post("/forecast/yield", response_model=YieldForecastResponse)
@@ -1670,6 +1923,83 @@ def get_field_dataset(field_id: str, n_samples: int = 500):
     }
 
 
+def _seed_integrations_if_empty():
+    """Каталог интеграций для UI (персистентность в analyticsdb)."""
+    seed = [
+        {
+            "id": "i1", "type": "1c_erp", "name": "1С:Агро / ERP",
+            "description": "Двусторонняя синхронизация справочников, себестоимости, складских остатков и актов выполненных работ",
+            "icon": "1c_erp", "status": "connected", "records_synced": 248,
+            "config": {"host": "erp.agro.ru", "port": "8080", "database": "agro_prod"},
+            "features": ["Синхронизация полей", "Импорт затрат", "Экспорт урожая", "Акты работ"],
+        },
+        {
+            "id": "i2", "type": "weather_api", "name": "OpenWeatherMap API",
+            "description": "Актуальные метеоданные и прогноз погоды для полей",
+            "icon": "cloud", "status": "connected", "records_synced": 12800,
+            "config": {"api_key": "••••••••••••••••", "endpoint": "api.openweathermap.org"},
+            "features": ["Текущая погода", "Прогноз", "Исторические данные", "Радар осадков"],
+        },
+        {
+            "id": "i3", "type": "iot_gateway", "name": "IoT Gateway (MQTT)",
+            "description": "Датчики почвы, метеостанции и контроллеры полива через MQTT",
+            "icon": "device_hub", "status": "connected", "records_synced": 94200,
+            "config": {"broker": "mqtt.agro.internal", "port": "1883", "topic": "sensors/#"},
+            "features": ["Датчики почвы", "Метеостанции", "Контроллеры полива", "Телеметрия"],
+        },
+        {
+            "id": "i4", "type": "geo_import", "name": "GIS / Shapefile Import",
+            "description": "Импорт границ полей из Shapefile, GeoJSON, KML",
+            "icon": "map", "status": "disconnected", "records_synced": 0,
+            "config": {},
+            "features": ["Shapefile (.shp)", "GeoJSON", "KML / KMZ", "WGS84 / СК-42"],
+        },
+        {
+            "id": "i5", "type": "telegram", "name": "Telegram Bot",
+            "description": "Уведомления и дайджесты в Telegram",
+            "icon": "send", "status": "error", "records_synced": 0,
+            "config": {"bot_token": "••••••••••••", "chat_id": "-100123456789"},
+            "features": ["Алерты", "Дайджесты", "Команды бота", "Групповые чаты"],
+        },
+        {
+            "id": "i6", "type": "email_smtp", "name": "Email / SMTP",
+            "description": "Отчёты и уведомления по электронной почте",
+            "icon": "email", "status": "connected", "records_synced": 156,
+            "config": {"host": "smtp.agro.ru", "port": "587", "from": "noreply@agro.ru"},
+            "features": ["Отчёты PDF/Excel", "Алерты по правилам", "Приглашения", "Дайджесты"],
+        },
+    ]
+    with SessionLocal() as db:
+        if db.query(AppIntegrationRecord).count() > 0:
+            return
+        now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+        for s in seed:
+            cfg = json.dumps(s["config"], ensure_ascii=False)
+            feat = json.dumps(s["features"], ensure_ascii=False)
+            last = now if s["status"] == "connected" else (None if s["status"] == "disconnected" else "2026-03-19T18:00:00Z")
+            db.add(AppIntegrationRecord(
+                id=s["id"], type=s["type"], name=s["name"], description=s["description"],
+                icon=s["icon"], status=s["status"], last_sync=last,
+                records_synced=int(s["records_synced"]), config_json=cfg, features_json=feat,
+            ))
+        db.commit()
+
+
+def _integration_row_to_api(row: AppIntegrationRecord) -> dict:
+    return {
+        "id": row.id,
+        "type": row.type,
+        "name": row.name,
+        "description": row.description,
+        "icon": row.icon,
+        "status": row.status,
+        "lastSync": row.last_sync,
+        "recordsSynced": row.records_synced,
+        "config": json.loads(row.config_json or "{}"),
+        "features": json.loads(row.features_json or "[]"),
+    }
+
+
 def _seed_ops_data_if_empty():
     with SessionLocal() as db:
         if db.query(OpsWorkTaskRecord).count() == 0:
@@ -1701,7 +2031,49 @@ def _seed_ops_data_if_empty():
                 field_ids_json=json.dumps(["f1", "f2"], ensure_ascii=False),
                 cooldown_minutes=60, created_by="system", created_at=datetime.utcnow().date().isoformat(), trigger_count=0
             ))
+        if db.query(OpsScheduledReportRecord).count() == 0:
+            now = datetime.utcnow()
+            wk = (now + timedelta(days=7)).strftime("%Y-%m-%d")
+            mo = (now + timedelta(days=30)).strftime("%Y-%m-%d")
+            db.add(OpsScheduledReportRecord(
+                id="sch_" + uuid4().hex[:10], template_id="r1", name="Недельный дайджест", frequency="weekly",
+                format="pdf", channel="email",
+                recipients_json=json.dumps(["admin@agro.ru", "manager@agro.ru"], ensure_ascii=False),
+                next_run=wk, created_at=now.isoformat(),
+            ))
+            db.add(OpsScheduledReportRecord(
+                id="sch_" + uuid4().hex[:10], template_id="r2", name="Финансовая сводка", frequency="monthly",
+                format="excel", channel="email",
+                recipients_json=json.dumps(["cfo@agro.ru"], ensure_ascii=False),
+                next_run=mo, created_at=now.isoformat(),
+            ))
+            db.add(OpsScheduledReportRecord(
+                id="sch_" + uuid4().hex[:10], template_id="r8", name="Отчёт для руководства", frequency="monthly",
+                format="pdf", channel="email",
+                recipients_json=json.dumps(["ceo@agro.ru"], ensure_ascii=False),
+                next_run=mo, created_at=now.isoformat(),
+            ))
         db.commit()
+
+
+def _scheduled_row_to_api(r: OpsScheduledReportRecord) -> dict:
+    return {
+        "id": r.id,
+        "templateId": r.template_id,
+        "name": r.name,
+        "frequency": r.frequency,
+        "nextRun": r.next_run,
+        "recipients": json.loads(r.recipients_json or "[]"),
+        "format": r.format,
+        "channel": r.channel,
+    }
+
+
+def _compute_next_run(frequency: str) -> str:
+    now = datetime.utcnow()
+    if frequency == "monthly":
+        return (now + timedelta(days=30)).strftime("%Y-%m-%d")
+    return (now + timedelta(days=7)).strftime("%Y-%m-%d")
 
 
 def _audit(action: str, details: str, entity_type: str = "", entity_id: str = "", entity_name: str = "", result: str = "success"):
@@ -1886,25 +2258,185 @@ def ops_delete_rule(rule_id: str):
 
 @app.get("/ops/reports/history")
 def ops_reports_history():
+    _seed_ops_data_if_empty()
     with SessionLocal() as db:
         rows = db.query(OpsReportRecord).order_by(OpsReportRecord.created_at.desc()).all()
         return [{"id": r.id, "name": r.name, "format": r.format, "date": r.created_at, "size": f"{r.size_mb:.1f} МБ", "user": r.created_by} for r in rows]
 
 
-@app.post("/ops/reports/generate")
-def ops_generate_report(payload: dict):
-    report_id = f"rep_{uuid4().hex[:10]}"
+@app.get("/ops/reports/history/{report_id}/download")
+def ops_report_download(report_id: str):
     with SessionLocal() as db:
-        db.add(OpsReportRecord(
-            id=report_id,
-            name=payload.get("name", "Сформированный отчёт"),
-            format=payload.get("format", "pdf"),
-            created_by=payload.get("user", "system"),
-            size_mb=float(payload.get("sizeMb", 2.4)),
-            created_at=datetime.utcnow().strftime("%Y-%m-%d %H:%M")
+        row = db.query(OpsReportRecord).filter(OpsReportRecord.id == report_id).first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Отчёт не найден")
+        name, fmt = row.name, row.format
+        template_id = (getattr(row, "template_id", None) or "") or ""
+    ext = "pdf" if fmt == "pdf" else "xlsx"
+    report_exports.ensure_reports_dir()
+    path = report_exports.REPORTS_DIR / f"{report_id}.{ext}"
+    if path.is_file():
+        media = (
+            "application/pdf"
+            if fmt == "pdf"
+            else "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        )
+        return FileResponse(str(path), filename=f"{report_id}.{ext}", media_type=media)
+    try:
+        content, attachment_name, media = report_exports.build_report_bytes(name, template_id, fmt)
+    except Exception as e:
+        logger.exception("report rebuild for download failed")
+        raise HTTPException(status_code=500, detail=f"Не удалось сформировать файл: {e!s}")
+    return Response(
+        content=content,
+        media_type=media,
+        headers={"Content-Disposition": f'attachment; filename="{attachment_name}"'},
+    )
+
+
+@app.get("/ops/reports/scheduled")
+def ops_reports_scheduled():
+    _seed_ops_data_if_empty()
+    with SessionLocal() as db:
+        rows = db.query(OpsScheduledReportRecord).order_by(OpsScheduledReportRecord.next_run.asc()).all()
+    return [_scheduled_row_to_api(r) for r in rows]
+
+
+@app.post("/ops/reports/scheduled")
+def ops_reports_scheduled_create(payload: dict):
+    template_id = (payload.get("templateId") or "").strip()
+    name = (payload.get("name") or "").strip()
+    frequency = (payload.get("frequency") or "").strip().lower()
+    fmt = (payload.get("format") or "pdf").strip().lower()
+    channel = (payload.get("channel") or "email").strip().lower()
+    recipients = payload.get("recipients") or []
+
+    if not template_id or not name:
+        raise HTTPException(status_code=400, detail="Укажите шаблон и название")
+    if frequency not in ("weekly", "monthly"):
+        raise HTTPException(status_code=400, detail="Периодичность: weekly или monthly")
+    if fmt not in ("pdf", "excel"):
+        raise HTTPException(status_code=400, detail="Формат: pdf или excel")
+    if channel != "email":
+        raise HTTPException(status_code=400, detail="Рассылка отчётов только на email")
+    if not isinstance(recipients, list) or len(recipients) == 0:
+        raise HTTPException(status_code=400, detail="Укажите хотя бы одного получателя")
+
+    clean_recipients = []
+    for x in recipients:
+        s = str(x).strip()
+        if s:
+            clean_recipients.append(s)
+    if not clean_recipients:
+        raise HTTPException(status_code=400, detail="Укажите хотя бы одного получателя")
+
+    sid = "sch_" + uuid4().hex[:10]
+    now = datetime.utcnow().isoformat()
+    next_run = _compute_next_run(frequency)
+    with SessionLocal() as db:
+        db.add(OpsScheduledReportRecord(
+            id=sid,
+            template_id=template_id,
+            name=name,
+            frequency=frequency,
+            format=fmt,
+            channel=channel,
+            recipients_json=json.dumps(clean_recipients, ensure_ascii=False),
+            next_run=next_run,
+            created_at=now,
         ))
         db.commit()
-    _audit("export_pdf" if payload.get("format", "pdf") == "pdf" else "export_excel", f"Generated report: {report_id}", "Report", report_id, payload.get("name", ""))
+        row = db.query(OpsScheduledReportRecord).filter(OpsScheduledReportRecord.id == sid).first()
+    _audit("report_schedule_create", f"Scheduled report {sid}: {name}", "ScheduledReport", sid, name)
+    return _scheduled_row_to_api(row)
+
+
+@app.patch("/ops/reports/scheduled/{schedule_id}")
+def ops_reports_scheduled_patch(schedule_id: str, payload: dict):
+    with SessionLocal() as db:
+        row = db.query(OpsScheduledReportRecord).filter(OpsScheduledReportRecord.id == schedule_id).first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Расписание не найдено")
+        if "name" in payload and payload["name"]:
+            row.name = str(payload["name"]).strip()
+        if "templateId" in payload and payload["templateId"]:
+            row.template_id = str(payload["templateId"]).strip()
+        if "frequency" in payload and payload["frequency"]:
+            fr = str(payload["frequency"]).strip().lower()
+            if fr not in ("weekly", "monthly"):
+                raise HTTPException(status_code=400, detail="Периодичность: weekly или monthly")
+            row.frequency = fr
+            row.next_run = _compute_next_run(fr)
+        if "format" in payload and payload["format"]:
+            fmt = str(payload["format"]).strip().lower()
+            if fmt not in ("pdf", "excel"):
+                raise HTTPException(status_code=400, detail="Формат: pdf или excel")
+            row.format = fmt
+        if "channel" in payload and payload["channel"]:
+            ch = str(payload["channel"]).strip().lower()
+            if ch != "email":
+                raise HTTPException(status_code=400, detail="Рассылка отчётов только на email")
+            row.channel = ch
+        if "recipients" in payload and isinstance(payload["recipients"], list):
+            clean_recipients = [str(x).strip() for x in payload["recipients"] if str(x).strip()]
+            if not clean_recipients:
+                raise HTTPException(status_code=400, detail="Нужен хотя бы один получатель")
+            row.recipients_json = json.dumps(clean_recipients, ensure_ascii=False)
+        db.commit()
+        db.refresh(row)
+    _audit("report_schedule_update", f"Updated schedule {schedule_id}", "ScheduledReport", schedule_id, row.name)
+    return _scheduled_row_to_api(row)
+
+
+@app.delete("/ops/reports/scheduled/{schedule_id}")
+def ops_reports_scheduled_delete(schedule_id: str):
+    with SessionLocal() as db:
+        row = db.query(OpsScheduledReportRecord).filter(OpsScheduledReportRecord.id == schedule_id).first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Расписание не найдено")
+        nm = row.name
+        db.delete(row)
+        db.commit()
+    _audit("report_schedule_delete", f"Deleted schedule {schedule_id}", "ScheduledReport", schedule_id, nm)
+    return {"status": "ok"}
+
+
+@app.post("/ops/reports/generate")
+def ops_generate_report(payload: dict):
+    name = (payload.get("name") or "Сформированный отчёт").strip()
+    fmt = (payload.get("format") or "pdf").strip().lower()
+    template_id = (payload.get("templateId") or "").strip()
+    if fmt not in ("pdf", "excel"):
+        raise HTTPException(status_code=400, detail="Формат: pdf или excel")
+    created_by = (payload.get("user") or "web").strip() or "web"
+    report_id = f"rep_{uuid4().hex[:10]}"
+    try:
+        content, _fname, _media = report_exports.build_report_bytes(name, template_id, fmt)
+    except Exception as e:
+        logger.exception("report generate failed")
+        raise HTTPException(status_code=500, detail=f"Не удалось сформировать отчёт: {e!s}")
+    report_exports.write_report_to_disk(report_id, fmt, content)
+    sz = max(round(len(content) / (1024 * 1024), 3), 0.01)
+    with SessionLocal() as db:
+        db.add(
+            OpsReportRecord(
+                id=report_id,
+                name=name,
+                format=fmt,
+                created_by=created_by,
+                size_mb=sz,
+                created_at=datetime.utcnow().strftime("%Y-%m-%d %H:%M"),
+                template_id=template_id,
+            )
+        )
+        db.commit()
+    _audit(
+        "export_pdf" if fmt == "pdf" else "export_excel",
+        f"Generated report: {report_id}",
+        "Report",
+        report_id,
+        name,
+    )
     return {"id": report_id, "status": "ready"}
 
 

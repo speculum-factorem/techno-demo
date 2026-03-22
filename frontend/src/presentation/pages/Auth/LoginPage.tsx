@@ -6,7 +6,6 @@ import Button from '@presentation/components/common/Button/Button'
 import Input from '@presentation/components/common/Input/Input'
 import Alert from '@presentation/components/common/Alert/Alert'
 import { authApi } from '@infrastructure/api/AuthApi'
-import { USE_MOCK } from '@infrastructure/api/config'
 import EmailCodeModal from './EmailCodeModal'
 import styles from './AuthPage.module.scss'
 
@@ -14,9 +13,6 @@ const demoAccounts = [
   { label: 'Администратор', username: 'admin', password: 'admin', icon: 'admin_panel_settings', color: '#1a73e8' },
   { label: 'Агроном', username: 'agronomist', password: 'agronomist', icon: 'grass', color: '#34a853' },
 ]
-const isDemoCredentials = (username: string, password: string) =>
-  demoAccounts.some(acc => acc.username === username && acc.password === password)
-
 const LoginPage: React.FC = () => {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
@@ -60,13 +56,6 @@ const LoginPage: React.FC = () => {
     dispatch(clearError())
     const result = await dispatch(login({ username: normalizedUsername, password }))
     if (login.fulfilled.match(result)) {
-      const requestId = (result.payload as { requestId: string }).requestId
-      if (USE_MOCK && isDemoCredentials(normalizedUsername, password) && requestId) {
-        const verifyResult = await dispatch(verifyLoginCode({ requestId, code: '000000' }))
-        if (verifyLoginCode.fulfilled.match(verifyResult)) {
-          return
-        }
-      }
       setCodeError('')
       setCodeModalOpen(true)
     }

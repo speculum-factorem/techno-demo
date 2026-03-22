@@ -1,7 +1,5 @@
 import apiClient from './ApiClient'
-import { USE_MOCK } from './config'
 import { WeatherData, WeatherSummary, WeatherForecast } from '@domain/entities/WeatherData'
-import { mockWeatherSummaries, mockHistoricalWeather } from './MockData'
 
 type WeatherSummaryApiDto = {
   fieldId: string
@@ -58,19 +56,11 @@ const toDailyForecast = (hourly: WeatherForecastHourlyEntry[]): WeatherForecast[
 
 export const weatherApi = {
   async getCurrentByField(fieldId: string): Promise<WeatherData> {
-    if (USE_MOCK) {
-      await new Promise(r => setTimeout(r, 400))
-      return mockWeatherSummaries[fieldId]?.current
-    }
     const { data } = await apiClient.get<WeatherData>(`/weather/fields/${fieldId}/current`)
     return data
   },
 
   async getHistoricalByField(fieldId: string, from: string, to: string): Promise<WeatherData[]> {
-    if (USE_MOCK) {
-      await new Promise(r => setTimeout(r, 600))
-      return mockHistoricalWeather[fieldId] || []
-    }
     const { data } = await apiClient.get<WeatherData[]>(`/weather/fields/${fieldId}/historical`, {
       params: {
         start: toIsoInstant(from, false),
@@ -81,19 +71,11 @@ export const weatherApi = {
   },
 
   async getForecastByField(fieldId: string): Promise<WeatherForecast[]> {
-    if (USE_MOCK) {
-      await new Promise(r => setTimeout(r, 500))
-      return mockWeatherSummaries[fieldId]?.forecast || []
-    }
     const { data } = await apiClient.get<WeatherForecastApiDto>(`/weather/fields/${fieldId}/forecast`)
     return toDailyForecast(data.hourly || [])
   },
 
   async getSummaryByField(fieldId: string): Promise<WeatherSummary> {
-    if (USE_MOCK) {
-      await new Promise(r => setTimeout(r, 700))
-      return mockWeatherSummaries[fieldId]
-    }
     const [currentResp, forecastResp, summaryResp] = await Promise.all([
       apiClient.get<WeatherData>(`/weather/fields/${fieldId}/current`),
       apiClient.get<WeatherForecastApiDto>(`/weather/fields/${fieldId}/forecast`),

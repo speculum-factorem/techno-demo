@@ -1,29 +1,10 @@
-import React, { useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { useAppDispatch, useAppSelector } from '@application/store/hooks'
+import { fetchFields } from '@application/store/slices/fieldsSlice'
+import { satelliteApi, SatelliteGridResponse, SatelliteSeriesPoint } from '@infrastructure/api/SatelliteApi'
+import Loader from '@presentation/components/common/Loader/Loader'
 import styles from './SatelliteAnalyticsPage.module.scss'
-
-const FIELDS = [
-  { id: 'f1', name: 'Поле А-1 (Пшеница)', area: 45.2 },
-  { id: 'f2', name: 'Поле Б-2 (Кукуруза)', area: 38.7 },
-  { id: 'f3', name: 'Поле В-3 (Подсолнечник)', area: 29.1 },
-  { id: 'f4', name: 'Поле Г-4 (Ячмень)', area: 52.3 },
-]
-
-const DATES = ['2026-03-20', '2026-03-15', '2026-03-10', '2026-02-28', '2026-02-15']
-
-interface FieldIndex {
-  ndvi: number
-  ndmi: number
-  coverage: number
-  stressZone: number
-  trend: 'up' | 'down' | 'stable'
-}
-
-const FIELD_INDICES: Record<string, FieldIndex> = {
-  f1: { ndvi: 0.72, ndmi: 0.41, coverage: 94, stressZone: 8, trend: 'up' },
-  f2: { ndvi: 0.58, ndmi: 0.29, coverage: 87, stressZone: 22, trend: 'down' },
-  f3: { ndvi: 0.65, ndmi: 0.35, coverage: 91, stressZone: 12, trend: 'stable' },
-  f4: { ndvi: 0.48, ndmi: 0.19, coverage: 78, stressZone: 35, trend: 'down' },
-}
 
 const ndviColor = (v: number) => {
   if (v >= 0.7) return '#1a7a1a'
@@ -41,35 +22,127 @@ const ndmiColor = (v: number) => {
   return '#ef9a9a'
 }
 
-const NdviMapMock: React.FC<{ fieldId: string; mode: 'ndvi' | 'ndmi' }> = ({ fieldId, mode }) => {
-  const base = mode === 'ndvi' ? FIELD_INDICES[fieldId].ndvi : FIELD_INDICES[fieldId].ndmi
+const SatelliteGridView: React.FC<{
+  cells: (number | null)[][]
+  mode: 'ndvi' | 'ndmi'
+}> = ({ cells, mode }) => {
   const colorFn = mode === 'ndvi' ? ndviColor : ndmiColor
-  const cells = Array.from({ length: 12 * 8 }, (_, i) => {
-    const noise = (Math.sin(i * 3.14 + fieldId.charCodeAt(1)) * 0.12) + (Math.cos(i * 1.7) * 0.08)
-    return Math.max(0, Math.min(1, base + noise))
-  })
+  const flat = cells.flat()
   return (
     <div className={styles.mapGrid}>
-      {cells.map((v, i) => (
-        <div key={i} className={styles.mapCell} style={{ background: colorFn(v) }} title={`${mode.toUpperCase()}: ${v.toFixed(2)}`} />
+      {flat.map((v, i) => (
+        <div
+          key={i}
+          className={styles.mapCell}
+          style={{
+            background: v == null || Number.isNaN(v) ? '#3d3d54' : colorFn(v),
+          }}
+          title={v == null ? 'Нет данных' : `${mode.toUpperCase()}: ${v.toFixed(3)}`}
+        />
       ))}
     </div>
   )
 }
 
+const trendFromSeries = (points: SatelliteSeriesPoint[], mode: 'ndvi' | 'ndmi'): 'up' | 'down' | 'stable' => {
+  if (points.length < 2) return 'stable'
+  const asc = [...points].sort((a, b) => a.date.localeCompare(b.date))
+  const a = mode === 'ndvi' ? asc[0].ndvi : asc[0].ndmi
+  const b = mode === 'ndvi' ? asc[asc.length - 1].ndvi : asc[asc.length - 1].ndmi
+  if (b - a > 0.03) return 'up'
+  if (a - b > 0.03) return 'down'
+  return 'stable'
+}
+
 const SatelliteAnalyticsPage: React.FC = () => {
-  const [selectedField, setSelectedField] = useState(FIELDS[0])
-  const [selectedDate, setSelectedDate] = useState(DATES[0])
+  const dispatch = useAppDispatch()
+  const { items: fields, loading: fieldsLoading } = useAppSelector(s => s.fields)
+  const [fieldId, setFieldId] = useState('')
+  const [dates, setDates] = useState<string[]>([])
+  const [selectedDate, setSelectedDate] = useState('')
+  const [series, setSeries] = useState<SatelliteSeriesPoint[]>([])
+  const [grid, setGrid] = useState<SatelliteGridResponse | null>(null)
   const [mapMode, setMapMode] = useState<'ndvi' | 'ndmi'>('ndvi')
+  const [loadingMeta, setLoadingMeta] = useState(false)
+  const [loadingGrid, setLoadingGrid] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [gridError, setGridError] = useState<string | null>(null)
 
-  const idx = FIELD_INDICES[selectedField.id]
-  const alerts = []
-  if (idx.ndvi < 0.5) alerts.push({ msg: `NDVI ${idx.ndvi.toFixed(2)} — низкая вегетация, возможен стресс`, color: '#f9ab00' })
-  if (idx.ndmi < 0.25) alerts.push({ msg: `NDMI ${idx.ndmi.toFixed(2)} — дефицит влаги`, color: '#ea4335' })
-  if (idx.stressZone > 20) alerts.push({ msg: `Зоны стресса: ${idx.stressZone}% площади — требуется инспекция`, color: '#ea4335' })
+  useEffect(() => {
+    dispatch(fetchFields())
+  }, [dispatch])
 
-  const trendIcon = { up: 'trending_up', down: 'trending_down', stable: 'trending_flat' }[idx.trend]
-  const trendColor = { up: '#34a853', down: '#ea4335', stable: '#f9ab00' }[idx.trend]
+  useEffect(() => {
+    if (!fields.length) return
+    if (!fieldId || !fields.some(f => f.id === fieldId)) {
+      setFieldId(fields[0].id)
+    }
+  }, [fields, fieldId])
+
+  useEffect(() => {
+    if (!fieldId) return
+    setLoadingMeta(true)
+    setError(null)
+    setGrid(null)
+    setDates([])
+    setSelectedDate('')
+    setSeries([])
+    Promise.all([satelliteApi.getDates(fieldId, 150), satelliteApi.getSeries(fieldId, 150, 10)])
+      .then(([d, s]) => {
+        setDates(d.dates)
+        setSeries(s.points)
+        const first = d.dates[0]
+        setSelectedDate(first || '')
+      })
+      .catch((e: { response?: { data?: { detail?: string } }; message?: string }) => {
+        setError(e.response?.data?.detail || e.message || 'Не удалось загрузить спутниковые метаданные')
+      })
+      .finally(() => setLoadingMeta(false))
+  }, [fieldId])
+
+  useEffect(() => {
+    if (!fieldId || !selectedDate) {
+      setGrid(null)
+      return
+    }
+    setLoadingGrid(true)
+    setGridError(null)
+    satelliteApi
+      .getGrid(fieldId, selectedDate, mapMode, 12, 8)
+      .then(setGrid)
+      .catch((e: { response?: { data?: { detail?: string } }; message?: string }) => {
+        setGrid(null)
+        setGridError(e.response?.data?.detail || e.message || 'Не удалось загрузить сетку')
+      })
+      .finally(() => setLoadingGrid(false))
+  }, [fieldId, selectedDate, mapMode])
+
+  const field = useMemo(() => fields.find(f => f.id === fieldId), [fields, fieldId])
+
+  const stats = grid?.stats
+  const meanNdvi = stats?.meanNdvi
+  const meanNdmi = stats?.meanNdmi
+
+  const alerts = useMemo(() => {
+    const out: { msg: string; color: string }[] = []
+    if (meanNdvi != null && meanNdvi < 0.35) {
+      out.push({ msg: `NDVI ${meanNdvi.toFixed(2)} — низкая вегетация, возможен стресс`, color: '#f9ab00' })
+    }
+    if (meanNdmi != null && meanNdmi < 0.12) {
+      out.push({ msg: `NDMI ${meanNdmi.toFixed(2)} — признаки дефицита влаги по SWIR`, color: '#ea4335' })
+    }
+    if (stats && stats.stressLowVegetationPercent > 25) {
+      out.push({
+        msg: `Низкая вегетация на ${stats.stressLowVegetationPercent}% пикселей сцены`,
+        color: '#ea4335',
+      })
+    }
+    return out
+  }, [meanNdvi, meanNdmi, stats])
+
+  const trend = trendFromSeries(series, mapMode)
+  const trendIcon = { up: 'trending_up', down: 'trending_down', stable: 'trending_flat' }[trend]
+  const trendColor = { up: '#34a853', down: '#ea4335', stable: '#f9ab00' }[trend]
 
   const legendNdvi = [
     { color: '#1a7a1a', label: '≥ 0.7 Высокая' },
@@ -86,38 +159,119 @@ const SatelliteAnalyticsPage: React.FC = () => {
     { color: '#ef9a9a', label: '< 0 Дефицит' },
   ]
 
+  const historyBars = useMemo(() => {
+    const sorted = [...series].sort((a, b) => b.date.localeCompare(a.date)).slice(0, 6).reverse()
+    return sorted
+  }, [series])
+
+  if (fieldsLoading && !fields.length) {
+    return <Loader text="Загрузка полей..." fullPage />
+  }
+
+  if (!fields.length) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.header}>
+          <div>
+            <h1 className={styles.title}>
+              <span className="material-icons-round">satellite_alt</span> Спутниковая аналитика
+            </h1>
+            <p className={styles.sub}>Нет полей — добавьте поле с координатами, чтобы загрузить Sentinel-2.</p>
+          </div>
+        </div>
+        <Link to="/app/fields" className={styles.exportBtn} style={{ display: 'inline-flex', textDecoration: 'none' }}>
+          <span className="material-icons-round">add</span> К полям
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className={styles.page}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}><span className="material-icons-round">satellite_alt</span> Спутниковая аналитика</h1>
-          <p className={styles.sub}>Индексы NDVI и NDMI — состояние вегетации и водный стресс</p>
+          <h1 className={styles.title}>
+            <span className="material-icons-round">satellite_alt</span> Спутниковая аналитика
+          </h1>
+          <p className={styles.sub}>
+            NDVI и NDMI из <strong>Sentinel-2 L2A</strong> (каталог Microsoft Planetary Computer). Нужен выход analytics-сервиса в интернет.
+          </p>
+          {grid?.source && (
+            <p className={styles.sub} style={{ marginTop: 6, fontSize: '0.8rem' }}>
+              Сцена: {grid.sceneDatetime || selectedDate}
+              {grid.cloudCover != null ? ` · облачность ~${grid.cloudCover}%` : ''}
+            </p>
+          )}
         </div>
       </div>
+
+      {error && (
+        <div className={styles.alertsBanner}>
+          <div className={styles.alertItem} style={{ borderLeftColor: '#ea4335' }}>
+            <span className="material-icons-round" style={{ color: '#ea4335', fontSize: 16 }}>error</span>
+            {error}
+          </div>
+        </div>
+      )}
 
       {/* Controls */}
       <div className={styles.controls}>
         <div className={styles.controlGroup}>
           <label>Поле</label>
-          <select className={styles.select} value={selectedField.id} onChange={e => setSelectedField(FIELDS.find(f => f.id === e.target.value)!)}>
-            {FIELDS.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+          <select
+            className={styles.select}
+            value={fieldId}
+            onChange={e => setFieldId(e.target.value)}
+            disabled={loadingMeta}
+          >
+            {fields.map(f => (
+              <option key={f.id} value={f.id}>
+                {f.name} ({f.area} га)
+              </option>
+            ))}
           </select>
         </div>
         <div className={styles.controlGroup}>
           <label>Дата снимка</label>
-          <select className={styles.select} value={selectedDate} onChange={e => setSelectedDate(e.target.value)}>
-            {DATES.map(d => <option key={d}>{d}</option>)}
+          <select
+            className={styles.select}
+            value={selectedDate}
+            onChange={e => setSelectedDate(e.target.value)}
+            disabled={loadingMeta || !dates.length}
+          >
+            {!dates.length && <option value="">Нет сцен в окне — см. подсказку ниже</option>}
+            {dates.map(d => (
+              <option key={d} value={d}>
+                {d}
+              </option>
+            ))}
           </select>
         </div>
         <div className={styles.modeBtns}>
-          <button className={`${styles.modeBtn} ${mapMode === 'ndvi' ? styles.activeModeBtn : ''}`} onClick={() => setMapMode('ndvi')}>
+          <button
+            type="button"
+            className={`${styles.modeBtn} ${mapMode === 'ndvi' ? styles.activeModeBtn : ''}`}
+            onClick={() => setMapMode('ndvi')}
+          >
             <span className="material-icons-round">eco</span> NDVI
           </button>
-          <button className={`${styles.modeBtn} ${mapMode === 'ndmi' ? styles.activeModeBtn : ''}`} onClick={() => setMapMode('ndmi')}>
+          <button
+            type="button"
+            className={`${styles.modeBtn} ${mapMode === 'ndmi' ? styles.activeModeBtn : ''}`}
+            onClick={() => setMapMode('ndmi')}
+          >
             <span className="material-icons-round">water</span> NDMI
           </button>
         </div>
       </div>
+
+      {!loadingMeta && !dates.length && !error && (
+        <p className={styles.sub} style={{ marginBottom: 12 }}>
+          За последние ~5 мес. под это поле нет подходящих сцен Sentinel-2 (облачность &lt;85%). Проверьте координаты поля или попробуйте позже.
+        </p>
+      )}
+
+      {loadingMeta && <Loader text="Поиск сцен Sentinel-2…" />}
 
       {/* Alerts */}
       {alerts.length > 0 && (
@@ -132,13 +286,22 @@ const SatelliteAnalyticsPage: React.FC = () => {
       )}
 
       <div className={styles.content}>
-        {/* Map area */}
         <div className={styles.mapCard}>
           <div className={styles.mapHeader}>
-            <span className={styles.mapTitle}>{selectedField.name} — {mapMode.toUpperCase()}</span>
-            <span className={styles.mapDate}>{selectedDate}</span>
+            <span className={styles.mapTitle}>
+              {field?.name ?? 'Поле'} — {mapMode.toUpperCase()}
+            </span>
+            <span className={styles.mapDate}>{selectedDate || '—'}</span>
           </div>
-          <NdviMapMock fieldId={selectedField.id} mode={mapMode} />
+          {gridError && (
+            <div style={{ padding: 12, color: '#c5221f', fontSize: '0.88rem' }}>{gridError}</div>
+          )}
+          {loadingGrid && <Loader text="Загрузка растра…" />}
+          {!loadingGrid && grid?.cells?.length ? (
+            <SatelliteGridView cells={grid.cells} mode={mapMode} />
+          ) : !loadingGrid && selectedDate && !gridError ? (
+            <div style={{ padding: 24, textAlign: 'center', color: '#5f6368' }}>Нет данных сетки</div>
+          ) : null}
           <div className={styles.legend}>
             {(mapMode === 'ndvi' ? legendNdvi : legendNdmi).map(l => (
               <div key={l.label} className={styles.legendItem}>
@@ -149,65 +312,101 @@ const SatelliteAnalyticsPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Stats panel */}
         <div className={styles.statsPanel}>
           <div className={styles.indexCard}>
             <div className={styles.indexLabel}>NDVI</div>
-            <div className={styles.indexValue} style={{ color: ndviColor(idx.ndvi) }}>{idx.ndvi.toFixed(2)}</div>
-            <div className={styles.indexBar}>
-              <div className={styles.indexFill} style={{ width: `${idx.ndvi * 100}%`, background: ndviColor(idx.ndvi) }} />
+            <div className={styles.indexValue} style={{ color: meanNdvi != null ? ndviColor(meanNdvi) : '#9aa0a6' }}>
+              {meanNdvi != null ? meanNdvi.toFixed(2) : '—'}
             </div>
-            <div className={styles.indexSub}>Индекс вегетации</div>
+            <div className={styles.indexBar}>
+              {meanNdvi != null && (
+                <div
+                  className={styles.indexFill}
+                  style={{ width: `${Math.min(100, Math.max(0, meanNdvi * 100))}%`, background: ndviColor(meanNdvi) }}
+                />
+              )}
+            </div>
+            <div className={styles.indexSub}>Среднее по сцене (NIR−RED)/(NIR+RED)</div>
           </div>
           <div className={styles.indexCard}>
             <div className={styles.indexLabel}>NDMI</div>
-            <div className={styles.indexValue} style={{ color: ndmiColor(idx.ndmi) }}>{idx.ndmi.toFixed(2)}</div>
-            <div className={styles.indexBar}>
-              <div className={styles.indexFill} style={{ width: `${Math.max(0, idx.ndmi) * 100}%`, background: ndmiColor(idx.ndmi) }} />
+            <div className={styles.indexValue} style={{ color: meanNdmi != null ? ndmiColor(meanNdmi) : '#9aa0a6' }}>
+              {meanNdmi != null ? meanNdmi.toFixed(2) : '—'}
             </div>
-            <div className={styles.indexSub}>Индекс влажности</div>
+            <div className={styles.indexBar}>
+              {meanNdmi != null && (
+                <div
+                  className={styles.indexFill}
+                  style={{
+                    width: `${Math.min(100, Math.max(0, (meanNdmi + 0.2) * 120))}%`,
+                    background: ndmiColor(meanNdmi),
+                  }}
+                />
+              )}
+            </div>
+            <div className={styles.indexSub}>Среднее (NIR−SWIR)/(NIR+SWIR)</div>
           </div>
 
           <div className={styles.detailCard}>
             <div className={styles.detailRow}>
               <span className="material-icons-round" style={{ fontSize: 18, color: '#34a853' }}>spa</span>
-              <span>Покрытие</span>
-              <strong>{idx.coverage}%</strong>
+              <span>Доля валидных пикселей</span>
+              <strong>{stats?.coverageGoodPercent != null ? `${stats.coverageGoodPercent}%` : '—'}</strong>
             </div>
             <div className={styles.detailRow}>
               <span className="material-icons-round" style={{ fontSize: 18, color: '#ea4335' }}>report_problem</span>
-              <span>Зоны стресса</span>
-              <strong style={{ color: idx.stressZone > 20 ? '#ea4335' : '#f9ab00' }}>{idx.stressZone}%</strong>
+              <span>Низкая вегетация (NDVI {'<'} 0.35)</span>
+              <strong style={{ color: (stats?.stressLowVegetationPercent ?? 0) > 20 ? '#ea4335' : '#f9ab00' }}>
+                {stats?.stressLowVegetationPercent != null ? `${stats.stressLowVegetationPercent}%` : '—'}
+              </strong>
             </div>
             <div className={styles.detailRow}>
               <span className="material-icons-round" style={{ fontSize: 18, color: trendColor }}>{trendIcon}</span>
-              <span>Тренд</span>
-              <strong style={{ color: trendColor }}>{idx.trend === 'up' ? 'Рост' : idx.trend === 'down' ? 'Спад' : 'Стабильно'}</strong>
+              <span>Тренд по ряду сцен</span>
+              <strong style={{ color: trendColor }}>
+                {trend === 'up' ? 'Рост' : trend === 'down' ? 'Спад' : 'Стабильно'}
+              </strong>
             </div>
             <div className={styles.detailRow}>
               <span className="material-icons-round" style={{ fontSize: 18, color: '#1a73e8' }}>straighten</span>
               <span>Площадь</span>
-              <strong>{selectedField.area} га</strong>
+              <strong>{field?.area != null ? `${field.area} га` : '—'}</strong>
             </div>
           </div>
 
-          {/* Time series mini chart */}
           <div className={styles.historyCard}>
-            <div className={styles.historyTitle}>История {mapMode.toUpperCase()}</div>
+            <div className={styles.historyTitle}>История {mapMode.toUpperCase()} (последние сцены)</div>
             <div className={styles.historyChart}>
-              {[0.61, 0.58, 0.65, 0.70, 0.72].map((v, i) => (
-                <div key={i} className={styles.histBar}>
-                  <div className={styles.histBarFill} style={{ height: `${v * 100}%`, background: ndviColor(v) }} />
-                  <span className={styles.histLabel}>{DATES[DATES.length - 1 - i].slice(5)}</span>
-                </div>
-              ))}
+              {historyBars.length ? (
+                historyBars.map(p => {
+                  const v = mapMode === 'ndvi' ? p.ndvi : p.ndmi
+                  const h = mapMode === 'ndvi' ? Math.min(100, Math.max(4, v * 100)) : Math.min(100, Math.max(4, (v + 0.2) * 130))
+                  return (
+                    <div key={p.date} className={styles.histBar}>
+                      <div
+                        className={styles.histBarFill}
+                        style={{ height: `${h}%`, background: mapMode === 'ndvi' ? ndviColor(v) : ndmiColor(v) }}
+                      />
+                      <span className={styles.histLabel}>{p.date.slice(5)}</span>
+                    </div>
+                  )
+                })
+              ) : (
+                <span className={styles.histLabel}>Нет ряда</span>
+              )}
             </div>
           </div>
 
-          <button className={styles.exportBtn}>
-            <span className="material-icons-round">download</span>
-            Скачать GeoTIFF
-          </button>
+          <a
+            className={styles.exportBtn}
+            href="https://planetarycomputer.microsoft.com/explore?collections=sentinel-2-l2a"
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ textDecoration: 'none', justifyContent: 'center' }}
+          >
+            <span className="material-icons-round">open_in_new</span>
+            Открыть данные в Planetary Computer
+          </a>
         </div>
       </div>
     </div>

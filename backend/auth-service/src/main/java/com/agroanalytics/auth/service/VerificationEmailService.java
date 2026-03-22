@@ -9,6 +9,8 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Optional;
 
 @Service
@@ -52,6 +54,51 @@ public class VerificationEmailService {
         if (!isMailConfigured()) {
             log.info("Login verification for {} — code: {}", toEmail, verificationCode);
         }
+    }
+
+    /**
+     * Приглашение в организацию: ссылка на регистрацию с подставленным invite-кодом.
+     *
+     * @return true если письмо ушло через SMTP (или false, если почта не настроена — тогда только лог)
+     */
+    public boolean sendOrganizationInviteEmail(String toEmail, String inviteCode, Long organizationId, String roleLabel) {
+        String enc = URLEncoder.encode(inviteCode, StandardCharsets.UTF_8);
+        String registerUrl = frontendUrl.replaceAll("/$", "") + "/auth/register?invite=" + enc;
+        String subject = "Приглашение в организацию — АгроАналитика";
+        String orgLine = organizationId != null ? ("Организация #" + organizationId) : "Организация";
+        String content =
+            "<h2 style='margin:0 0 8px;font-size:22px;font-weight:700;color:#202124;'>Вас пригласили</h2>" +
+            "<p style='margin:0 0 16px;font-size:15px;color:#5f6368;line-height:1.5;'>" +
+            "Вы получили приглашение присоединиться к <strong>" + escapeHtml(orgLine) + "</strong> " +
+            "с ролью <strong>" + escapeHtml(roleLabel != null ? roleLabel : "участник") + "</strong>.</p>" +
+            "<table role='presentation' cellpadding='0' cellspacing='0' border='0' style='margin-bottom:20px;'><tr>" +
+            "<td style='border-radius:10px;background:linear-gradient(135deg,#1a73e8,#34a853);'>" +
+            "<a href='" + registerUrl + "' target='_blank'" +
+            "  style='display:inline-block;padding:14px 32px;font-size:15px;font-weight:700;" +
+            "  color:#ffffff;text-decoration:none;border-radius:10px;'>Зарегистрироваться →</a>" +
+            "</td></tr></table>" +
+            "<p style='margin:0 0 8px;font-size:13px;color:#9aa0a6;'>Код приглашения (если ссылка не открывается):</p>" +
+            "<code style='display:block;padding:12px 16px;background:#f1f3f4;border-radius:8px;font-size:14px;" +
+            "  word-break:break-all;color:#202124;'>" + escapeHtml(inviteCode) + "</code>" +
+            "<p style='margin:20px 0 0;font-size:13px;color:#5f6368;line-height:1.5;'>Если вы не ожидали это письмо, просто проигнорируйте его.</p>";
+
+        String html = baseTemplate("Приглашение — АгроАналитика", orgLine + " — регистрация", content);
+        boolean configured = isMailConfigured();
+        sendHtml(toEmail, subject, html);
+        if (!configured) {
+            log.info("Organization invite for {} — orgId={} role={} — link: {}", toEmail, organizationId, roleLabel, registerUrl);
+        }
+        return configured;
+    }
+
+    private static String escapeHtml(String s) {
+        if (s == null) {
+            return "";
+        }
+        return s.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;");
     }
 
     public boolean isMailConfigured() {

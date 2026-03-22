@@ -1,67 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useState } from 'react'
 import styles from './WorkPlannerPage.module.scss'
-import { WorkTask, TaskStatus, TaskPriority, TaskCategory } from '@domain/entities/WorkTask'
+import { WorkTask, TaskStatus, TaskPriority, TaskCategory, ChecklistItem } from '@domain/entities/WorkTask'
 import { opsApi } from '@infrastructure/api/OpsApi'
-
-const MOCK_TASKS: WorkTask[] = [
-  {
-    id: 't1', title: 'Полив пшеничного поля А-1', description: 'Провести плановый полив капельным методом',
-    category: 'irrigation', priority: 'high', status: 'in_progress',
-    fieldId: 'f1', fieldName: 'Поле А-1 (Пшеница)', assignee: 'Иванов И.И.', assigneeRole: 'operator',
-    deadline: '2026-03-21', createdAt: '2026-03-19', updatedAt: '2026-03-20', estimatedHours: 4, actualHours: 2,
-    checklist: [
-      { id: 'c1', text: 'Проверить давление в системе', done: true },
-      { id: 'c2', text: 'Открыть клапаны секций 1-3', done: true },
-      { id: 'c3', text: 'Фиксировать расход воды', done: false },
-      { id: 'c4', text: 'Закрыть клапаны и сделать отчёт', done: false },
-    ],
-  },
-  {
-    id: 't2', title: 'Внесение удобрений Поле Б-2', description: 'NPK удобрения, норма 120 кг/га',
-    category: 'fertilization', priority: 'medium', status: 'todo',
-    fieldId: 'f2', fieldName: 'Поле Б-2 (Кукуруза)', assignee: 'Петров А.С.', assigneeRole: 'agronomist',
-    deadline: '2026-03-22', createdAt: '2026-03-20', updatedAt: '2026-03-20', estimatedHours: 6,
-    checklist: [
-      { id: 'c5', text: 'Получить удобрения со склада', done: false },
-      { id: 'c6', text: 'Настроить разбрасыватель', done: false },
-      { id: 'c7', text: 'Внести по схеме', done: false },
-    ],
-  },
-  {
-    id: 't3', title: 'Инспекция сенсоров В-3', description: 'Плановая проверка состояния датчиков почвы',
-    category: 'inspection', priority: 'low', status: 'done',
-    fieldId: 'f3', fieldName: 'Поле В-3 (Подсолнечник)', assignee: 'Сидоров В.Д.', assigneeRole: 'operator',
-    deadline: '2026-03-19', createdAt: '2026-03-17', updatedAt: '2026-03-19', estimatedHours: 2, actualHours: 2,
-    checklist: [
-      { id: 'c8', text: 'Проверить заряд батарей', done: true },
-      { id: 'c9', text: 'Сверить показания', done: true },
-      { id: 'c10', text: 'Загрузить данные в систему', done: true },
-    ],
-  },
-  {
-    id: 't4', title: 'Уборка Поле Г-4', description: 'Уборка ячменя, работа 2 комбайнов',
-    category: 'harvesting', priority: 'critical', status: 'overdue',
-    fieldId: 'f4', fieldName: 'Поле Г-4 (Ячмень)', assignee: 'Николаев К.Р.', assigneeRole: 'operator',
-    deadline: '2026-03-18', createdAt: '2026-03-15', updatedAt: '2026-03-18', estimatedHours: 16,
-    checklist: [
-      { id: 'c11', text: 'Подготовить комбайны', done: true },
-      { id: 'c12', text: 'Начать уборку с северного края', done: false },
-      { id: 'c13', text: 'Транспортировка на ток', done: false },
-    ],
-    notes: 'Задержка из-за поломки комбайна №2',
-  },
-  {
-    id: 't5', title: 'ТО оросительной системы', description: 'Плановое техническое обслуживание',
-    category: 'maintenance', priority: 'medium', status: 'todo',
-    fieldId: 'f1', fieldName: 'Поле А-1 (Пшеница)', assignee: 'Иванов И.И.', assigneeRole: 'operator',
-    deadline: '2026-03-25', createdAt: '2026-03-20', updatedAt: '2026-03-20', estimatedHours: 8,
-    checklist: [
-      { id: 'c14', text: 'Промыть фильтры', done: false },
-      { id: 'c15', text: 'Проверить капельницы', done: false },
-      { id: 'c16', text: 'Замена уплотнителей', done: false },
-    ],
-  },
-]
+import { fieldApi } from '@infrastructure/api/FieldApi'
+import type { Field } from '@domain/entities/Field'
 
 const STATUS_LABELS: Record<TaskStatus, string> = {
   todo: 'К выполнению', in_progress: 'В работе', done: 'Выполнено', overdue: 'Просрочено',
@@ -79,18 +21,179 @@ const CATEGORY_ICONS: Record<TaskCategory, string> = {
   irrigation: 'water_drop', fertilization: 'science', harvesting: 'agriculture',
   inspection: 'search', maintenance: 'build', other: 'task',
 }
+const CATEGORY_LABELS: Record<TaskCategory, string> = {
+  irrigation: 'Полив', fertilization: 'Удобрения', harvesting: 'Уборка',
+  inspection: 'Инспекция', maintenance: 'Обслуживание', other: 'Прочее',
+}
+
+function parseChecklistFromText(raw: string): ChecklistItem[] {
+  const lines = raw.split(/\r?\n/).map(s => s.trim()).filter(Boolean)
+  const base = Date.now()
+  return lines.map((text, i) => ({
+    id: `c_${base}_${i}`,
+    text,
+    done: false,
+  }))
+}
+
+function apiErr(e: unknown, fallback: string): string {
+  const ex = e as { response?: { data?: { detail?: unknown; message?: string } } }
+  const d = ex.response?.data
+  const detail = d?.detail
+  if (typeof detail === 'string' && detail.trim()) return detail
+  if (Array.isArray(detail) && detail[0] && typeof (detail[0] as { msg?: string }).msg === 'string') {
+    return (detail[0] as { msg: string }).msg
+  }
+  const msg = d?.message
+  if (typeof msg === 'string' && msg.trim()) return msg
+  return fallback
+}
 
 const WorkPlannerPage: React.FC = () => {
   const [tasks, setTasks] = useState<WorkTask[]>([])
+  const [listError, setListError] = useState<string | null>(null)
   const [filter, setFilter] = useState<'all' | 'today' | 'overdue' | TaskStatus>('all')
   const [selectedTask, setSelectedTask] = useState<WorkTask | null>(null)
   const [showModal, setShowModal] = useState(false)
+  const [fields, setFields] = useState<Field[]>([])
+  const [fieldsLoadError, setFieldsLoadError] = useState<string | null>(null)
+
+  const [newTitle, setNewTitle] = useState('')
+  const [newDescription, setNewDescription] = useState('')
+  const [newCategory, setNewCategory] = useState<TaskCategory>('other')
+  const [newPriority, setNewPriority] = useState<TaskPriority>('medium')
+  const [newFieldId, setNewFieldId] = useState('')
+  const [newFieldNameManual, setNewFieldNameManual] = useState('')
+  const [newAssignee, setNewAssignee] = useState('')
+  const [newAssigneeRole, setNewAssigneeRole] = useState<'agronomist' | 'operator' | 'manager'>('operator')
+  const [newDeadline, setNewDeadline] = useState('')
+  const [newEstimatedHours, setNewEstimatedHours] = useState(2)
+  const [newNotes, setNewNotes] = useState('')
+  const [newChecklistText, setNewChecklistText] = useState('')
+  const [createSubmitting, setCreateSubmitting] = useState(false)
+  const [createFormError, setCreateFormError] = useState<string | null>(null)
 
   const today = new Date().toISOString().slice(0, 10)
 
-  useEffect(() => {
-    opsApi.getWorkTasks().then(setTasks).catch(() => setTasks(MOCK_TASKS))
+  const loadTasks = useCallback(async () => {
+    setListError(null)
+    try {
+      const list = await opsApi.getWorkTasks()
+      setTasks(list)
+    } catch {
+      setTasks([])
+      setListError('Не удалось загрузить задачи. Проверьте API и авторизацию.')
+    }
   }, [])
+
+  useEffect(() => {
+    void loadTasks()
+  }, [loadTasks])
+
+  useEffect(() => {
+    if (showModal && fields.length > 0 && !fields.some(f => f.id === newFieldId)) {
+      setNewFieldId(fields[0].id)
+    }
+  }, [showModal, fields, newFieldId])
+
+  useEffect(() => {
+    let cancelled = false
+    ;(async () => {
+      try {
+        const list = await fieldApi.getAll()
+        if (!cancelled) {
+          setFields(list)
+          setFieldsLoadError(null)
+        }
+      } catch {
+        if (!cancelled) {
+          setFields([])
+          setFieldsLoadError('Поля не загружены — укажите ID и название поля вручную.')
+        }
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const openCreateModal = () => {
+    setNewTitle('')
+    setNewDescription('')
+    setNewCategory('other')
+    setNewPriority('medium')
+    setNewFieldId(fields[0]?.id ?? '')
+    setNewFieldNameManual('')
+    setNewAssignee('')
+    setNewAssigneeRole('operator')
+    setNewDeadline(today)
+    setNewEstimatedHours(2)
+    setNewNotes('')
+    setNewChecklistText('')
+    setCreateFormError(null)
+    setShowModal(true)
+  }
+
+  const closeCreateModal = () => {
+    if (!createSubmitting) setShowModal(false)
+  }
+
+  const submitNewTask = async () => {
+    setCreateFormError(null)
+    if (!newTitle.trim()) {
+      setCreateFormError('Введите название задачи')
+      return
+    }
+    let fieldId: string
+    let fieldName: string
+    if (fields.length > 0) {
+      const field = fields.find(f => f.id === newFieldId)
+      if (!field) {
+        setCreateFormError('Выберите поле из списка')
+        return
+      }
+      fieldId = field.id
+      fieldName = field.name
+    } else {
+      fieldId = newFieldId.trim() || 'f1'
+      fieldName = newFieldNameManual.trim()
+      if (!newFieldId.trim()) {
+        setCreateFormError('Укажите ID поля')
+        return
+      }
+      if (!fieldName) {
+        setCreateFormError('Укажите название поля')
+        return
+      }
+    }
+
+    const checklist = parseChecklistFromText(newChecklistText)
+
+    setCreateSubmitting(true)
+    try {
+      await opsApi.createWorkTask({
+        title: newTitle.trim(),
+        description: newDescription.trim() || '—',
+        category: newCategory,
+        priority: newPriority,
+        status: 'todo',
+        fieldId,
+        fieldName,
+        assignee: newAssignee.trim() || 'Не назначен',
+        assigneeRole: newAssigneeRole,
+        deadline: newDeadline || today,
+        estimatedHours: Math.max(0.25, Number(newEstimatedHours) || 1),
+        checklist,
+        notes: newNotes.trim() || undefined,
+      })
+      await loadTasks()
+      setShowModal(false)
+    } catch (e) {
+      setCreateFormError(apiErr(e, 'Не удалось создать задачу'))
+    } finally {
+      setCreateSubmitting(false)
+    }
+  }
 
   const filtered = tasks.filter(t => {
     if (filter === 'all') return true
@@ -140,11 +243,18 @@ const WorkPlannerPage: React.FC = () => {
           </h1>
           <p className={styles.sub}>Задачи для агрономов и механизаторов с контролем исполнения</p>
         </div>
-        <button className={styles.addBtn} onClick={() => setShowModal(true)}>
+        <button type="button" className={styles.addBtn} onClick={openCreateModal}>
           <span className="material-icons-round">add</span>
           Новая задача
         </button>
       </div>
+
+      {listError && (
+        <div className={styles.infoMsg} style={{ borderColor: '#ea4335', background: '#fce8e6', marginBottom: 16 }}>
+          <span className="material-icons-round" style={{ color: '#ea4335' }}>error_outline</span>
+          {listError}
+        </div>
+      )}
 
       {/* Stats */}
       <div className={styles.stats}>
@@ -166,11 +276,11 @@ const WorkPlannerPage: React.FC = () => {
       {/* Filters */}
       <div className={styles.filters}>
         {(['all', 'todo', 'in_progress', 'done', 'overdue'] as const).map(f => (
-          <button key={f} className={`${styles.filterBtn} ${filter === f ? styles.activeFilter : ''}`} onClick={() => setFilter(f)}>
+          <button key={f} type="button" className={`${styles.filterBtn} ${filter === f ? styles.activeFilter : ''}`} onClick={() => setFilter(f)}>
             {f === 'all' ? 'Все' : STATUS_LABELS[f as TaskStatus] || f}
           </button>
         ))}
-        <button className={`${styles.filterBtn} ${filter === 'today' ? styles.activeFilter : ''}`} onClick={() => setFilter('today')}>
+        <button type="button" className={`${styles.filterBtn} ${filter === 'today' ? styles.activeFilter : ''}`} onClick={() => setFilter('today')}>
           Сегодня
         </button>
       </div>
@@ -238,7 +348,7 @@ const WorkPlannerPage: React.FC = () => {
                 </span>
                 {selectedTask.title}
               </div>
-              <button className={styles.closeBtn} onClick={() => setSelectedTask(null)}>
+              <button type="button" className={styles.closeBtn} onClick={() => setSelectedTask(null)}>
                 <span className="material-icons-round">close</span>
               </button>
             </div>
@@ -283,75 +393,112 @@ const WorkPlannerPage: React.FC = () => {
         </div>
       )}
 
-      {/* New task modal stub */}
       {showModal && (
-        <div className={styles.overlay} onClick={() => setShowModal(false)}>
+        <div className={styles.overlay} onClick={closeCreateModal}>
           <div className={styles.modal} onClick={e => e.stopPropagation()}>
             <div className={styles.modalHeader}>
               <div className={styles.modalTitle}><span className="material-icons-round">add_task</span> Новая задача</div>
-              <button className={styles.closeBtn} onClick={() => setShowModal(false)}><span className="material-icons-round">close</span></button>
+              <button type="button" className={styles.closeBtn} disabled={createSubmitting} onClick={closeCreateModal}>
+                <span className="material-icons-round">close</span>
+              </button>
             </div>
             <div className={styles.modalBody}>
+              {fieldsLoadError && (
+                <div className={styles.infoMsg} style={{ borderColor: '#f9ab00', background: '#fff8e1' }}>
+                  <span className="material-icons-round" style={{ color: '#f9ab00' }}>warning</span>
+                  {fieldsLoadError}
+                </div>
+              )}
+              {createFormError && (
+                <div className={styles.infoMsg} style={{ borderColor: '#ea4335', background: '#fce8e6' }}>
+                  <span className="material-icons-round" style={{ color: '#ea4335' }}>error_outline</span>
+                  {createFormError}
+                </div>
+              )}
               <div className={styles.formGroup}>
                 <label>Название задачи</label>
-                <input className={styles.input} placeholder="Введите название..." />
+                <input className={styles.input} value={newTitle} onChange={e => setNewTitle(e.target.value)} placeholder="Например, Полив секции 2" />
               </div>
               <div className={styles.formGroup}>
                 <label>Описание</label>
-                <textarea className={styles.textarea} placeholder="Подробное описание..." rows={3} />
+                <textarea className={styles.textarea} value={newDescription} onChange={e => setNewDescription(e.target.value)} placeholder="Подробности для исполнителя" rows={3} />
               </div>
               <div className={styles.formRow}>
                 <div className={styles.formGroup}>
-                  <label>Поле</label>
-                  <select className={styles.select}>
-                    {['Поле А-1', 'Поле Б-2', 'Поле В-3', 'Поле Г-4'].map(f => <option key={f}>{f}</option>)}
+                  <label>Категория</label>
+                  <select className={styles.select} value={newCategory} onChange={e => setNewCategory(e.target.value as TaskCategory)}>
+                    {(Object.keys(CATEGORY_LABELS) as TaskCategory[]).map(c => (
+                      <option key={c} value={c}>{CATEGORY_LABELS[c]}</option>
+                    ))}
                   </select>
                 </div>
-                <div className={styles.formGroup}>
-                  <label>Исполнитель</label>
-                  <select className={styles.select}>
-                    {['Иванов И.И.', 'Петров А.С.', 'Сидоров В.Д.'].map(a => <option key={a}>{a}</option>)}
-                  </select>
-                </div>
-              </div>
-              <div className={styles.formRow}>
                 <div className={styles.formGroup}>
                   <label>Приоритет</label>
-                  <select className={styles.select}>
-                    {Object.entries(PRIORITY_LABELS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                  <select className={styles.select} value={newPriority} onChange={e => setNewPriority(e.target.value as TaskPriority)}>
+                    {(Object.keys(PRIORITY_LABELS) as TaskPriority[]).map(k => (
+                      <option key={k} value={k}>{PRIORITY_LABELS[k]}</option>
+                    ))}
                   </select>
                 </div>
+              </div>
+              {fields.length > 0 ? (
                 <div className={styles.formGroup}>
-                  <label>Дедлайн</label>
-                  <input type="date" className={styles.input} defaultValue={today} />
+                  <label>Поле</label>
+                  <select className={styles.select} value={newFieldId} onChange={e => setNewFieldId(e.target.value)}>
+                    {fields.map(f => (
+                      <option key={f.id} value={f.id}>{f.name} ({f.id})</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div className={styles.formRow}>
+                  <div className={styles.formGroup}>
+                    <label>ID поля</label>
+                    <input className={styles.input} value={newFieldId} onChange={e => setNewFieldId(e.target.value)} placeholder="f1" />
+                  </div>
+                  <div className={styles.formGroup}>
+                    <label>Название поля</label>
+                    <input className={styles.input} value={newFieldNameManual} onChange={e => setNewFieldNameManual(e.target.value)} placeholder="Поле А-1" />
+                  </div>
+                </div>
+              )}
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label>Исполнитель (ФИО)</label>
+                  <input className={styles.input} value={newAssignee} onChange={e => setNewAssignee(e.target.value)} placeholder="Иванов И.И." />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Роль исполнителя</label>
+                  <select className={styles.select} value={newAssigneeRole} onChange={e => setNewAssigneeRole(e.target.value as 'agronomist' | 'operator' | 'manager')}>
+                    <option value="operator">Механизатор</option>
+                    <option value="agronomist">Агроном</option>
+                    <option value="manager">Менеджер</option>
+                  </select>
                 </div>
               </div>
+              <div className={styles.formRow}>
+                <div className={styles.formGroup}>
+                  <label>Дедлайн</label>
+                  <input type="date" className={styles.input} value={newDeadline} onChange={e => setNewDeadline(e.target.value)} />
+                </div>
+                <div className={styles.formGroup}>
+                  <label>Оценка, ч</label>
+                  <input type="number" className={styles.input} min={0.25} step={0.5} value={newEstimatedHours} onChange={e => setNewEstimatedHours(Number(e.target.value))} />
+                </div>
+              </div>
+              <div className={styles.formGroup}>
+                <label>Чек-лист (по одному пункту в строке, необязательно)</label>
+                <textarea className={styles.textarea} value={newChecklistText} onChange={e => setNewChecklistText(e.target.value)} placeholder="Проверить оборудование&#10;Согласовать время" rows={3} />
+              </div>
+              <div className={styles.formGroup}>
+                <label>Заметки (необязательно)</label>
+                <input className={styles.input} value={newNotes} onChange={e => setNewNotes(e.target.value)} placeholder="Комментарий для планировщика" />
+              </div>
               <div className={styles.modalActions}>
-                <button className={styles.cancelBtn} onClick={() => setShowModal(false)}>Отмена</button>
-                <button
-                  className={styles.saveBtn}
-                  onClick={async () => {
-                    const draft: Partial<WorkTask> = {
-                      title: 'Новая задача',
-                      description: 'Создано из планировщика',
-                      category: 'other',
-                      priority: 'medium',
-                      status: 'todo',
-                      fieldId: 'f1',
-                      fieldName: 'Поле А-1',
-                      assignee: 'Не назначен',
-                      assigneeRole: 'operator',
-                      deadline: today,
-                      checklist: [],
-                      estimatedHours: 1,
-                    }
-                    await opsApi.createWorkTask(draft)
-                    const refreshed = await opsApi.getWorkTasks()
-                    setTasks(refreshed)
-                    setShowModal(false)
-                  }}
-                >
-                  <span className="material-icons-round">save</span> Создать задачу
+                <button type="button" className={styles.cancelBtn} disabled={createSubmitting} onClick={closeCreateModal}>Отмена</button>
+                <button type="button" className={styles.saveBtn} disabled={createSubmitting} onClick={() => void submitNewTask()}>
+                  <span className="material-icons-round">save</span>
+                  {createSubmitting ? 'Создание…' : 'Создать задачу'}
                 </button>
               </div>
             </div>

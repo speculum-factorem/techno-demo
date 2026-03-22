@@ -3,45 +3,6 @@ import styles from './EquipmentPage.module.scss'
 import { Device, DeviceStatus, DeviceType } from '@domain/entities/Equipment'
 import { opsApi } from '@infrastructure/api/OpsApi'
 
-const MOCK_DEVICES: Device[] = [
-  {
-    id: 'd1', name: 'Датчик почвы А-1-01', type: 'soil_sensor', fieldId: 'f1', fieldName: 'Поле А-1',
-    status: 'online', battery: 87, signal: 92, lastPing: '2026-03-20T14:18:00Z', firmware: '2.1.4', installDate: '2025-04-10',
-    telemetry: { temperature: 18.2, humidity: 65, soilMoisture: 42, lat: 47.21, lng: 39.73 },
-    sla: { uptime: 99.2, dataQuality: 98.5, missedReadings: 3 }, alerts: [],
-  },
-  {
-    id: 'd2', name: 'Датчик почвы А-1-02', type: 'soil_sensor', fieldId: 'f1', fieldName: 'Поле А-1',
-    status: 'warning', battery: 14, signal: 78, lastPing: '2026-03-20T13:45:00Z', firmware: '2.1.3', installDate: '2025-04-10',
-    telemetry: { temperature: 19.1, humidity: 62, soilMoisture: 38, lat: 47.22, lng: 39.74 },
-    sla: { uptime: 96.1, dataQuality: 94.0, missedReadings: 12 }, alerts: ['Низкий заряд батареи'],
-  },
-  {
-    id: 'd3', name: 'Метеостанция Б-2', type: 'weather_station', fieldId: 'f2', fieldName: 'Поле Б-2',
-    status: 'online', battery: 100, signal: 100, lastPing: '2026-03-20T14:20:00Z', firmware: '3.0.1', installDate: '2025-03-15',
-    telemetry: { temperature: 17.5, humidity: 71, pressure: 1013, windSpeed: 3.2, lat: 47.18, lng: 39.68 },
-    sla: { uptime: 99.9, dataQuality: 99.7, missedReadings: 0 }, alerts: [],
-  },
-  {
-    id: 'd4', name: 'Контроллер полива В-3', type: 'irrigation_controller', fieldId: 'f3', fieldName: 'Поле В-3',
-    status: 'error', battery: 45, signal: 55, lastPing: '2026-03-20T09:12:00Z', firmware: '1.8.2', installDate: '2025-05-20',
-    telemetry: { lat: 47.25, lng: 39.77 },
-    sla: { uptime: 88.4, dataQuality: 82.1, missedReadings: 47 }, alerts: ['Нет связи > 5 часов', 'Сбой клапана #3'],
-  },
-  {
-    id: 'd5', name: 'БПЛА AgriDrone X4', type: 'drone', fieldId: 'f4', fieldName: 'Поле Г-4',
-    status: 'offline', battery: 0, signal: 0, lastPing: '2026-03-19T17:00:00Z', firmware: '4.2.0', installDate: '2025-06-01',
-    telemetry: { lat: 47.30, lng: 39.80 },
-    sla: { uptime: 72.0, dataQuality: 91.0, missedReadings: 0 }, alerts: ['Устройство выключено'],
-  },
-  {
-    id: 'd6', name: 'Трактор John Deere 8R', type: 'tractor', fieldId: 'f2', fieldName: 'Поле Б-2',
-    status: 'online', battery: 100, signal: 88, lastPing: '2026-03-20T14:15:00Z', firmware: 'GPS-3.1', installDate: '2024-09-01',
-    telemetry: { lat: 47.19, lng: 39.70 },
-    sla: { uptime: 95.0, dataQuality: 97.0, missedReadings: 2 }, alerts: [],
-  },
-]
-
 const STATUS_LABELS: Record<DeviceStatus, string> = {
   online: 'Онлайн', offline: 'Офлайн', warning: 'Предупреждение', error: 'Ошибка',
 }
@@ -90,7 +51,7 @@ const EquipmentPage: React.FC = () => {
   const [devices, setDevices] = useState<Device[]>([])
 
   useEffect(() => {
-    opsApi.getEquipment().then(setDevices).catch(() => setDevices(MOCK_DEVICES))
+    opsApi.getEquipment().then(setDevices).catch(() => setDevices([]))
   }, [])
 
   const filtered = devices.filter(d => {

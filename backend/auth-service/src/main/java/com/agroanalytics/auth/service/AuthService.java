@@ -19,6 +19,7 @@ import com.agroanalytics.auth.repository.LoginVerificationCodeRepository;
 import com.agroanalytics.auth.repository.OrganizationInviteCodeRepository;
 import com.agroanalytics.auth.repository.PasswordResetTokenRepository;
 import com.agroanalytics.auth.repository.UserRepository;
+import com.agroanalytics.auth.util.AppRoleMapping;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -123,6 +124,7 @@ public class AuthService {
                     .code(bootstrapInviteCode)
                     .organizationId(1L)
                     .expiresAt(LocalDateTime.now().plusYears(1))
+                    .consumableOnce(false)
                     .build();
             organizationInviteCodeRepository.save(inviteCode);
             log.info("Default invite code created for org 1: {}", bootstrapInviteCode);
@@ -135,6 +137,9 @@ public class AuthService {
 
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
             throw new BadCredentialsException("Invalid username or password");
+        }
+        if (!user.isActive()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Учётная запись заблокирована");
         }
         if (!user.isEmailVerified()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Email is not verified");
@@ -198,6 +203,9 @@ public class AuthService {
     }
 
     private LoginResponse createLoginResponse(User user) {
+        if (!user.isActive()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Учётная запись заблокирована");
+        }
         user = assignPersonalOrganizationIfMissing(user);
         Map<String, Object> claims = new HashMap<>();
         claims.put("role", user.getRole().name());
@@ -242,14 +250,16 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Этот email уже зарегистрирован");
         }
 
-        Long organizationId = validateAndResolveOrganization(request);
+        OrganizationInviteCode invite = validateInviteForRegistration(request, normalizedEmail);
+        Long organizationId = invite != null ? invite.getOrganizationId() : null;
+        User.Role registrationRole = resolveRegistrationRole(invite);
 
         User user = User.builder()
                 .username(normalizedUsername)
                 .email(normalizedEmail)
                 .fullName(normalizedFullName)
                 .passwordHash(passwordEncoder.encode(request.getPassword()))
-                .role(User.Role.AGRONOMIST)
+                .role(registrationRole)
                 .organizationId(organizationId)
                 .emailVerified(false)
                 .build();
@@ -257,7 +267,69 @@ public class AuthService {
         userRepository.save(user);
         user = assignPersonalOrganizationIfMissing(user);
         createAndSendVerificationToken(user);
+        consumeInviteIfNeeded(invite);
         return verificationTtlMinutes * 60;
+    }
+
+    private User.Role resolveRegistrationRole(OrganizationInviteCode invite) {
+        if (invite == null || invite.getDefaultAppRole() == null || invite.getDefaultAppRole().isBlank()) {
+            return AppRoleMapping.defaultRegistrationRole();
+        }
+        return AppRoleMapping.toUserRole(invite.getDefaultAppRole());
+    }
+
+    /**
+     * Проверка invite-кода. Использование кода (used_at) фиксируется после успешного создания пользователя.
+     */
+    private OrganizationInviteCode validateInviteForRegistration(RegisterRequest request, String normalizedEmail) {
+        String inviteRaw = request.getInviteCode();
+        boolean hasInvite = inviteRaw != null && !inviteRaw.isBlank();
+        Long orgIdParam = request.getOrganizationId();
+
+        if (!hasInvite) {
+            if (orgIdParam != null) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Укажите invite-код для этой организации или оставьте поле «ID организации» пустым"
+                );
+            }
+            return null;
+        }
+
+        OrganizationInviteCode invite = organizationInviteCodeRepository.findByCode(inviteRaw.trim())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Неверный invite-код"));
+
+        if (invite.getUsedAt() != null && (inviteSingleUse || invite.isConsumableOnce())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Этот invite-код уже был использован");
+        }
+        if (invite.getExpiresAt() != null && invite.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Срок действия invite-кода истёк");
+        }
+        if (orgIdParam != null && !invite.getOrganizationId().equals(orgIdParam)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite-код не соответствует указанной организации");
+        }
+
+        if (invite.getInvitedEmail() != null && !invite.getInvitedEmail().isBlank()) {
+            if (!normalizedEmail.equalsIgnoreCase(invite.getInvitedEmail().trim())) {
+                throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Укажите тот же email, на который было отправлено приглашение"
+                );
+            }
+        }
+
+        return invite;
+    }
+
+    private void consumeInviteIfNeeded(OrganizationInviteCode invite) {
+        if (invite == null) {
+            return;
+        }
+        if (!inviteSingleUse && !invite.isConsumableOnce()) {
+            return;
+        }
+        invite.setUsedAt(LocalDateTime.now());
+        organizationInviteCodeRepository.save(invite);
     }
 
     /**
@@ -359,6 +431,9 @@ public class AuthService {
         }
         if (!user.isEmailVerified()) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Email is not verified");
+        }
+        if (!user.isActive()) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Учётная запись заблокирована");
         }
 
         user = assignPersonalOrganizationIfMissing(user);
@@ -559,38 +634,4 @@ public class AuthService {
         }
     }
 
-    private Long validateAndResolveOrganization(RegisterRequest request) {
-        String inviteRaw = request.getInviteCode();
-        boolean hasInvite = inviteRaw != null && !inviteRaw.isBlank();
-        Long orgId = request.getOrganizationId();
-
-        if (!hasInvite) {
-            if (orgId != null) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Укажите invite-код для этой организации или оставьте поле «ID организации» пустым"
-                );
-            }
-            return null;
-        }
-
-        OrganizationInviteCode invite = organizationInviteCodeRepository.findByCode(inviteRaw.trim())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Неверный invite-код"));
-
-        if (inviteSingleUse && invite.getUsedAt() != null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Этот invite-код уже был использован");
-        }
-        if (invite.getExpiresAt() != null && invite.getExpiresAt().isBefore(LocalDateTime.now())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Срок действия invite-кода истёк");
-        }
-        if (orgId != null && !invite.getOrganizationId().equals(orgId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invite-код не соответствует указанной организации");
-        }
-
-        if (inviteSingleUse) {
-            invite.setUsedAt(LocalDateTime.now());
-            organizationInviteCodeRepository.save(invite);
-        }
-        return invite.getOrganizationId();
-    }
 }
