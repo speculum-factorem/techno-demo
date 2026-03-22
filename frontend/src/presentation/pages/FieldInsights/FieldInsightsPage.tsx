@@ -276,7 +276,7 @@ const FieldInsightsPage: React.FC = () => {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Полевой цифровой паспорт и аналитика</h1>
-          <p className={styles.subtitle}>История операций, NDVI/NDMI и финансовая панель по каждому полю</p>
+          <p className={styles.subtitle}>История операций, снимки вегетации и финансы по каждому полю</p>
         </div>
         <div className={styles.selector}>
           <Select options={options} value={fieldId} onChange={e => setFieldId(e.target.value)} />
@@ -290,7 +290,7 @@ const FieldInsightsPage: React.FC = () => {
         <>
           <div className={styles.kpiGrid}>
             <Card><div className={styles.kpiLabel}>Всего затрат</div><div className={styles.kpiValue}>{money(passport.totals.totalCost)}</div></Card>
-            <Card><div className={styles.kpiLabel}>Последний NDVI / NDMI</div><div className={styles.kpiValue}>{satellite.latestNdvi} / {satellite.latestNdmi}</div></Card>
+            <Card><div className={styles.kpiLabel}>Вегетация / влага по снимкам</div><div className={styles.kpiValue}>{satellite.latestNdvi} / {satellite.latestNdmi}</div></Card>
             <Card><div className={styles.kpiLabel}>Водосбережение</div><div className={styles.kpiValue}>{finance.waterSavingPercent}%</div></Card>
             <Card><div className={styles.kpiLabel}>Маржинальность</div><div className={styles.kpiValue}>{finance.marginPercent}%</div></Card>
           </div>
@@ -299,7 +299,7 @@ const FieldInsightsPage: React.FC = () => {
             <Card>
               <h3 className={styles.sectionTitle}>Паспорт операций</h3>
               <p className={styles.passportHint}>
-                Записи хранятся в базе field-service. Добавляйте операции, удобрения и обработки — итоги пересчитываются автоматически.
+                Добавляйте операции, удобрения и обработки — итоги пересчитываются автоматически.
               </p>
               {passportFormError && <p className={styles.formError}>{passportFormError}</p>}
               <div className={styles.passportForm}>
@@ -446,7 +446,7 @@ const FieldInsightsPage: React.FC = () => {
             </Card>
 
             <Card>
-              <h3 className={styles.sectionTitle}>Спутниковая аналитика (NDVI/NDMI)</h3>
+              <h3 className={styles.sectionTitle}>Динамика вегетации и влажности</h3>
               <div className={styles.chartWrap}>
                 <ResponsiveContainer width="100%" height={260}>
                   <LineChart data={satellite.timeline}>

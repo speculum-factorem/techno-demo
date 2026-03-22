@@ -102,7 +102,7 @@ const IrrigationPage: React.FC = () => {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Управление поливом</h1>
-          <p className={styles.subtitle}>Рекомендации на основе ML и задачи сервиса орошения</p>
+          <p className={styles.subtitle}>Рекомендации по влажности почвы и погоде, план поливов</p>
         </div>
       </div>
 
@@ -309,10 +309,9 @@ const IrrigationPage: React.FC = () => {
         </Card>
       )}
 
-      {/* ML Recommendations */}
       <h3 className={styles.sectionTitle} style={{ marginTop: 4 }}>
-        <span className="material-icons-round" style={{ verticalAlign: 'middle', marginRight: 6, color: '#1a73e8' }}>psychology</span>
-        ML-рекомендации по поливу
+        <span className="material-icons-round" style={{ verticalAlign: 'middle', marginRight: 6, color: '#1a73e8' }}>water_drop</span>
+        Рекомендации по поливу
       </h3>
       <div className={styles.recsList}>
         {filteredRecs.length === 0 && (

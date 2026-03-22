@@ -17,11 +17,11 @@ interface ReportTemplate {
 const TEMPLATES: ReportTemplate[] = [
   { id: 'r1', name: 'Недельный дайджест', description: 'Сводка по всем полям: урожай, полив, алерты, погода за неделю', icon: 'summarize', category: 'analytics', formats: ['pdf', 'excel'], frequency: 'weekly', lastGenerated: '2026-03-19', pages: 12 },
   { id: 'r2', name: 'Финансовая сводка', description: 'Себестоимость, экономия воды, ROI, маржинальность по культурам', icon: 'account_balance', category: 'finance', formats: ['pdf', 'excel'], frequency: 'monthly', lastGenerated: '2026-02-28', pages: 8 },
-  { id: 'r3', name: 'Прогноз урожая', description: 'Детальный прогноз RandomForest с метриками по каждому полю', icon: 'trending_up', category: 'analytics', formats: ['pdf'], lastGenerated: '2026-03-15', pages: 18 },
+  { id: 'r3', name: 'Прогноз урожая', description: 'Детальный прогноз и сравнение по каждому полю', icon: 'trending_up', category: 'analytics', formats: ['pdf'], lastGenerated: '2026-03-15', pages: 18 },
   { id: 'r4', name: 'Отчёт по поливу', description: 'Объёмы полива, рекомендации, принятые/отклонённые решения', icon: 'water_drop', category: 'operations', formats: ['pdf', 'excel'], lastGenerated: '2026-03-18', pages: 6 },
   { id: 'r5', name: 'Аудит действий', description: 'Журнал всех действий пользователей за выбранный период', icon: 'manage_history', category: 'compliance', formats: ['pdf', 'excel'] },
-  { id: 'r6', name: 'Состояние техники', description: 'SLA устройств, аптайм, качество данных, алерты по сенсорам', icon: 'device_hub', category: 'operations', formats: ['pdf', 'excel'], lastGenerated: '2026-03-20', pages: 5 },
-  { id: 'r7', name: 'Спутниковый отчёт NDVI/NDMI', description: 'Динамика индексов, зоны стресса, тренды по полям', icon: 'satellite_alt', category: 'analytics', formats: ['pdf'] },
+  { id: 'r6', name: 'Состояние техники', description: 'Работа оборудования, качество данных, предупреждения', icon: 'device_hub', category: 'operations', formats: ['pdf', 'excel'], lastGenerated: '2026-03-20', pages: 5 },
+  { id: 'r7', name: 'Спутниковый отчёт', description: 'Динамика вегетации и влажности, зоны стресса по полям', icon: 'satellite_alt', category: 'analytics', formats: ['pdf'] },
   { id: 'r8', name: 'Ежемесячный отчёт для руководства', description: 'Исполнительное резюме: KPI, финансы, прогнозы, риски', icon: 'business_center', category: 'compliance', formats: ['pdf'], frequency: 'monthly', lastGenerated: '2026-02-28', pages: 24 },
 ]
 
@@ -76,7 +76,7 @@ const ReportsPage: React.FC = () => {
       setHistory(h)
       setScheduled(sch)
     } catch {
-      setListError('Не удалось загрузить отчёты или расписание. Проверьте API и авторизацию.')
+      setListError('Не удалось загрузить отчёты или расписание. Проверьте подключение и войдите снова.')
       setHistory([])
       setScheduled([])
     } finally {

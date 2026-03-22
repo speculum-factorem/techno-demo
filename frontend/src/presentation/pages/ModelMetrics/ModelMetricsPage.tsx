@@ -49,7 +49,7 @@ const ModelMetricsPage: React.FC = () => {
     }
   }, [tab, eda])
 
-  if (loadingMetrics && !metrics) return <Loader text="Расчёт метрик модели..." fullPage />
+  if (loadingMetrics && !metrics) return <Loader text="Загрузка оценки прогноза..." fullPage />
   if (!metrics) return null
 
   const cropChartData = Object.entries(metrics.byCrop).map(([crop, m]) => ({
@@ -67,17 +67,17 @@ const ModelMetricsPage: React.FC = () => {
     <div className={styles.page}>
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Метрики ML-модели и анализ датасета</h1>
+          <h1 className={styles.title}>Точность прогноза урожайности</h1>
           <p className={styles.subtitle}>
-            RandomForest · Прогноз урожайности · Ростовская область
+            Оценка качества прогнозов по историческим данным
           </p>
         </div>
         <div className={styles.tabs}>
           <button className={`${styles.tab} ${tab === 'metrics' ? styles.tabActive : ''}`} onClick={() => setTab('metrics')}>
-            <span className="material-icons-round">analytics</span> Метрики модели
+            <span className="material-icons-round">analytics</span> Сводка точности
           </button>
           <button className={`${styles.tab} ${tab === 'eda' ? styles.tabActive : ''}`} onClick={() => setTab('eda')}>
-            <span className="material-icons-round">dataset</span> Анализ датасета (EDA)
+            <span className="material-icons-round">dataset</span> Данные для расчёта
           </button>
         </div>
       </div>
@@ -109,7 +109,7 @@ const ModelMetricsPage: React.FC = () => {
                 </span>
               </div>
               <div className={styles.metricValue}>{metrics.overall.r2.toFixed(3)}</div>
-              <div className={styles.metricLabel}>R² (коэф. детерминации)</div>
+              <div className={styles.metricLabel}>R²</div>
               <Badge variant={r2Quality as any}>{r2Quality === 'success' ? 'Отлично' : r2Quality === 'warning' ? 'Приемлемо' : 'Плохо'}</Badge>
             </Card>
             <Card className={styles.metricCard}>
@@ -124,7 +124,7 @@ const ModelMetricsPage: React.FC = () => {
 
           <div className={styles.testInfo}>
             <span className="material-icons-round">info</span>
-            Тест на <strong>{metrics.overall.testSamples}</strong> примерах (20% датасета). Точность = прогнозы с отклонением &lt;15%.
+            Проверка на <strong>{metrics.overall.testSamples}</strong> примерах. Точность — доля прогнозов с отклонением не более 15%.
           </div>
 
           <Card>
@@ -165,7 +165,7 @@ const ModelMetricsPage: React.FC = () => {
 
           <Card>
             <h3 className={styles.sectionTitle}>Тестовые сценарии кейса</h3>
-            <p className={styles.scenariosDesc}>Проверка поведения системы на контрольных сценариях, включая сценарий из технического задания.</p>
+            <p className={styles.scenariosDesc}>Проверка на типовых ситуациях по влажности и температуре.</p>
             <div className={styles.scenarios}>
               {metrics.scenarios.map((s, i) => (
                 <div key={i} className={`${styles.scenario} ${styles[s.status]}`}>
@@ -198,7 +198,7 @@ const ModelMetricsPage: React.FC = () => {
 
       {/* ===== EDA TAB ===== */}
       {tab === 'eda' && (
-        edaLoading ? <Loader text="Загрузка анализа датасета..." /> : eda && (
+        edaLoading ? <Loader text="Загрузка сводки..." /> : eda && (
           <>
             {/* Dataset summary */}
             <div className={styles.metricsGrid}>
@@ -224,7 +224,7 @@ const ModelMetricsPage: React.FC = () => {
                 </div>
                 <div className={styles.metricValue}>{eda.anomaly_analysis.anomaly_rate_pct}%</div>
                 <div className={styles.metricLabel}>Доля аномалий</div>
-                <div className={styles.metricDesc}>{eda.anomaly_analysis.total_anomalies} записей с is_anomaly=true</div>
+                <div className={styles.metricDesc}>{eda.anomaly_analysis.total_anomalies} подозрительных записей</div>
               </Card>
               <Card className={styles.metricCard}>
                 <div className={styles.metricIcon} style={{ background: '#fef9e0' }}>
@@ -238,7 +238,7 @@ const ModelMetricsPage: React.FC = () => {
 
             {/* Mandatory fields list */}
             <Card>
-              <h3 className={styles.sectionTitle}>Обязательные поля датасета (из инструкции)</h3>
+              <h3 className={styles.sectionTitle}>Показатели в расчёте</h3>
               <div className={styles.fieldGrid}>
                 {eda.dataset_info.mandatory_fields.map((f: string) => (
                   <div key={f} className={styles.fieldChip}>
@@ -251,7 +251,7 @@ const ModelMetricsPage: React.FC = () => {
 
             {/* Descriptive stats */}
             <Card>
-              <h3 className={styles.sectionTitle}>Дескриптивная статистика числовых полей</h3>
+              <h3 className={styles.sectionTitle}>Сводка по числовым показателям</h3>
               <div className={styles.cropTable}>
                 <table>
                   <thead>
@@ -296,7 +296,7 @@ const ModelMetricsPage: React.FC = () => {
                 </div>
               </Card>
               <Card>
-                <h3 className={styles.sectionTitle}>Средняя урожайность (yield_actual, 0–1) по культурам</h3>
+                <h3 className={styles.sectionTitle}>Средняя нормированная урожайность по культурам</h3>
                 <div className={styles.chart}>
                   <ResponsiveContainer width="100%" height={240}>
                     <BarChart data={Object.entries(eda.yield_by_crop).map(([k, v]) => ({ name: CROP_LABELS[k] || k, 'yield_actual': v }))}
@@ -314,11 +314,11 @@ const ModelMetricsPage: React.FC = () => {
 
             {/* Outliers */}
             <Card>
-              <h3 className={styles.sectionTitle}>Выбросы (метод IQR) по числовым полям</h3>
+              <h3 className={styles.sectionTitle}>Редкие значения по показателям</h3>
               <div className={styles.cropTable}>
                 <table>
                   <thead>
-                    <tr><th>Поле</th><th>Выбросов (IQR)</th><th>Доля, %</th><th>Оценка</th></tr>
+                    <tr><th>Показатель</th><th>Редких значений</th><th>Доля, %</th><th>Оценка</th></tr>
                   </thead>
                   <tbody>
                     {Object.entries(eda.outliers).map(([col, o]: [string, any]) => (
@@ -338,7 +338,7 @@ const ModelMetricsPage: React.FC = () => {
 
             {/* Anomaly breakdown */}
             <Card>
-              <h3 className={styles.sectionTitle}>Аномалии (is_anomaly) по культурам</h3>
+              <h3 className={styles.sectionTitle}>Аномальные записи по культурам</h3>
               <div className={styles.chart}>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart

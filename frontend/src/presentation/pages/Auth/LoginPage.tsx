@@ -81,16 +81,16 @@ const LoginPage: React.FC = () => {
             Умное управление сельскохозяйственными полями
           </h2>
           <ul className={styles.panelFeatures}>
-            <li><span className="material-icons-round">model_training</span>ML-прогноз урожайности</li>
+            <li><span className="material-icons-round">model_training</span>Прогноз урожайности</li>
             <li><span className="material-icons-round">water_drop</span>Рекомендации по поливу</li>
             <li><span className="material-icons-round">cloud</span>Погода в реальном времени</li>
-            <li><span className="material-icons-round">sensors_off</span>Обнаружение аномалий</li>
-            <li><span className="material-icons-round">notifications_active</span>Система алертов</li>
+            <li><span className="material-icons-round">sensors_off</span>Проверка показаний с поля</li>
+            <li><span className="material-icons-round">notifications_active</span>Уведомления</li>
           </ul>
           <div className={styles.panelStats}>
-            <div><strong>87%</strong><span>точность R²</span></div>
-            <div><strong>7</strong><span>культур</span></div>
-            <div><strong>100+</strong><span>деревьев RF</span></div>
+            <div><strong>7+</strong><span>культур в справочнике</span></div>
+            <div><strong>1</strong><span>кабинет для команды</span></div>
+            <div><strong>24/7</strong><span>доступ к данным</span></div>
           </div>
         </div>
       </div>
@@ -101,7 +101,7 @@ const LoginPage: React.FC = () => {
           <div className={styles.formHeader}>
             <span className={`material-icons-round ${styles.formIcon}`}>eco</span>
             <h1 className={styles.formTitle}>Вход в систему</h1>
-            <p className={styles.formSub}>Предиктивная аналитика полей</p>
+            <p className={styles.formSub}>Аналитика и прогнозы для ваших полей</p>
           </div>
 
           {error && (
@@ -114,7 +114,7 @@ const LoginPage: React.FC = () => {
 
           {/* Demo quick-access */}
           <div className={styles.demoSection}>
-            <p className={styles.demoLabel}>Быстрый вход (демо)</p>
+            <p className={styles.demoLabel}>Быстрый вход</p>
             <div className={styles.demoBtns}>
               {demoAccounts.map(d => (
                 <button

@@ -126,10 +126,10 @@ const SatelliteAnalyticsPage: React.FC = () => {
   const alerts = useMemo(() => {
     const out: { msg: string; color: string }[] = []
     if (meanNdvi != null && meanNdvi < 0.35) {
-      out.push({ msg: `NDVI ${meanNdvi.toFixed(2)} — низкая вегетация, возможен стресс`, color: '#f9ab00' })
+      out.push({ msg: `Низкая вегетация по снимку (${meanNdvi.toFixed(2)}), возможен стресс`, color: '#f9ab00' })
     }
     if (meanNdmi != null && meanNdmi < 0.12) {
-      out.push({ msg: `NDMI ${meanNdmi.toFixed(2)} — признаки дефицита влаги по SWIR`, color: '#ea4335' })
+      out.push({ msg: `Признаки дефицита влаги по снимку (${meanNdmi.toFixed(2)})`, color: '#ea4335' })
     }
     if (stats && stats.stressLowVegetationPercent > 25) {
       out.push({
@@ -176,7 +176,7 @@ const SatelliteAnalyticsPage: React.FC = () => {
             <h1 className={styles.title}>
               <span className="material-icons-round">satellite_alt</span> Спутниковая аналитика
             </h1>
-            <p className={styles.sub}>Нет полей — добавьте поле с координатами, чтобы загрузить Sentinel-2.</p>
+            <p className={styles.sub}>Нет полей — добавьте поле с координатами, чтобы открыть спутниковые слои.</p>
           </div>
         </div>
         <Link to="/app/fields" className={styles.exportBtn} style={{ display: 'inline-flex', textDecoration: 'none' }}>
@@ -194,7 +194,7 @@ const SatelliteAnalyticsPage: React.FC = () => {
             <span className="material-icons-round">satellite_alt</span> Спутниковая аналитика
           </h1>
           <p className={styles.sub}>
-            NDVI и NDMI из <strong>Sentinel-2 L2A</strong> (каталог Microsoft Planetary Computer). Нужен выход analytics-сервиса в интернет.
+            Вегетация и влажность почвы по спутниковым снимкам. Для загрузки снимков нужна сеть у сервера расчётов.
           </p>
           {grid?.source && (
             <p className={styles.sub} style={{ marginTop: 6, fontSize: '0.8rem' }}>
@@ -267,11 +267,11 @@ const SatelliteAnalyticsPage: React.FC = () => {
 
       {!loadingMeta && !dates.length && !error && (
         <p className={styles.sub} style={{ marginBottom: 12 }}>
-          За последние ~5 мес. под это поле нет подходящих сцен Sentinel-2 (облачность &lt;85%). Проверьте координаты поля или попробуйте позже.
+          За последние несколько месяцев нет подходящих снимков (много облаков). Проверьте координаты поля или попробуйте позже.
         </p>
       )}
 
-      {loadingMeta && <Loader text="Поиск сцен Sentinel-2…" />}
+      {loadingMeta && <Loader text="Загрузка снимков…" />}
 
       {/* Alerts */}
       {alerts.length > 0 && (
@@ -326,7 +326,7 @@ const SatelliteAnalyticsPage: React.FC = () => {
                 />
               )}
             </div>
-            <div className={styles.indexSub}>Среднее по сцене (NIR−RED)/(NIR+RED)</div>
+            <div className={styles.indexSub}>Среднее по выбранному снимку</div>
           </div>
           <div className={styles.indexCard}>
             <div className={styles.indexLabel}>NDMI</div>
@@ -344,7 +344,7 @@ const SatelliteAnalyticsPage: React.FC = () => {
                 />
               )}
             </div>
-            <div className={styles.indexSub}>Среднее (NIR−SWIR)/(NIR+SWIR)</div>
+            <div className={styles.indexSub}>Среднее по выбранному снимку</div>
           </div>
 
           <div className={styles.detailCard}>
@@ -355,7 +355,7 @@ const SatelliteAnalyticsPage: React.FC = () => {
             </div>
             <div className={styles.detailRow}>
               <span className="material-icons-round" style={{ fontSize: 18, color: '#ea4335' }}>report_problem</span>
-              <span>Низкая вегетация (NDVI {'<'} 0.35)</span>
+              <span>Низкая вегетация</span>
               <strong style={{ color: (stats?.stressLowVegetationPercent ?? 0) > 20 ? '#ea4335' : '#f9ab00' }}>
                 {stats?.stressLowVegetationPercent != null ? `${stats.stressLowVegetationPercent}%` : '—'}
               </strong>
@@ -397,16 +397,6 @@ const SatelliteAnalyticsPage: React.FC = () => {
             </div>
           </div>
 
-          <a
-            className={styles.exportBtn}
-            href="https://planetarycomputer.microsoft.com/explore?collections=sentinel-2-l2a"
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ textDecoration: 'none', justifyContent: 'center' }}
-          >
-            <span className="material-icons-round">open_in_new</span>
-            Открыть данные в Planetary Computer
-          </a>
         </div>
       </div>
     </div>

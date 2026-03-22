@@ -65,7 +65,7 @@ const Dashboard: React.FC = () => {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Дашборд</h1>
-          <p className={styles.subtitle}>Предиктивная аналитика для сельского хозяйства</p>
+          <p className={styles.subtitle}>Обзор полей, погоды и рекомендаций</p>
         </div>
         <div className={styles.date}>
           {new Date().toLocaleDateString('ru-RU', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}

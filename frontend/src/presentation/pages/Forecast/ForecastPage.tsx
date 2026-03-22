@@ -101,7 +101,7 @@ const ForecastPage: React.FC = () => {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Прогноз урожайности</h1>
-          <p className={styles.subtitle}>ML-модели на основе погодных и исторических данных</p>
+          <p className={styles.subtitle}>Прогноз по погоде и истории поля</p>
         </div>
         <Select
           options={fieldOptions}
@@ -116,8 +116,8 @@ const ForecastPage: React.FC = () => {
         <div className={styles.anomalyBanner}>
           <span className="material-icons-round">warning</span>
           <div className={styles.anomalyBannerContent}>
-            <strong>Внимание: обнаружены аномалии данных датчика</strong>
-            <p>Прогноз помечен как «Низкая достоверность». Рекомендуется проверить оборудование или внести корректировки вручную перед применением рекомендаций.</p>
+            <strong>Внимание: показания выглядят необычно</strong>
+            <p>Прогноз с пониженной достоверностью. Проверьте измерения на поле перед решениями по агротехнике.</p>
             {anomalyResult.alerts.map((a, i) => (
               <div key={i} className={styles.anomalyAlert}>
                 <span className="material-icons-round">sensors_off</span>
@@ -256,7 +256,7 @@ const ForecastPage: React.FC = () => {
           {/* Model info */}
           <div className={styles.modelInfo}>
             <span className="material-icons-round">info</span>
-            Прогноз рассчитан моделью v{currentForecast.modelVersion} · Дата расчёта: {new Date(currentForecast.createdAt).toLocaleString('ru-RU')}
+            Обновлено: {new Date(currentForecast.createdAt).toLocaleString('ru-RU')} · версия расчёта {currentForecast.modelVersion}
           </div>
         </>
       )}

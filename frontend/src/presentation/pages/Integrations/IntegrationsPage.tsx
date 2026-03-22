@@ -33,7 +33,7 @@ const TYPE_ICONS: Record<IntegrationType, string> = {
 }
 
 const PROTO_LABELS: Record<ConnectorProtocol, string> = {
-  http_poll: 'HTTP Polling', webhook: 'Webhook Push', mqtt: 'MQTT', modbus_tcp: 'Modbus TCP',
+  http_poll: 'Опрос по расписанию', webhook: 'Приём по ссылке', mqtt: 'MQTT', modbus_tcp: 'Modbus TCP',
 }
 const PROTO_ICONS: Record<ConnectorProtocol, string> = {
   http_poll: 'autorenew', webhook: 'webhook', mqtt: 'router', modbus_tcp: 'settings_ethernet',
@@ -61,10 +61,10 @@ const INTEGRATION_CONFIG_FIELDS: Record<IntegrationType, { key: string; label: s
     { key: 'chat_id', label: 'Chat ID (необязательно)', placeholder: '-100123456789' },
   ],
   iot_gateway: [
-    { key: 'endpoint_url', label: 'IoT Gateway URL (только чтение)', placeholder: 'http://gateway:8883' },
+    { key: 'endpoint_url', label: 'Адрес шлюза', placeholder: 'http://gateway:8883' },
   ],
   weather_api: [
-    { key: 'base_url', label: 'Open-Meteo URL (только чтение)', placeholder: 'https://api.open-meteo.com' },
+    { key: 'base_url', label: 'Адрес погодного сервиса', placeholder: 'https://api.open-meteo.com' },
   ],
   geo_import: [],
 }
@@ -389,11 +389,11 @@ const IntegrationsPage: React.FC = () => {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}><span className="material-icons-round">cable</span> Интеграции</h1>
-          <p className={styles.sub}>1С/ERP, метеоAPI, IoT-шлюзы, GIS, Telegram, Email и датчики</p>
+          <p className={styles.sub}>Учёт, погода, техника, карты, уведомления и датчики</p>
         </div>
         {activeTab === 'system' && (
           <button className={styles.importBtn} onClick={() => setShowImport(true)}>
-            <span className="material-icons-round">upload_file</span> Импорт GeoJSON
+            <span className="material-icons-round">upload_file</span> Импорт с карты
           </button>
         )}
         {activeTab === 'sensors' && (
@@ -529,7 +529,7 @@ const IntegrationsPage: React.FC = () => {
             <div className={styles.emptyState}>
               <span className="material-icons-round">sensors_off</span>
               <h3>Коннекторы не настроены</h3>
-              <p>Добавьте коннектор датчика для получения данных через HTTP, Webhook, MQTT или Modbus TCP</p>
+              <p>Добавьте источник данных с поля — опрос, приём по ссылке, радиоканал или промышленный протокол</p>
               <button className={styles.saveBtn} onClick={openAddConnector}>
                 <span className="material-icons-round">add</span> Добавить коннектор
               </button>
@@ -775,10 +775,10 @@ const IntegrationsPage: React.FC = () => {
                 {connForm.protocol === 'http_poll' && (
                   <div className={styles.configSection}>
                     <div className={styles.configSectionTitle}>
-                      <span className="material-icons-round">autorenew</span> HTTP Polling
+                      <span className="material-icons-round">autorenew</span> Опрос по расписанию
                     </div>
                     <div className={styles.formGroup}>
-                      <label>URL эндпоинта датчика *</label>
+                      <label>Адрес, откуда брать данные *</label>
                       <input className={styles.input} placeholder="https://sensor.example.com/api/data" value={connForm.url} onChange={e => setFormField('url', e.target.value)} />
                     </div>
                     <div className={styles.formGroup}>
@@ -801,11 +801,11 @@ const IntegrationsPage: React.FC = () => {
                 {connForm.protocol === 'webhook' && (
                   <div className={styles.configSection}>
                     <div className={styles.configSectionTitle}>
-                      <span className="material-icons-round">webhook</span> Webhook Push
+                      <span className="material-icons-round">webhook</span> Приём по ссылке
                     </div>
                     {editingConnector ? (
                       <div>
-                        <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#5f6368' }}>Webhook URL (датчик отправляет POST на этот адрес)</label>
+                        <label style={{ fontSize: '0.8rem', fontWeight: 600, color: '#5f6368' }}>Адрес для приёма данных с датчика</label>
                         <div className={styles.webhookUrlBox} style={{ marginTop: 8 }}>
                           <span className={styles.webhookUrlText}>{getWebhookUrl(editingConnector)}</span>
                           <button className={styles.copyBtn} onClick={() => copyToClipboard(getWebhookUrl(editingConnector!), 'modal')} title="Скопировать">
@@ -816,7 +816,7 @@ const IntegrationsPage: React.FC = () => {
                     ) : (
                       <div className={styles.infoMsg}>
                         <span className="material-icons-round">info</span>
-                        После создания коннектора здесь появится URL для настройки датчика.
+                        После создания здесь появится адрес для настройки датчика.
                       </div>
                     )}
                   </div>
@@ -881,8 +881,8 @@ const IntegrationsPage: React.FC = () => {
                 {/* Field mappings (shared for all protocols) */}
                 <div className={styles.configSection}>
                   <div className={styles.configSectionTitle}>
-                    <span className="material-icons-round">account_tree</span> Маппинг полей JSON
-                    <span className={styles.configSectionHint}>(JSON path, например: data.temperature)</span>
+                    <span className="material-icons-round">account_tree</span> Как читать поля из ответа
+                    <span className={styles.configSectionHint}>(например: data.temperature)</span>
                   </div>
                   <div className={styles.fieldMapGrid}>
                     {[
@@ -943,7 +943,7 @@ const IntegrationsPage: React.FC = () => {
                 <input type="file" accept=".shp,.geojson,.kml,.kmz" style={{ display: 'none' }} />
               </div>
               <div className={styles.formGroup}><label>Система координат</label>
-                <select className={styles.select}><option>WGS84 (EPSG:4326)</option><option>СК-42 (EPSG:4284)</option><option>UTM Zone 37N</option></select>
+                <select className={styles.select}><option>Обычные координаты (широта/долгота)</option><option>СК-42</option><option>UTM, зона 37N</option></select>
               </div>
               <div className={styles.formGroup}><label>Сопоставление полей</label>
                 <select className={styles.select}><option>Автоматически</option><option>Вручную</option></select>

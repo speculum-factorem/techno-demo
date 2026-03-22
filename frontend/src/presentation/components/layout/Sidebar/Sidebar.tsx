@@ -38,8 +38,8 @@ const Sidebar: React.FC<SidebarProps> = ({ open, onClose }) => {
       items: [
         { path: '/app/forecast', icon: 'trending_up', label: 'Прогноз урожая' },
         { path: '/app/irrigation', icon: 'water_drop', label: 'Рекомендации полива' },
-        { path: '/app/satellite', icon: 'satellite_alt', label: 'NDVI / Спутник' },
-        { path: '/app/model-metrics', icon: 'model_training', label: 'Метрики модели' },
+        { path: '/app/satellite', icon: 'satellite_alt', label: 'Спутник' },
+        { path: '/app/model-metrics', icon: 'model_training', label: 'Точность прогноза' },
       ],
     },
     {

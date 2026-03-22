@@ -48,11 +48,11 @@ const FieldsPage: React.FC = () => {
     const lat = Number(form.lat)
     const lng = Number(form.lng)
     if (!Number.isFinite(lat) || lat < -90 || lat > 90) {
-      alert('Укажите корректную широту WGS84 (-90…90).')
+      alert('Укажите широту в диапазоне от −90 до 90.')
       return
     }
     if (!Number.isFinite(lng) || lng < -180 || lng > 180) {
-      alert('Укажите корректную долготу WGS84 (-180…180).')
+      alert('Укажите долготу в диапазоне от −180 до 180.')
       return
     }
     await dispatch(createField({
@@ -101,10 +101,10 @@ const FieldsPage: React.FC = () => {
                 onChange={e => setForm(p => ({ ...p, status: e.target.value as FieldStatus }))} fullWidth />
               <Input label="Тип почвы" value={form.soilType} onChange={e => setForm(p => ({ ...p, soilType: e.target.value }))}
                 placeholder="Чернозём" fullWidth />
-              <Input label="Широта (WGS84)" type="number" step="any" value={form.lat} required
+              <Input label="Широта" type="number" step="any" value={form.lat} required
                 onChange={e => setForm(p => ({ ...p, lat: e.target.value }))}
                 placeholder="47.2357" fullWidth />
-              <Input label="Долгота (WGS84)" type="number" step="any" value={form.lng} required
+              <Input label="Долгота" type="number" step="any" value={form.lng} required
                 onChange={e => setForm(p => ({ ...p, lng: e.target.value }))}
                 placeholder="39.7015" fullWidth />
               <Input label="Дата посева" type="date" value={form.plantingDate}
@@ -126,7 +126,7 @@ const FieldsPage: React.FC = () => {
             </div>
             <h2 className={styles.emptyTitle}>У вас пока нет полей</h2>
             <p className={styles.emptyText}>
-              Создайте первое поле с площадью и координатами — откроются прогноз урожайности, рекомендации по поливу и спутниковая аналитика.
+              Создайте первое поле с площадью и координатами — откроются прогноз урожайности, рекомендации по поливу и снимки поля.
             </p>
             <Button icon="add" onClick={() => setShowForm(true)}>
               Добавить поле

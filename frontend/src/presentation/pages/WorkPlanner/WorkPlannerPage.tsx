@@ -82,7 +82,7 @@ const WorkPlannerPage: React.FC = () => {
       setTasks(list)
     } catch {
       setTasks([])
-      setListError('Не удалось загрузить задачи. Проверьте API и авторизацию.')
+      setListError('Не удалось загрузить задачи. Проверьте подключение и войдите снова.')
     }
   }, [])
 
