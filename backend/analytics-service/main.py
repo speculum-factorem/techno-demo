@@ -2238,17 +2238,106 @@ def ops_update_task(task_id: str, task: dict):
     return {"status": "ok"}
 
 
+def _equipment_row_to_api(r) -> dict:
+    return {
+        "id": r.id, "name": r.name, "type": r.type, "fieldId": r.field_id, "fieldName": r.field_name, "status": r.status,
+        "battery": r.battery, "signal": r.signal, "lastPing": r.last_ping, "firmware": r.firmware, "installDate": r.install_date,
+        "telemetry": json.loads(r.telemetry_json or "{}"), "sla": json.loads(r.sla_json or "{}"), "alerts": json.loads(r.alerts_json or "[]")
+    }
+
+
 @app.get("/ops/equipment")
 def ops_get_equipment():
     with SessionLocal() as db:
         _reconcile_equipment_from_recent_iot(db)
         db.commit()
         rows = db.query(OpsEquipmentRecord).all()
-        return [{
-            "id": r.id, "name": r.name, "type": r.type, "fieldId": r.field_id, "fieldName": r.field_name, "status": r.status,
-            "battery": r.battery, "signal": r.signal, "lastPing": r.last_ping, "firmware": r.firmware, "installDate": r.install_date,
-            "telemetry": json.loads(r.telemetry_json or "{}"), "sla": json.loads(r.sla_json or "{}"), "alerts": json.loads(r.alerts_json or "[]")
-        } for r in rows]
+        return [_equipment_row_to_api(r) for r in rows]
+
+
+@app.post("/ops/equipment")
+def ops_create_equipment(device: dict):
+    now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    dev_id = device.get("id") or f"dev_{uuid4().hex[:12]}"
+    telemetry = device.get("telemetry") or {}
+    sla = device.get("sla") or {"uptime": 100.0, "dataQuality": 100.0, "missedReadings": 0}
+    with SessionLocal() as db:
+        existing = db.query(OpsEquipmentRecord).filter(OpsEquipmentRecord.id == dev_id).first()
+        if existing:
+            raise HTTPException(status_code=409, detail="Device with this ID already exists")
+        row = OpsEquipmentRecord(
+            id=dev_id[:120],
+            name=str(device.get("name", "Новое устройство"))[:200],
+            type=str(device.get("type", "soil_sensor")),
+            field_id=str(device.get("fieldId", "")),
+            field_name=str(device.get("fieldName", ""))[:200],
+            status=str(device.get("status", "online")),
+            battery=int(device.get("battery", 100)),
+            signal=int(device.get("signal", 100)),
+            last_ping=str(device.get("lastPing") or now_iso),
+            firmware=str(device.get("firmware", "1.0.0"))[:50],
+            install_date=str(device.get("installDate") or datetime.utcnow().date().isoformat()),
+            telemetry_json=json.dumps(telemetry, ensure_ascii=False),
+            sla_json=json.dumps(sla, ensure_ascii=False),
+            alerts_json=json.dumps(device.get("alerts") or [], ensure_ascii=False),
+        )
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        result = _equipment_row_to_api(row)
+    _audit("field_create", f"Equipment created: {dev_id}", "Device", dev_id, device.get("name", ""))
+    return result
+
+
+@app.put("/ops/equipment/{device_id}")
+def ops_update_equipment(device_id: str, device: dict):
+    now_iso = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    with SessionLocal() as db:
+        row = db.query(OpsEquipmentRecord).filter(OpsEquipmentRecord.id == device_id).first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Device not found")
+        if "name" in device:
+            row.name = str(device["name"])[:200]
+        if "type" in device:
+            row.type = str(device["type"])
+        if "fieldId" in device:
+            row.field_id = str(device["fieldId"])
+        if "fieldName" in device:
+            row.field_name = str(device["fieldName"])[:200]
+        if "status" in device:
+            row.status = str(device["status"])
+        if "battery" in device:
+            row.battery = int(device["battery"])
+        if "signal" in device:
+            row.signal = int(device["signal"])
+        if "firmware" in device:
+            row.firmware = str(device["firmware"])[:50]
+        if "installDate" in device:
+            row.install_date = str(device["installDate"])
+        if "telemetry" in device:
+            row.telemetry_json = json.dumps(device["telemetry"], ensure_ascii=False)
+        if "sla" in device:
+            row.sla_json = json.dumps(device["sla"], ensure_ascii=False)
+        if "alerts" in device:
+            row.alerts_json = json.dumps(device["alerts"], ensure_ascii=False)
+        row.last_ping = now_iso
+        db.commit()
+        db.refresh(row)
+        result = _equipment_row_to_api(row)
+    _audit("field_update", f"Equipment updated: {device_id}", "Device", device_id)
+    return result
+
+
+@app.delete("/ops/equipment/{device_id}")
+def ops_delete_equipment(device_id: str):
+    with SessionLocal() as db:
+        row = db.query(OpsEquipmentRecord).filter(OpsEquipmentRecord.id == device_id).first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Device not found")
+        db.delete(row)
+        db.commit()
+    _audit("field_delete", f"Equipment deleted: {device_id}", "Device", device_id)
+    return {"status": "deleted", "id": device_id}
 
 
 @app.get("/ops/audit-log")

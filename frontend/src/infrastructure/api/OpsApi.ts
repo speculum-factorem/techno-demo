@@ -31,6 +31,12 @@ export const opsApi = {
   updateWorkTask: async (id: string, payload: Partial<WorkTask>) => (await apiClient.put('/analytics/ops/work-tasks/' + id, payload)).data,
 
   getEquipment: async () => (await apiClient.get<Device[]>('/analytics/ops/equipment')).data,
+  createEquipment: async (payload: Partial<Device> & { fieldId: string; name: string; type: string }) =>
+    (await apiClient.post<Device>('/analytics/ops/equipment', payload)).data,
+  updateEquipment: async (id: string, payload: Partial<Device>) =>
+    (await apiClient.put<Device>(`/analytics/ops/equipment/${encodeURIComponent(id)}`, payload)).data,
+  deleteEquipment: async (id: string) =>
+    (await apiClient.delete(`/analytics/ops/equipment/${encodeURIComponent(id)}`)).data,
   getAuditLog: async () => (await apiClient.get<AuditEntry[]>('/analytics/ops/audit-log')).data,
 
   getRules: async () => (await apiClient.get<NotificationRule[]>('/analytics/ops/notification-rules')).data,
