@@ -4,10 +4,14 @@
 // ─── PAGE ────────────────────────────────────────────────────
 .page {
   min-height: 100vh;
+  min-height: 100dvh;
   background: #fff;
   color: $text-primary;
   font-family: $font-family;
   overflow-x: hidden;
+  padding-left: env(safe-area-inset-left, 0);
+  padding-right: env(safe-area-inset-right, 0);
+  padding-bottom: env(safe-area-inset-bottom, 0);
 }
 
 // ─── NAVBAR ──────────────────────────────────────────────────
@@ -23,10 +27,12 @@
 .navInner {
   max-width: 1200px;
   margin: 0 auto;
-  padding: 0 24px;
-  height: 64px;
+  padding: 0 max(12px, env(safe-area-inset-right, 0)) 0 max(12px, env(safe-area-inset-left, 0));
+  min-height: 64px;
   @include flex(row, center, space-between, 24px);
-  @media (max-width: 480px) { padding: 0 12px; gap: 12px; }
+  flex-wrap: nowrap;
+  gap: 12px;
+  @media (min-width: 481px) { padding: 0 24px; gap: 24px; }
 }
 
 .brand {
@@ -36,7 +42,18 @@
 }
 
 .brandIcon { font-size: 28px !important; color: $secondary; }
-.brandName { font-size: $font-size-md; font-weight: 700; color: $text-primary; }
+.brandName {
+  font-size: $font-size-md;
+  font-weight: 700;
+  color: $text-primary;
+  @media (max-width: 380px) {
+    font-size: $font-size-sm;
+    max-width: 42vw;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
 .brandSub {
   font-size: $font-size-xs;
   color: $text-tertiary;
@@ -64,7 +81,172 @@
 
 .navActions {
   @include flex(row, center, flex-end, 8px);
+  flex-shrink: 0;
   @media (max-width: 600px) { .btnOutline { display: none; } }
+  @media (max-width: 768px) { display: none; }
+}
+
+.navBtnLabel {
+  @media (max-width: 420px) {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+}
+
+.navMenuBtn {
+  display: none;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: $radius-md;
+  background: transparent;
+  color: $text-primary;
+  cursor: pointer;
+  transition: background $transition-fast;
+  .material-icons-round { font-size: 26px !important; }
+  &:hover { background: $surface-variant; }
+  @media (max-width: 768px) { display: inline-flex; }
+}
+
+.navDrawer {
+  display: none;
+}
+
+@media (max-width: 768px) {
+  .navDrawer {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    position: fixed;
+    top: 64px;
+    left: 0;
+    right: 0;
+    z-index: 101;
+    max-height: 0;
+    padding: 0 16px;
+    margin: 0;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.98);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid transparent;
+    box-shadow: none;
+    opacity: 0;
+    visibility: hidden;
+    transition:
+      max-height $transition-base,
+      opacity $transition-fast,
+      padding $transition-base,
+      visibility $transition-base,
+      border-color $transition-fast;
+  }
+
+  .navDrawerOpen {
+    max-height: min(75dvh, 520px);
+    padding: 12px 16px 20px;
+    padding-left: max(16px, env(safe-area-inset-left, 0));
+    padding-right: max(16px, env(safe-area-inset-right, 0));
+    padding-bottom: max(20px, env(safe-area-inset-bottom, 0));
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    border-bottom-color: $outline;
+    box-shadow: $shadow-lg;
+    opacity: 1;
+    visibility: visible;
+  }
+}
+
+@media (min-width: 769px) {
+  .navDrawer { display: none !important; }
+  .navDrawerBackdrop { display: none !important; }
+}
+
+.navDrawerLink {
+  padding: 12px 14px;
+  border-radius: $radius-md;
+  font-size: $font-size-base;
+  font-weight: 500;
+  color: $text-primary;
+  text-decoration: none;
+  transition: background $transition-fast;
+  &:hover,
+  &:focus-visible { background: $surface-variant; outline: none; }
+}
+
+.navDrawerActions {
+  @include flex(row, center, stretch, 10px);
+  flex-wrap: wrap;
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid $outline;
+}
+
+.navDrawerPrimary {
+  @include flex(row, center, center, 6px);
+  flex: 1;
+  min-width: 120px;
+  padding: 12px 16px;
+  background: $primary;
+  color: #fff !important;
+  border-radius: $radius-full;
+  font-weight: 600;
+  text-decoration: none;
+  text-align: center;
+  &:hover { background: $primary-dark; }
+}
+
+.navDrawerSecondary {
+  @include flex(row, center, center, 6px);
+  flex: 1;
+  min-width: 120px;
+  padding: 12px 16px;
+  border: 1.5px solid $outline;
+  border-radius: $radius-full;
+  font-weight: 600;
+  color: $text-primary;
+  text-decoration: none;
+  text-align: center;
+  &:hover { border-color: $primary; color: $primary; }
+}
+
+.navDrawerCta {
+  @include flex(row, center, center, 8px);
+  margin-top: 8px;
+  padding: 14px 16px;
+  background: $primary;
+  color: #fff !important;
+  border-radius: $radius-full;
+  font-weight: 600;
+  text-decoration: none;
+  .material-icons-round { font-size: 18px !important; }
+  &:hover { background: $primary-dark; }
+}
+
+.navDrawerBackdrop {
+  display: none;
+  @media (max-width: 768px) {
+    display: block;
+    position: fixed;
+    inset: 64px 0 0 0;
+    z-index: 100;
+    margin: 0;
+    padding: 0;
+    border: none;
+    background: rgba(0, 0, 0, 0.35);
+    cursor: pointer;
+  }
 }
 
 .btnOutline {
@@ -96,65 +278,91 @@
 // ─── HERO ─────────────────────────────────────────────────────
 .hero {
   min-height: calc(100vh - 64px);
+  min-height: calc(100dvh - 64px);
   background: linear-gradient(135deg, #f0f7ff 0%, #f0faf4 50%, #fffbf0 100%);
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 48px;
+  gap: clamp(24px, 4vw, 48px);
   align-items: center;
   max-width: 1200px;
   margin: 0 auto;
-  padding: 60px 24px;
+  padding: clamp(28px, 5vw, 60px) clamp(12px, 4vw, 24px);
   overflow-x: clip;
-  @media (max-width: 960px) { grid-template-columns: 1fr; overflow-x: visible; }
+  @media (max-width: 960px) {
+    grid-template-columns: 1fr;
+    overflow-x: visible;
+    align-items: stretch;
+    min-height: auto;
+    padding-bottom: clamp(32px, 8vw, 48px);
+  }
 }
 
 .heroInner {
   @include flex(column, flex-start, flex-start, 24px);
+  min-width: 0;
+  @media (max-width: 480px) { gap: 18px; }
 }
 
 .heroBadge {
   @include flex(row, center, flex-start, 6px);
+  flex-wrap: wrap;
   background: $primary-light;
   color: $primary;
   border-radius: $radius-full;
   padding: 6px 14px;
-  font-size: $font-size-sm;
+  font-size: clamp(11px, 2.5vw, #{$font-size-sm});
   font-weight: 600;
-  .material-icons-round { font-size: 14px !important; }
+  max-width: 100%;
+  .material-icons-round { font-size: 14px !important; flex-shrink: 0; }
 }
 
 .heroTitle {
-  font-size: clamp(36px, 5vw, 60px);
+  font-size: clamp(28px, 5.5vw + 0.5rem, 60px);
   font-weight: 800;
   line-height: 1.08;
   color: $text-primary;
   margin: 0;
+  word-break: break-word;
 }
 
 .heroAccent { color: $secondary; }
 
 .heroDesc {
-  font-size: $font-size-md;
+  font-size: clamp($font-size-sm, 2.5vw, $font-size-md);
   color: $text-secondary;
   line-height: 1.6;
   max-width: 520px;
   margin: 0;
 }
 
-.heroCta { @include flex(row, center, flex-start, 12px); flex-wrap: wrap; }
+.heroCta {
+  @include flex(row, center, flex-start, 12px);
+  flex-wrap: wrap;
+  width: 100%;
+  @media (max-width: 440px) {
+    flex-direction: column;
+    align-items: stretch;
+    .ctaPrimary,
+    .ctaSecondary {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}
 
 .ctaPrimary {
   @include flex(row, center, flex-start, 8px);
   background: $primary;
   color: #fff;
-  padding: 14px 28px;
+  padding: clamp(12px, 2vw, 14px) clamp(18px, 4vw, 28px);
   border-radius: $radius-full;
-  font-size: $font-size-base;
+  font-size: clamp($font-size-sm, 2.5vw, $font-size-base);
   font-weight: 700;
   text-decoration: none;
   box-shadow: 0 4px 16px rgba(26,115,232,0.35);
   transition: all $transition-fast;
-  .material-icons-round { font-size: 18px !important; }
+  text-align: center;
+  .material-icons-round { font-size: 18px !important; flex-shrink: 0; }
   &:hover { background: $primary-dark; box-shadow: 0 6px 20px rgba(26,115,232,0.45); transform: translateY(-1px); }
 }
 
@@ -162,36 +370,47 @@
   @include flex(row, center, flex-start, 8px);
   background: #fff;
   color: $text-primary;
-  padding: 14px 28px;
+  padding: clamp(12px, 2vw, 14px) clamp(18px, 4vw, 28px);
   border-radius: $radius-full;
-  font-size: $font-size-base;
+  font-size: clamp($font-size-sm, 2.5vw, $font-size-base);
   font-weight: 600;
   text-decoration: none;
   border: 1.5px solid $outline;
   transition: all $transition-fast;
-  .material-icons-round { font-size: 18px !important; color: $secondary; }
+  text-align: center;
+  .material-icons-round { font-size: 18px !important; color: $secondary; flex-shrink: 0; }
   &:hover { border-color: $secondary; color: $secondary; }
 }
 
 .statsBar {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 16px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(10px, 2vw, 16px);
   background: #fff;
   border: 1px solid $outline;
   border-radius: $radius-xl;
-  padding: 20px;
+  padding: clamp(14px, 3vw, 20px);
   box-shadow: $shadow-md;
-  @media (max-width: 600px) { grid-template-columns: repeat(2, 1fr); }
+  width: 100%;
+  max-width: 100%;
+  @media (max-width: 720px) { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  @media (max-width: 380px) { grid-template-columns: 1fr; }
 }
 
 .statItem {
   @include flex(row, center, flex-start, 10px);
-  .material-icons-round { font-size: 20px !important; color: $primary; }
+  min-width: 0;
+  .material-icons-round { font-size: 20px !important; color: $primary; flex-shrink: 0; }
 }
 
 .statValue { font-size: $font-size-lg; font-weight: 700; color: $text-primary; line-height: 1; }
-.statLabel { font-size: $font-size-xs; color: $text-tertiary; margin-top: 2px; }
+.statLabel {
+  font-size: $font-size-xs;
+  color: $text-tertiary;
+  margin-top: 2px;
+  line-height: 1.35;
+  word-break: break-word;
+}
 
 // ─── HERO WIREFRAME (no fake KPI numbers) ────────────────────
 .heroVisual {
@@ -199,7 +418,11 @@
   width: 100%;
   min-width: 0;
   justify-self: stretch;
-  @media (max-width: 960px) { display: none; }
+  @media (max-width: 960px) {
+    max-width: min(100%, 520px);
+    margin-left: auto;
+    margin-right: auto;
+  }
 }
 
 .wireframeDisclaimer {
@@ -214,16 +437,21 @@
 
 .wireframe {
   background: #fff;
-  border-radius: 16px;
+  border-radius: clamp(12px, 2vw, 16px);
   box-shadow: 0 20px 60px rgba(0,0,0,0.12);
   overflow: hidden;
   border: 1px solid $outline;
   width: 100%;
   max-width: 100%;
-  /* Фиксированная высота колонки героя — иначе flex внутри тела не заполняет «экран» */
-  height: clamp(300px, 42vh, 440px);
+  height: clamp(260px, 36vh, 440px);
   display: flex;
   flex-direction: column;
+  @media (max-width: 960px) {
+    height: clamp(280px, 38vh, 400px);
+  }
+  @media (max-width: 480px) {
+    height: clamp(240px, 34vh, 360px);
+  }
 }
 
 .wireframeTopBar {
@@ -268,11 +496,11 @@
 
 .wireframeBody {
   flex: 1;
-  padding: 12px;
+  padding: clamp(8px, 2vw, 12px);
   min-height: 0;
   display: grid;
   grid-template-rows: minmax(0, 1.15fr) minmax(0, 1fr);
-  gap: 10px;
+  gap: clamp(6px, 1.5vw, 10px);
   align-content: stretch;
 }
 
@@ -283,14 +511,26 @@
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   grid-template-rows: repeat(2, minmax(0, 1fr));
-  gap: 8px;
+  gap: clamp(6px, 1.2vw, 8px);
+  @media (max-width: 360px) {
+    grid-template-columns: 1fr;
+    grid-template-rows: repeat(4, minmax(0, auto));
+    height: auto;
+    min-height: 0;
+  }
+}
+
+@media (max-width: 360px) {
+  .wireframeBody {
+    grid-template-rows: auto minmax(72px, 1fr);
+  }
 }
 
 .wireframeCard {
-  @include flex(row, center, flex-start, 8px);
+  @include flex(row, center, flex-start, clamp(6px, 1.5vw, 8px));
   min-width: 0;
   min-height: 0;
-  padding: 8px 10px;
+  padding: clamp(6px, 1.5vw, 8px) clamp(8px, 2vw, 10px);
   background: $surface-variant;
   border-radius: $radius-md;
   border: 1px dashed rgba(0, 0, 0, 0.12);
@@ -298,12 +538,12 @@
 
 .wireframeCardIcon {
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
+  width: clamp(24px, 5vw, 28px);
+  height: clamp(24px, 5vw, 28px);
   display: inline-flex !important;
   align-items: center;
   justify-content: center;
-  font-size: 20px !important;
+  font-size: clamp(18px, 4vw, 20px) !important;
   line-height: 1 !important;
   color: $text-tertiary;
 }
@@ -383,7 +623,8 @@
 
 .sectionMeta {
   text-align: center;
-  margin-bottom: 48px;
+  margin-bottom: clamp(28px, 6vw, 48px);
+  padding: 0 4px;
 }
 
 .sectionTag {
@@ -405,11 +646,12 @@
 }
 
 .sectionDesc {
-  font-size: $font-size-md;
+  font-size: clamp($font-size-sm, 2.5vw, $font-size-md);
   color: $text-secondary;
   max-width: 560px;
   margin: 0 auto;
   line-height: 1.6;
+  padding: 0 4px;
 }
 
 // ─── FEATURES ─────────────────────────────────────────────────
@@ -417,22 +659,25 @@
 
 .featuresGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+  gap: clamp(14px, 3vw, 20px);
 }
 
 .featureCard {
   background: #fff;
   border-radius: $radius-xl;
-  padding: 24px;
+  padding: clamp(18px, 4vw, 24px);
   border: 1px solid $outline;
   transition: all $transition-base;
   @include flex(column, flex-start, flex-start, 10px);
+  min-width: 0;
 
   &:hover {
-    transform: translateY(-4px);
-    box-shadow: $shadow-lg;
-    border-color: $primary;
+    @media (hover: hover) {
+      transform: translateY(-4px);
+      box-shadow: $shadow-lg;
+      border-color: $primary;
+    }
   }
 }
 
@@ -483,6 +728,12 @@
 .stepContent {
   @include flex(row, flex-start, flex-start, 16px);
   padding-bottom: 32px;
+  min-width: 0;
+  @media (max-width: 540px) {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
 }
 
 .stepIcon {
@@ -502,9 +753,9 @@
 
 .techGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 12px;
-  margin-bottom: 48px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 148px), 1fr));
+  gap: clamp(8px, 2vw, 12px);
+  margin-bottom: clamp(32px, 6vw, 48px);
 }
 
 .techCard {
@@ -521,9 +772,11 @@
 .archDiagram {
   background: $text-primary;
   border-radius: $radius-xl;
-  padding: 32px;
+  padding: clamp(16px, 4vw, 32px);
   @include flex(column, center, center, 8px);
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  max-width: 100%;
 }
 
 .archRow { @include flex(row, center, center, 8px); flex-wrap: wrap; }
@@ -567,18 +820,34 @@
   p { font-size: $font-size-md; color: rgba(255,255,255,0.8); margin: 0; }
 }
 
-.ctaButtons { @include flex(row, center, center, 12px); flex-wrap: wrap; }
+.ctaButtons {
+  @include flex(row, center, center, 12px);
+  flex-wrap: wrap;
+  width: 100%;
+  max-width: 100%;
+  @media (max-width: 440px) {
+    flex-direction: column;
+    align-items: stretch;
+    .ctaBtnPrimary,
+    .ctaBtnOutline {
+      width: 100%;
+      justify-content: center;
+    }
+  }
+}
 
 .ctaBtnPrimary {
   @include flex(row, center, flex-start, 8px);
   background: #fff;
   color: $primary;
-  padding: 14px 28px;
+  padding: clamp(12px, 2vw, 14px) clamp(18px, 4vw, 28px);
   border-radius: $radius-full;
   font-weight: 700;
+  font-size: clamp($font-size-sm, 2.5vw, $font-size-base);
   text-decoration: none;
   transition: all $transition-fast;
-  .material-icons-round { font-size: 18px !important; }
+  text-align: center;
+  .material-icons-round { font-size: 18px !important; flex-shrink: 0; }
   &:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
 }
 
@@ -586,24 +855,28 @@
   @include flex(row, center, flex-start, 8px);
   background: transparent;
   color: #fff;
-  padding: 14px 28px;
+  padding: clamp(12px, 2vw, 14px) clamp(18px, 4vw, 28px);
   border-radius: $radius-full;
   border: 2px solid rgba(255,255,255,0.6);
   font-weight: 600;
+  font-size: clamp($font-size-sm, 2.5vw, $font-size-base);
   text-decoration: none;
   transition: all $transition-fast;
-  .material-icons-round { font-size: 18px !important; }
+  text-align: center;
+  .material-icons-round { font-size: 18px !important; flex-shrink: 0; }
   &:hover { background: rgba(255,255,255,0.1); border-color: #fff; }
 }
 
 .ctaHint {
-  font-size: $font-size-sm !important;
+  font-size: clamp(11px, 2.5vw, #{$font-size-sm}) !important;
   color: rgba(255,255,255,0.65) !important;
   background: rgba(255,255,255,0.1);
   border-radius: $radius-full;
-  padding: 8px 18px;
+  padding: 8px clamp(12px, 3vw, 18px);
   line-height: 1.5;
   max-width: 520px;
+  width: 100%;
+  box-sizing: border-box;
   margin-left: auto;
   margin-right: auto;
   strong { color: rgba(255,255,255,0.9); }
@@ -618,7 +891,8 @@
 // ─── FOOTER ───────────────────────────────────────────────────
 .footer {
   background: $text-primary;
-  padding: 32px 24px;
+  padding: 32px max(16px, env(safe-area-inset-right, 0)) 32px max(16px, env(safe-area-inset-left, 0));
+  padding-bottom: max(32px, env(safe-area-inset-bottom, 0));
 }
 
 .footerInner {
@@ -635,7 +909,12 @@
 .footerName { font-size: $font-size-base; font-weight: 700; color: #fff; }
 .footerSub { font-size: $font-size-xs; color: rgba(255,255,255,0.5); margin-top: 2px; }
 
-.footerLinks { @include flex(row, center, flex-end, 4px); }
+.footerLinks {
+  @include flex(row, center, flex-end, 4px);
+  flex-wrap: wrap;
+  justify-content: center;
+  @media (min-width: 601px) { justify-content: flex-end; }
+}
 
 .footerLink {
   padding: 6px 12px;

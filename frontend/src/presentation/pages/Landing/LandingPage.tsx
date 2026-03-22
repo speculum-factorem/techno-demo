@@ -89,6 +89,31 @@ const platformPillars = [
 
 const LandingPage: React.FC = () => {
   const isAuthenticated = !!localStorage.getItem('tokens')
+  const [menuOpen, setMenuOpen] = React.useState(false)
+
+  const closeMenu = () => setMenuOpen(false)
+
+  React.useEffect(() => {
+    const onResize = () => {
+      if (window.innerWidth > 768) setMenuOpen(false)
+    }
+    window.addEventListener('resize', onResize)
+    return () => window.removeEventListener('resize', onResize)
+  }, [])
+
+  React.useEffect(() => {
+    if (!menuOpen) return
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setMenuOpen(false)
+    }
+    window.addEventListener('keydown', onEsc)
+    const prev = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => {
+      window.removeEventListener('keydown', onEsc)
+      document.body.style.overflow = prev
+    }
+  }, [menuOpen])
 
   return (
     <div className={styles.page}>
@@ -96,11 +121,11 @@ const LandingPage: React.FC = () => {
       {/* ===== NAVBAR ===== */}
       <nav className={styles.navbar}>
         <div className={styles.navInner}>
-          <div className={styles.brand}>
+          <Link to="/" className={styles.brand} onClick={closeMenu}>
             <span className={`material-icons-round ${styles.brandIcon}`}>eco</span>
             <span className={styles.brandName}>АгроАналитика</span>
             <span className={styles.brandSub}>Веб-платформа</span>
-          </div>
+          </Link>
           <div className={styles.navLinks}>
             <a href="#features" className={styles.navLink}>Возможности</a>
             <a href="#how" className={styles.navLink}>Как работает</a>
@@ -111,9 +136,9 @@ const LandingPage: React.FC = () => {
           </div>
           <div className={styles.navActions}>
             {isAuthenticated ? (
-              <Link to="/app" className={styles.btnPrimary}>
+              <Link to="/app" className={styles.btnPrimary} aria-label="Открыть приложение">
                 <span className="material-icons-round">dashboard</span>
-                Открыть приложение
+                <span className={styles.navBtnLabel}>Открыть приложение</span>
               </Link>
             ) : (
               <>
@@ -122,8 +147,49 @@ const LandingPage: React.FC = () => {
               </>
             )}
           </div>
+          <button
+            type="button"
+            className={styles.navMenuBtn}
+            aria-label={menuOpen ? 'Закрыть меню' : 'Открыть меню'}
+            aria-expanded={menuOpen}
+            aria-controls="landing-nav-drawer"
+            onClick={() => setMenuOpen(o => !o)}
+          >
+            <span className="material-icons-round">{menuOpen ? 'close' : 'menu'}</span>
+          </button>
         </div>
       </nav>
+      <div
+        className={`${styles.navDrawer} ${menuOpen ? styles.navDrawerOpen : ''}`}
+        id="landing-nav-drawer"
+        aria-hidden={!menuOpen}
+      >
+        <a href="#features" className={styles.navDrawerLink} onClick={closeMenu}>Возможности</a>
+        <a href="#how" className={styles.navDrawerLink} onClick={closeMenu}>Как работает</a>
+        <a href="#tech" className={styles.navDrawerLink} onClick={closeMenu}>Платформа</a>
+        <Link to="/about-service" className={styles.navDrawerLink} onClick={closeMenu}>О сервисе</Link>
+        <Link to="/about-app" className={styles.navDrawerLink} onClick={closeMenu}>О приложении</Link>
+        <Link to="/docs" className={styles.navDrawerLink} onClick={closeMenu}>Документация</Link>
+        {isAuthenticated ? (
+          <Link to="/app" className={styles.navDrawerCta} onClick={closeMenu}>
+            <span className="material-icons-round">dashboard</span>
+            Открыть приложение
+          </Link>
+        ) : (
+          <div className={styles.navDrawerActions}>
+            <Link to="/auth/login" className={styles.navDrawerSecondary} onClick={closeMenu}>Войти</Link>
+            <Link to="/auth/register" className={styles.navDrawerPrimary} onClick={closeMenu}>Регистрация</Link>
+          </div>
+        )}
+      </div>
+      {menuOpen && (
+        <button
+          type="button"
+          className={styles.navDrawerBackdrop}
+          aria-label="Закрыть меню"
+          onClick={closeMenu}
+        />
+      )}
 
       {/* ===== HERO ===== */}
       <section className={styles.hero}>
