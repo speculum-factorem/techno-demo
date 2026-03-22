@@ -185,28 +185,37 @@ const LandingPage: React.FC = () => {
             <div className={styles.wireframeTopBar}>
               <span className={styles.wireframeDots}><span /><span /><span /></span>
               <span className={styles.wireframeTitle}>Приложение · обзор</span>
+              <span className={styles.wireframeTopBarBalance} aria-hidden />
             </div>
             <div className={styles.wireframeBody}>
               <div className={styles.wireframeGrid}>
                 <div className={styles.wireframeCard}>
-                  <span className="material-icons-round">grass</span>
-                  <span className={styles.wireframeCardLabel}>Поля</span>
-                  <span className={styles.wireframeCardHint}>ваши участки</span>
+                  <span className={`material-icons-round ${styles.wireframeCardIcon}`}>grass</span>
+                  <div className={styles.wireframeCardText}>
+                    <span className={styles.wireframeCardLabel}>Поля</span>
+                    <span className={styles.wireframeCardHint}>ваши участки</span>
+                  </div>
                 </div>
                 <div className={styles.wireframeCard}>
-                  <span className="material-icons-round">cloud</span>
-                  <span className={styles.wireframeCardLabel}>Погода</span>
-                  <span className={styles.wireframeCardHint}>прогноз</span>
+                  <span className={`material-icons-round ${styles.wireframeCardIcon}`}>cloud</span>
+                  <div className={styles.wireframeCardText}>
+                    <span className={styles.wireframeCardLabel}>Погода</span>
+                    <span className={styles.wireframeCardHint}>прогноз</span>
+                  </div>
                 </div>
                 <div className={styles.wireframeCard}>
-                  <span className="material-icons-round">trending_up</span>
-                  <span className={styles.wireframeCardLabel}>Прогноз</span>
-                  <span className={styles.wireframeCardHint}>урожайность</span>
+                  <span className={`material-icons-round ${styles.wireframeCardIcon}`}>trending_up</span>
+                  <div className={styles.wireframeCardText}>
+                    <span className={styles.wireframeCardLabel}>Прогноз</span>
+                    <span className={styles.wireframeCardHint}>урожайность</span>
+                  </div>
                 </div>
                 <div className={styles.wireframeCard}>
-                  <span className="material-icons-round">notifications</span>
-                  <span className={styles.wireframeCardLabel}>Алерты</span>
-                  <span className={styles.wireframeCardHint}>события</span>
+                  <span className={`material-icons-round ${styles.wireframeCardIcon}`}>notifications</span>
+                  <div className={styles.wireframeCardText}>
+                    <span className={styles.wireframeCardLabel}>Алерты</span>
+                    <span className={styles.wireframeCardHint}>события</span>
+                  </div>
                 </div>
               </div>
               <div className={styles.wireframeChart}>
