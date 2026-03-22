@@ -258,5 +258,5 @@ def send_report_via_email(
         except smtplib.SMTPException:
             pass
         if MAIL_USERNAME:
-            smtp.login(MAIL_USERNAME, MAIL_PASSWORD)
+            smtp.login(MAIL_USERNAME, MAIL_PASSWORD) 
         smtp.sendmail(MAIL_FROM, recipients, msg.as_string())
