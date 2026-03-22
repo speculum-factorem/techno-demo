@@ -74,7 +74,7 @@ const Dashboard: React.FC = () => {
 
       {/* KPI Cards */}
       <div className={styles.kpiGrid}>
-        <Card className={styles.kpiCard} hoverable onClick={() => navigate('/fields')}>
+        <Card className={styles.kpiCard} hoverable onClick={() => navigate('/app/fields')}>
           <div className={styles.kpiIcon} style={{ background: '#e8f0fe' }}>
             <span className="material-icons-round" style={{ color: '#1a73e8' }}>grass</span>
           </div>
@@ -85,7 +85,7 @@ const Dashboard: React.FC = () => {
           </div>
         </Card>
 
-        <Card className={styles.kpiCard} hoverable onClick={() => navigate('/fields')}>
+        <Card className={styles.kpiCard} hoverable onClick={() => navigate('/app/fields')}>
           <div className={styles.kpiIcon} style={{ background: '#e6f4ea' }}>
             <span className="material-icons-round" style={{ color: '#34a853' }}>agriculture</span>
           </div>
@@ -97,7 +97,7 @@ const Dashboard: React.FC = () => {
         </Card>
 
         <Card className={`${styles.kpiCard} ${criticalAlerts > 0 ? styles.kpiCardDanger : ''}`}
-          hoverable onClick={() => navigate('/alerts')}>
+          hoverable onClick={() => navigate('/app/alerts')}>
           <div className={styles.kpiIcon} style={{ background: criticalAlerts > 0 ? '#fce8e6' : '#f8f9fa' }}>
             <span className="material-icons-round"
               style={{ color: criticalAlerts > 0 ? '#ea4335' : '#5f6368' }}>
@@ -114,7 +114,7 @@ const Dashboard: React.FC = () => {
         </Card>
 
         <Card className={`${styles.kpiCard} ${criticalIrrigation > 0 ? styles.kpiCardWarning : ''}`}
-          hoverable onClick={() => navigate('/irrigation')}>
+          hoverable onClick={() => navigate('/app/irrigation')}>
           <div className={styles.kpiIcon} style={{ background: criticalIrrigation > 0 ? '#fff8e1' : '#e8f0fe' }}>
             <span className="material-icons-round"
               style={{ color: criticalIrrigation > 0 ? '#f59e0b' : '#1a73e8' }}>
@@ -138,59 +138,74 @@ const Dashboard: React.FC = () => {
               <span className="material-icons-round">grass</span>
               Состояние полей
             </h2>
-            <button className={styles.cardAction} onClick={() => navigate('/fields')}>
+            <button className={styles.cardAction} onClick={() => navigate('/app/fields')}>
               Все поля <span className="material-icons-round">arrow_forward</span>
             </button>
           </div>
           <div className={styles.fieldsList}>
-            {fields.map(field => {
-              const summary = summaries[field.id]
-              const forecast = forecasts[field.id]?.[0]
-              const irrigation = recommendations[field.id]?.[0]
-              return (
-                <div key={field.id} className={styles.fieldRow}
-                  onClick={() => navigate(`/fields/${field.id}`)}>
-                  <div className={styles.fieldInfo}>
-                    <div className={styles.fieldName}>{field.name}</div>
-                    <div className={styles.fieldMeta}>
-                      {cropLabels[field.cropType]} · {field.area} га · {field.soilType}
+            {fields.length === 0 ? (
+              <div className={styles.fieldsEmpty}>
+                <div className={styles.fieldsEmptyIcon}>
+                  <span className="material-icons-round">grass</span>
+                </div>
+                <p className={styles.fieldsEmptyTitle}>У вас пока нет полей</p>
+                <p className={styles.fieldsEmptyHint}>
+                  Добавьте поле в разделе «Поля», чтобы здесь отображались культура, влажность и прогнозы.
+                </p>
+                <button type="button" className={styles.fieldsEmptyCta} onClick={() => navigate('/app/fields')}>
+                  Перейти к полям
+                </button>
+              </div>
+            ) : (
+              fields.map(field => {
+                const summary = summaries[field.id]
+                const forecast = forecasts[field.id]?.[0]
+                const irrigation = recommendations[field.id]?.[0]
+                return (
+                  <div key={field.id} className={styles.fieldRow}
+                    onClick={() => navigate('/app/fields')}>
+                    <div className={styles.fieldInfo}>
+                      <div className={styles.fieldName}>{field.name}</div>
+                      <div className={styles.fieldMeta}>
+                        {cropLabels[field.cropType]} · {field.area} га · {field.soilType}
+                      </div>
+                    </div>
+                    <div className={styles.fieldStats}>
+                      {field.currentMoistureLevel != null && (
+                        <div className={`${styles.statItem} ${field.currentMoistureLevel < 40 ? styles.statDanger : field.currentMoistureLevel < 55 ? styles.statWarning : ''}`}>
+                          <span className="material-icons-round">water</span>
+                          {field.currentMoistureLevel}%
+                        </div>
+                      )}
+                      {summary && (
+                        <div className={styles.statItem}>
+                          <span className="material-icons-round">thermostat</span>
+                          {summary.current.temperature.toFixed(1)}°C
+                        </div>
+                      )}
+                      {forecast && (
+                        <div className={styles.statItem}>
+                          <span className="material-icons-round">trending_up</span>
+                          {forecast.predictedYield} т/га
+                        </div>
+                      )}
+                      <Badge
+                        variant={field.status === 'active' ? 'success' : field.status === 'idle' ? 'neutral' : 'info'}
+                        size="sm"
+                      >
+                        {statusLabels[field.status]}
+                      </Badge>
+                      {irrigation && irrigation.priority === 'critical' && (
+                        <Badge variant="danger" size="sm" dot>Полив!</Badge>
+                      )}
+                      {irrigation && irrigation.priority === 'high' && (
+                        <Badge variant="warning" size="sm" dot>Полив</Badge>
+                      )}
                     </div>
                   </div>
-                  <div className={styles.fieldStats}>
-                    {field.currentMoistureLevel != null && (
-                      <div className={`${styles.statItem} ${field.currentMoistureLevel < 40 ? styles.statDanger : field.currentMoistureLevel < 55 ? styles.statWarning : ''}`}>
-                        <span className="material-icons-round">water</span>
-                        {field.currentMoistureLevel}%
-                      </div>
-                    )}
-                    {summary && (
-                      <div className={styles.statItem}>
-                        <span className="material-icons-round">thermostat</span>
-                        {summary.current.temperature.toFixed(1)}°C
-                      </div>
-                    )}
-                    {forecast && (
-                      <div className={styles.statItem}>
-                        <span className="material-icons-round">trending_up</span>
-                        {forecast.predictedYield} т/га
-                      </div>
-                    )}
-                    <Badge
-                      variant={field.status === 'active' ? 'success' : field.status === 'idle' ? 'neutral' : 'info'}
-                      size="sm"
-                    >
-                      {statusLabels[field.status]}
-                    </Badge>
-                    {irrigation && irrigation.priority === 'critical' && (
-                      <Badge variant="danger" size="sm" dot>Полив!</Badge>
-                    )}
-                    {irrigation && irrigation.priority === 'high' && (
-                      <Badge variant="warning" size="sm" dot>Полив</Badge>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+                )
+              })
+            )}
           </div>
         </Card>
 
@@ -202,7 +217,7 @@ const Dashboard: React.FC = () => {
                 <span className="material-icons-round">notifications_active</span>
                 Уведомления
               </h2>
-              <button className={styles.cardAction} onClick={() => navigate('/alerts')}>
+              <button className={styles.cardAction} onClick={() => navigate('/app/alerts')}>
                 Все <span className="material-icons-round">arrow_forward</span>
               </button>
             </div>
@@ -231,7 +246,7 @@ const Dashboard: React.FC = () => {
 
           {/* Weather snapshot */}
           {fields[0] && summaries[fields[0].id] && (
-            <Card padding="md" hoverable onClick={() => navigate('/weather')}>
+            <Card padding="md" hoverable onClick={() => navigate('/app/weather')}>
               <div className={styles.weatherSnap}>
                 <div className={styles.weatherSnapHeader}>
                   <span className="material-icons-round">cloud</span>

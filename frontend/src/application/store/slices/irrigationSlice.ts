@@ -81,7 +81,7 @@ const irrigationSlice = createSlice({
   extraReducers: (builder) => {
     builder
       // recommendations
-      .addCase(fetchIrrigationRecommendations.pending, (state) => { state.loading = true })
+      .addCase(fetchIrrigationRecommendations.pending, (state) => { state.loading = true; state.error = null })
       .addCase(fetchIrrigationRecommendations.fulfilled, (state, action) => {
         state.loading = false
         state.recommendations[action.payload.fieldId] = action.payload.data
@@ -91,7 +91,7 @@ const irrigationSlice = createSlice({
         state.error = action.payload as string
       })
       // schedule
-      .addCase(fetchIrrigationSchedule.pending, (state) => { state.loading = true })
+      .addCase(fetchIrrigationSchedule.pending, (state) => { state.loading = true; state.error = null })
       .addCase(fetchIrrigationSchedule.fulfilled, (state, action) => {
         state.loading = false
         state.schedules[action.payload.fieldId] = action.payload.data
@@ -101,7 +101,7 @@ const irrigationSlice = createSlice({
         state.error = action.payload as string
       })
       // tasks (Java irrigation-service)
-      .addCase(fetchIrrigationTasks.pending, (state) => { state.tasksLoading = true })
+      .addCase(fetchIrrigationTasks.pending, (state) => { state.tasksLoading = true; state.error = null })
       .addCase(fetchIrrigationTasks.fulfilled, (state, action) => {
         state.tasksLoading = false
         state.tasks[action.payload.fieldId] = action.payload.data

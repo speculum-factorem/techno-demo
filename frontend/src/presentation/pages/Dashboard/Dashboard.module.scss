@@ -163,6 +163,57 @@
   @include flex(column, stretch, flex-start);
 }
 
+.fieldsEmpty {
+  @include flex(column, center, center, 10px);
+  padding: 40px 24px 36px;
+  text-align: center;
+  background: linear-gradient(180deg, rgba($primary, 0.04) 0%, transparent 100%);
+}
+
+.fieldsEmptyIcon {
+  width: 56px;
+  height: 56px;
+  border-radius: $radius-full;
+  background: $primary-light;
+  @include flex(row, center, center);
+  margin-bottom: 4px;
+
+  .material-icons-round {
+    font-size: 28px !important;
+    color: $primary;
+  }
+}
+
+.fieldsEmptyTitle {
+  font-size: $font-size-md;
+  font-weight: 600;
+  color: $text-primary;
+  margin: 0;
+}
+
+.fieldsEmptyHint {
+  font-size: $font-size-sm;
+  color: $text-secondary;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 320px;
+}
+
+.fieldsEmptyCta {
+  @include button-base;
+  margin-top: 10px;
+  padding: 10px 20px;
+  border-radius: $radius-md;
+  background: $primary;
+  color: $text-on-primary;
+  font-size: $font-size-sm;
+  font-weight: 500;
+
+  &:hover {
+    background: $primary-dark;
+  }
+}
+
 .fieldRow {
   @include flex(row, center, space-between, 12px);
   padding: 14px 20px;

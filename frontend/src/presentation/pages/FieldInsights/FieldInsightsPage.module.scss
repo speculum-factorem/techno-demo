@@ -11,6 +11,47 @@
   @media (max-width: 480px) { font-size: $font-size-lg; }
 }
 .subtitle { color: $text-secondary; }
+
+.emptyCard {
+  max-width: 520px;
+  width: 100%;
+  align-self: center;
+}
+
+.emptyState {
+  @include flex(column, center, center, 16px);
+  padding: 44px 28px 40px;
+  text-align: center;
+}
+
+.emptyIconWrap {
+  width: 72px;
+  height: 72px;
+  border-radius: $radius-full;
+  background: $primary-light;
+  @include flex(row, center, center);
+
+  .material-icons-round {
+    font-size: 36px !important;
+    color: $primary;
+  }
+}
+
+.emptyTitle {
+  font-size: $font-size-lg;
+  font-weight: 600;
+  color: $text-primary;
+  margin: 0;
+}
+
+.emptyText {
+  font-size: $font-size-sm;
+  color: $text-secondary;
+  line-height: 1.55;
+  margin: 0;
+  max-width: 400px;
+}
+
 .selector {
   min-width: 320px;
   @media (max-width: 480px) { min-width: 100%; }

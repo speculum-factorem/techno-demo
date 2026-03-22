@@ -75,7 +75,11 @@ const FieldsPage: React.FC = () => {
       <div className={styles.header}>
         <div>
           <h1 className={styles.title}>Управление полями</h1>
-          <p className={styles.subtitle}>{fields.length} полей · {totalArea.toFixed(1)} га общая площадь</p>
+          <p className={styles.subtitle}>
+            {fields.length === 0
+              ? 'У вас пока нет полей'
+              : `${fields.length} полей · ${totalArea.toFixed(1)} га общая площадь`}
+          </p>
         </div>
         <Button icon="add" onClick={() => setShowForm(!showForm)}>
           Добавить поле
@@ -114,14 +118,31 @@ const FieldsPage: React.FC = () => {
         </Card>
       )}
 
-      <div className={styles.fieldsGrid}>
-        {fields.map(field => (
-          <FieldCard key={field.id} field={field}
-            onView={() => navigate(`/forecast?fieldId=${field.id}`)}
-            onDelete={() => dispatch(deleteField(field.id))}
-          />
-        ))}
-      </div>
+      {fields.length === 0 && !showForm ? (
+        <Card className={styles.emptyCard}>
+          <div className={styles.emptyState}>
+            <div className={styles.emptyIconWrap}>
+              <span className="material-icons-round">agriculture</span>
+            </div>
+            <h2 className={styles.emptyTitle}>У вас пока нет полей</h2>
+            <p className={styles.emptyText}>
+              Создайте первое поле с площадью и координатами — откроются прогноз урожайности, рекомендации по поливу и спутниковая аналитика.
+            </p>
+            <Button icon="add" onClick={() => setShowForm(true)}>
+              Добавить поле
+            </Button>
+          </div>
+        </Card>
+      ) : (
+        <div className={styles.fieldsGrid}>
+          {fields.map(field => (
+            <FieldCard key={field.id} field={field}
+              onView={() => navigate(`/forecast?fieldId=${field.id}`)}
+              onDelete={() => dispatch(deleteField(field.id))}
+            />
+          ))}
+        </div>
+      )}
     </div>
   )
 }

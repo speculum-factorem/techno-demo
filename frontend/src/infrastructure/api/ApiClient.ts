@@ -17,7 +17,7 @@ const requestPath = (config: { baseURL?: string; url?: string }) => {
 /** Не вешать Bearer на публичные эндпоинты — меньше шансов странного поведения прокси/фильтров. */
 const isPublicAuthRequest = (config: { baseURL?: string; url?: string }) => {
   const p = requestPath(config)
-  return /\/auth\/(register|login|forgot-password|reset-password|verify-email|verify-email-code)(\?|$)/.test(p)
+  return /\/auth\/(register|login(\/verify-code|\/resend-code)?|forgot-password|reset-password|verify-email|verify-email-code)(\?|$|\/|$)/.test(p)
 }
 
 apiClient.interceptors.request.use((config) => {

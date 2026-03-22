@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAppDispatch, useAppSelector } from '@application/store/hooks'
 import { fetchFields } from '@application/store/slices/fieldsSlice'
 import { fieldApi } from '@infrastructure/api/FieldApi'
@@ -22,6 +23,7 @@ const todayYmd = () => new Date().toISOString().slice(0, 10)
 
 const FieldInsightsPage: React.FC = () => {
   const dispatch = useAppDispatch()
+  const navigate = useNavigate()
   const { items: fields, loading: fieldsLoading } = useAppSelector(s => s.fields)
   const [fieldId, setFieldId] = useState('')
   const [loading, setLoading] = useState(false)
@@ -241,6 +243,33 @@ const FieldInsightsPage: React.FC = () => {
   )
 
   if (fieldsLoading && !fields.length) return <Loader text="Загрузка полей..." fullPage />
+
+  if (!fields.length) {
+    return (
+      <div className={styles.page}>
+        <div className={styles.header}>
+          <div>
+            <h1 className={styles.title}>Полевой цифровой паспорт и аналитика</h1>
+            <p className={styles.subtitle}>У вас пока нет полей</p>
+          </div>
+        </div>
+        <Card className={styles.emptyCard}>
+          <div className={styles.emptyState}>
+            <div className={styles.emptyIconWrap}>
+              <span className="material-icons-round">assignment</span>
+            </div>
+            <h2 className={styles.emptyTitle}>У вас пока нет полей</h2>
+            <p className={styles.emptyText}>
+              Сначала создайте поле — затем здесь появятся паспорт операций, сезоны и финансовая сводка.
+            </p>
+            <Button icon="grass" onClick={() => navigate('/app/fields')}>
+              Перейти к полям
+            </Button>
+          </div>
+        </Card>
+      </div>
+    )
+  }
 
   return (
     <div className={styles.page}>
