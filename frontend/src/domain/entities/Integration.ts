@@ -14,3 +14,22 @@ export interface Integration {
   features: string[]
   setupUrl?: string
 }
+
+export type ConnectorProtocol = 'http_poll' | 'webhook' | 'mqtt' | 'modbus_tcp'
+export type ConnectorStatus = 'connected' | 'disconnected' | 'error'
+
+export interface SensorConnector {
+  id: string
+  name: string
+  protocol: ConnectorProtocol
+  fieldId: string
+  fieldName: string
+  deviceName: string
+  config: Record<string, any>
+  status: ConnectorStatus
+  lastDataAt?: string
+  lastError?: string
+  recordsIngested: number
+  createdAt: string
+  webhookUrl?: string
+}

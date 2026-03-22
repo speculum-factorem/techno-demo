@@ -63,6 +63,62 @@
 .formGroup { display: flex; flex-direction: column; gap: 5px; label { font-size: 0.8rem; font-weight: 600; color: #5f6368; } }
 .select { padding: 9px 12px; border: 1.5px solid #e8eaed; border-radius: 8px; font-size: 0.88rem; color: #202124; background: #fff; outline: none; cursor: pointer; &:focus { border-color: #1a73e8; } }
 .infoMsg { display: flex; align-items: center; gap: 8px; padding: 10px 14px; background: #e8f0fe; border-radius: 8px; font-size: 0.83rem; color: #1a73e8; .material-icons-round { font-size: 16px; flex-shrink: 0; } }
-.modalActions { display: flex; gap: 10px; justify-content: flex-end; }
+.modalActions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
 .cancelBtn { padding: 9px 16px; background: #f1f3f4; border: none; border-radius: 8px; font-size: 0.88rem; cursor: pointer; color: #5f6368; &:hover { background: #e8eaed; } }
-.saveBtn { display: flex; align-items: center; gap: 6px; padding: 9px 16px; background: #1a73e8; color: #fff; border: none; border-radius: 8px; font-size: 0.88rem; font-weight: 600; cursor: pointer; &:hover { background: #1557b0; } }
+.saveBtn { display: flex; align-items: center; gap: 6px; padding: 9px 16px; background: #1a73e8; color: #fff; border: none; border-radius: 8px; font-size: 0.88rem; font-weight: 600; cursor: pointer; &:hover { background: #1557b0; } &:disabled { opacity: 0.6; cursor: not-allowed; } }
+
+// ─── Tabs ───────────────────────────────────────────────────────────────────
+.tabs { display: flex; gap: 4px; margin-bottom: 20px; background: #f1f3f4; border-radius: 12px; padding: 4px; width: fit-content; }
+.tab { display: flex; align-items: center; gap: 7px; padding: 9px 18px; background: transparent; border: none; border-radius: 9px; font-size: 0.88rem; font-weight: 600; color: #5f6368; cursor: pointer; transition: all .15s; .material-icons-round { font-size: 18px; } &:hover { background: rgba(255,255,255,.7); color: #202124; } }
+.activeTab { background: #fff !important; color: #1a73e8 !important; box-shadow: 0 1px 4px rgba(0,0,0,.1); .material-icons-round { color: #1a73e8; } }
+
+// ─── Sensor connector grid ───────────────────────────────────────────────────
+.connGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+.connCard { background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 1px 6px rgba(0,0,0,.07); display: flex; flex-direction: column; gap: 10px; transition: box-shadow .15s; &:hover { box-shadow: 0 4px 16px rgba(0,0,0,.12); } }
+.connCardHeader { display: flex; align-items: center; justify-content: space-between; }
+.connProto { display: flex; align-items: center; gap: 5px; padding: 4px 10px; border-radius: 20px; font-size: 0.75rem; font-weight: 700; }
+.connStatus { display: flex; align-items: center; gap: 4px; font-size: 0.78rem; font-weight: 600; }
+.connField { display: flex; align-items: center; gap: 5px; font-size: 0.82rem; color: #5f6368; .material-icons-round { color: #9aa0a6; } }
+.connDevice { color: #9aa0a6; }
+.connMeta { display: flex; align-items: center; gap: 12px; font-size: 0.76rem; color: #9aa0a6; span { display: flex; align-items: center; gap: 3px; } }
+.connError { font-size: 0.76rem; color: #c5221f; background: #fce8e6; border-radius: 6px; padding: 6px 10px; line-height: 1.4; display: flex; align-items: flex-start; gap: 5px; }
+.connActions { display: flex; gap: 8px; align-items: center; margin-top: 4px; }
+
+// ─── Webhook URL box ─────────────────────────────────────────────────────────
+.webhookUrlBox { display: flex; align-items: center; gap: 6px; background: #f8f9fa; border: 1.5px solid #e8eaed; border-radius: 8px; padding: 8px 10px; }
+.webhookUrlText { flex: 1; font-family: 'Roboto Mono', monospace; font-size: 0.72rem; color: #202124; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.copyBtn { background: none; border: none; cursor: pointer; color: #5f6368; padding: 2px; display: flex; align-items: center; border-radius: 4px; flex-shrink: 0; &:hover { background: #e8eaed; color: #1a73e8; } }
+
+// ─── Test result ─────────────────────────────────────────────────────────────
+.testResult { display: flex; align-items: flex-start; gap: 6px; font-size: 0.78rem; border-radius: 8px; padding: 8px 10px; line-height: 1.4; }
+.testSuccess { background: #e6f4ea; color: #1e7e34; }
+.testError { background: #fce8e6; color: #c5221f; }
+
+// ─── Config form ─────────────────────────────────────────────────────────────
+.configForm { display: flex; flex-direction: column; gap: 14px; }
+.configSection { background: #f8f9fa; border-radius: 10px; padding: 14px; display: flex; flex-direction: column; gap: 12px; border: 1px solid #e8eaed; }
+.configSectionTitle { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 700; color: #202124; .material-icons-round { font-size: 16px; color: #1a73e8; } }
+.configSectionHint { font-size: 0.72rem; color: #9aa0a6; font-weight: 400; margin-left: 4px; }
+
+// ─── Protocol selector badges ─────────────────────────────────────────────────
+.protoSelector { display: flex; gap: 8px; flex-wrap: wrap; }
+.protoBadge { display: flex; align-items: center; gap: 5px; padding: 7px 12px; border: 1.5px solid #e8eaed; border-radius: 8px; background: #fff; color: #5f6368; font-size: 0.8rem; font-weight: 600; cursor: pointer; transition: all .15s; .material-icons-round { font-size: 14px; } &:hover { border-color: #1a73e8; color: #1a73e8; } }
+.protoBadgeActive { border-color: transparent !important; }
+
+// ─── Field mapping grid ───────────────────────────────────────────────────────
+.fieldMapGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; @media (max-width: 480px) { grid-template-columns: 1fr; } }
+
+// ─── Form row (horizontal layout) ────────────────────────────────────────────
+.formRow { display: flex; gap: 10px; @media (max-width: 480px) { flex-direction: column; } }
+
+// ─── Input ───────────────────────────────────────────────────────────────────
+.input { padding: 9px 12px; border: 1.5px solid #e8eaed; border-radius: 8px; font-size: 0.88rem; color: #202124; background: #fff; outline: none; width: 100%; box-sizing: border-box; transition: border-color .15s; &:focus { border-color: #1a73e8; } &:read-only { background: #f1f3f4; color: #5f6368; cursor: default; } }
+
+// ─── Range input ──────────────────────────────────────────────────────────────
+.rangeInput { width: 100%; accent-color: #1a73e8; cursor: pointer; height: 4px; }
+
+// ─── Empty state ─────────────────────────────────────────────────────────────
+.emptyState { text-align: center; padding: 60px 24px; color: #5f6368; .material-icons-round { font-size: 56px; color: #e8eaed; display: block; margin-bottom: 16px; } h3 { font-size: 1.1rem; font-weight: 700; color: #202124; margin: 0 0 8px; } p { font-size: 0.9rem; margin: 0 0 20px; } }
+
+// ─── Danger button variant ────────────────────────────────────────────────────
+.dangerBtn { &:hover { background: #fce8e6 !important; color: #c5221f !important; } }

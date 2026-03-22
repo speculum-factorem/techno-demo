@@ -187,6 +187,22 @@ class OpsWorkTaskRecord(Base):
     updated_at = Column(String, nullable=False)
 
 
+class SensorConnectorRecord(Base):
+    __tablename__ = "sensor_connectors"
+    id = Column(String, primary_key=True)
+    name = Column(String, nullable=False)
+    protocol = Column(String, nullable=False)   # http_poll | webhook | mqtt | modbus_tcp
+    field_id = Column(String, nullable=False)
+    field_name = Column(String, nullable=False, default="")
+    device_name = Column(String, nullable=False, default="")
+    config_json = Column(Text, nullable=False, default="{}")
+    status = Column(String, nullable=False, default="disconnected")
+    last_data_at = Column(String, nullable=True)
+    last_error = Column(String, nullable=True)
+    records_ingested = Column(Integer, nullable=False, default=0)
+    created_at = Column(String, nullable=False)
+
+
 class OpsEquipmentRecord(Base):
     __tablename__ = "ops_equipment"
     id = Column(String, primary_key=True)
@@ -1169,6 +1185,8 @@ async def lifespan(app: FastAPI):
     yield_model.start_training_background()
     thread = threading.Thread(target=_run_kafka_consumer, daemon=True, name="kafka-consumer")
     thread.start()
+    _poller_thread = threading.Thread(target=_run_http_poller, daemon=True)
+    _poller_thread.start()
     _report_scheduler = BackgroundScheduler()
     _report_scheduler.add_job(
         _scheduled_reports_tick,
@@ -1277,6 +1295,25 @@ def disconnect_integration(integration_id: str):
         payload = _integration_row_to_api(row)
         iname = row.name
     _audit("integration_disconnect", f"Disconnected integration {integration_id}", "Integration", integration_id, iname)
+    return payload
+
+
+@app.put("/integrations/{integration_id}/config")
+def update_integration_config(integration_id: str, body: dict):
+    """Update integration config (host, port, credentials, etc.)."""
+    _seed_integrations_if_empty()
+    with SessionLocal() as db:
+        row = db.query(AppIntegrationRecord).filter(AppIntegrationRecord.id == integration_id).first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Интеграция не найдена")
+        existing = json.loads(row.config_json or "{}")
+        existing.update(body.get("config") or {})
+        row.config_json = json.dumps(existing, ensure_ascii=False)
+        if row.status != "connected":
+            row.status = "disconnected"
+        db.commit()
+        db.refresh(row)
+        payload = _integration_row_to_api(row)
     return payload
 
 
@@ -2338,6 +2375,386 @@ def ops_delete_equipment(device_id: str):
         db.commit()
     _audit("field_delete", f"Equipment deleted: {device_id}", "Device", device_id)
     return {"status": "deleted", "id": device_id}
+
+
+# ─── Sensor Connectors ──────────────────────────────────────────────────────
+
+def _connector_row_to_api(r) -> dict:
+    cfg = json.loads(r.config_json or "{}")
+    webhook_url = ""
+    if r.protocol == "webhook":
+        base = os.getenv("APP_PUBLIC_URL", "http://localhost:8000")
+        webhook_url = f"{base}/sensors/webhook/{r.id}"
+    return {
+        "id": r.id, "name": r.name, "protocol": r.protocol,
+        "fieldId": r.field_id, "fieldName": r.field_name,
+        "deviceName": r.device_name,
+        "config": cfg, "status": r.status,
+        "lastDataAt": r.last_data_at, "lastError": r.last_error,
+        "recordsIngested": r.records_ingested,
+        "createdAt": r.created_at,
+        "webhookUrl": webhook_url,
+    }
+
+
+def _poll_http_sensor(connector_id: str, url: str, auth_header: str, field_map: dict, field_id: str, field_name: str, device_name: str) -> dict:
+    """Actually fetch the HTTP endpoint and parse sensor data. Returns telemetry dict or raises."""
+    headers = {}
+    if auth_header and auth_header.strip():
+        if ":" in auth_header:
+            k, v = auth_header.split(":", 1)
+            headers[k.strip()] = v.strip()
+        else:
+            headers["Authorization"] = auth_header.strip()
+    resp = requests.get(url, headers=headers, timeout=15)
+    resp.raise_for_status()
+    try:
+        body = resp.json()
+    except Exception:
+        raise ValueError(f"Response is not valid JSON: {resp.text[:200]}")
+
+    def extract(obj, path):
+        for key in path.split("."):
+            if isinstance(obj, dict):
+                obj = obj.get(key)
+            else:
+                return None
+        try:
+            return float(obj) if obj is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    tel = {
+        "lat": extract(body, field_map.get("lat", "lat")) or 0.0,
+        "lng": extract(body, field_map.get("lng", "lng")) or 0.0,
+    }
+    for key in ("temperature", "humidity", "soilMoisture", "precipitation", "windSpeed", "solarRadiation"):
+        path = field_map.get(key, "")
+        if path:
+            v = extract(body, path)
+            if v is not None:
+                tel[key] = v
+
+    payload = IoTTelemetryInput(
+        fieldId=field_id, fieldName=field_name, deviceId=connector_id,
+        temperature=tel.get("temperature"), humidity=tel.get("humidity"),
+        soilMoisture=tel.get("soilMoisture"), precipitation=tel.get("precipitation"),
+        windSpeed=tel.get("windSpeed"), solarRadiation=tel.get("solarRadiation"),
+        lat=tel.get("lat"), lng=tel.get("lng"),
+    )
+    ping = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    with SessionLocal() as db:
+        rec = IoTTelemetryRecord(
+            field_id=payload.fieldId, field_name=payload.fieldName, device_id=connector_id,
+            temperature=payload.temperature, humidity=payload.humidity, soil_moisture=payload.soilMoisture,
+            precipitation=payload.precipitation, wind_speed=payload.windSpeed, solar_radiation=payload.solarRadiation,
+            lat=payload.lat, lng=payload.lng,
+        )
+        db.add(rec)
+        db.flush()
+        if rec.created_at:
+            ping = rec.created_at.isoformat() + "Z"
+        _upsert_equipment_from_telemetry_payload(db, payload, ping)
+        db.commit()
+    if payload.soilMoisture is not None:
+        _update_field_moisture(payload.fieldId, payload.soilMoisture)
+    return tel
+
+
+def _run_http_poller():
+    """Background thread: poll all http_poll connectors on their interval."""
+    import time
+    logger.info("HTTP sensor poller started")
+    last_poll: dict = {}
+    while True:
+        try:
+            with SessionLocal() as db:
+                rows = db.query(SensorConnectorRecord).filter(
+                    SensorConnectorRecord.protocol == "http_poll",
+                    SensorConnectorRecord.status.in_(["connected", "error"]),
+                ).all()
+            for row in rows:
+                cfg = json.loads(row.config_json or "{}")
+                interval = int(cfg.get("interval_seconds") or 60)
+                now = time.time()
+                if now - last_poll.get(row.id, 0) < interval:
+                    continue
+                last_poll[row.id] = now
+                try:
+                    _poll_http_sensor(
+                        row.id, cfg.get("url", ""), cfg.get("auth_header", ""),
+                        cfg.get("field_map") or {}, row.field_id, row.field_name, row.device_name,
+                    )
+                    with SessionLocal() as db:
+                        r = db.query(SensorConnectorRecord).filter(SensorConnectorRecord.id == row.id).first()
+                        if r:
+                            r.status = "connected"
+                            r.last_data_at = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+                            r.records_ingested = (r.records_ingested or 0) + 1
+                            r.last_error = None
+                            db.commit()
+                except Exception as exc:
+                    logger.warning("HTTP poll failed for connector %s: %s", row.id, exc)
+                    with SessionLocal() as db:
+                        r = db.query(SensorConnectorRecord).filter(SensorConnectorRecord.id == row.id).first()
+                        if r:
+                            r.status = "error"
+                            r.last_error = str(exc)[:500]
+                            db.commit()
+        except Exception as e:
+            logger.warning("Poller iteration error: %s", e)
+        time.sleep(10)
+
+
+@app.get("/sensors/connectors")
+def list_sensor_connectors():
+    with SessionLocal() as db:
+        rows = db.query(SensorConnectorRecord).order_by(SensorConnectorRecord.created_at.desc()).all()
+        return [_connector_row_to_api(r) for r in rows]
+
+
+@app.post("/sensors/connectors")
+def create_sensor_connector(body: dict):
+    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    conn_id = body.get("id") or f"sc_{uuid4().hex[:12]}"
+    protocol = str(body.get("protocol", "webhook"))
+    cfg = body.get("config") or {}
+    with SessionLocal() as db:
+        row = SensorConnectorRecord(
+            id=conn_id, name=str(body.get("name", "Новый коннектор"))[:200],
+            protocol=protocol, field_id=str(body.get("fieldId", "")),
+            field_name=str(body.get("fieldName", ""))[:200],
+            device_name=str(body.get("deviceName", ""))[:200],
+            config_json=json.dumps(cfg, ensure_ascii=False),
+            status="disconnected", created_at=now,
+        )
+        db.add(row)
+        db.commit()
+        db.refresh(row)
+        result = _connector_row_to_api(row)
+    _audit("field_create", f"Sensor connector created: {conn_id} protocol={protocol}", "SensorConnector", conn_id, body.get("name", ""))
+    return result
+
+
+@app.put("/sensors/connectors/{connector_id}")
+def update_sensor_connector(connector_id: str, body: dict):
+    with SessionLocal() as db:
+        row = db.query(SensorConnectorRecord).filter(SensorConnectorRecord.id == connector_id).first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Connector not found")
+        if "name" in body:
+            row.name = str(body["name"])[:200]
+        if "protocol" in body:
+            row.protocol = str(body["protocol"])
+        if "fieldId" in body:
+            row.field_id = str(body["fieldId"])
+        if "fieldName" in body:
+            row.field_name = str(body["fieldName"])[:200]
+        if "deviceName" in body:
+            row.device_name = str(body["deviceName"])[:200]
+        if "config" in body:
+            row.config_json = json.dumps(body["config"], ensure_ascii=False)
+        db.commit()
+        db.refresh(row)
+        result = _connector_row_to_api(row)
+    _audit("field_update", f"Sensor connector updated: {connector_id}", "SensorConnector", connector_id)
+    return result
+
+
+@app.delete("/sensors/connectors/{connector_id}")
+def delete_sensor_connector(connector_id: str):
+    with SessionLocal() as db:
+        row = db.query(SensorConnectorRecord).filter(SensorConnectorRecord.id == connector_id).first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Connector not found")
+        db.delete(row)
+        db.commit()
+    _audit("field_delete", f"Sensor connector deleted: {connector_id}", "SensorConnector", connector_id)
+    return {"status": "deleted", "id": connector_id}
+
+
+@app.post("/sensors/connectors/{connector_id}/test")
+def test_sensor_connector(connector_id: str):
+    """Test the sensor connection. For http_poll: actually fetch URL. For webhook/mqtt: validate config."""
+    with SessionLocal() as db:
+        row = db.query(SensorConnectorRecord).filter(SensorConnectorRecord.id == connector_id).first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Connector not found")
+        cfg = json.loads(row.config_json or "{}")
+        protocol = row.protocol
+
+    now = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+
+    if protocol == "http_poll":
+        url = (cfg.get("url") or "").strip()
+        if not url:
+            raise HTTPException(status_code=400, detail="URL не задан. Укажите URL HTTP-эндпоинта датчика.")
+        try:
+            tel = _poll_http_sensor(
+                connector_id, url, cfg.get("auth_header", ""),
+                cfg.get("field_map") or {}, row.field_id, row.field_name, row.device_name,
+            )
+            with SessionLocal() as db:
+                r = db.query(SensorConnectorRecord).filter(SensorConnectorRecord.id == connector_id).first()
+                if r:
+                    r.status = "connected"
+                    r.last_data_at = now
+                    r.records_ingested = (r.records_ingested or 0) + 1
+                    r.last_error = None
+                    db.commit()
+                    result = _connector_row_to_api(r)
+            return {"status": "connected", "message": f"Данные получены: {tel}", "connector": result}
+        except Exception as e:
+            with SessionLocal() as db:
+                r = db.query(SensorConnectorRecord).filter(SensorConnectorRecord.id == connector_id).first()
+                if r:
+                    r.status = "error"
+                    r.last_error = str(e)[:500]
+                    db.commit()
+                    result = _connector_row_to_api(r)
+            raise HTTPException(status_code=400, detail=f"Ошибка опроса датчика: {e}")
+
+    elif protocol == "webhook":
+        # Webhook is always "ready" — just mark connected
+        with SessionLocal() as db:
+            r = db.query(SensorConnectorRecord).filter(SensorConnectorRecord.id == connector_id).first()
+            if r:
+                r.status = "connected"
+                r.last_error = None
+                db.commit()
+                result = _connector_row_to_api(r)
+        return {"status": "connected", "message": "Webhook endpoint активен. Отправьте POST-запрос на URL ниже.", "connector": result}
+
+    elif protocol == "mqtt":
+        broker = (cfg.get("broker_host") or "").strip()
+        if not broker:
+            raise HTTPException(status_code=400, detail="Укажите адрес MQTT-брокера.")
+        # Try TCP connection to broker port
+        import socket
+        port = int(cfg.get("broker_port") or 1883)
+        try:
+            with socket.create_connection((broker, port), timeout=8):
+                pass
+            with SessionLocal() as db:
+                r = db.query(SensorConnectorRecord).filter(SensorConnectorRecord.id == connector_id).first()
+                if r:
+                    r.status = "connected"
+                    r.last_error = None
+                    db.commit()
+                    result = _connector_row_to_api(r)
+            return {"status": "connected", "message": f"MQTT-брокер {broker}:{port} доступен.", "connector": result}
+        except OSError as e:
+            with SessionLocal() as db:
+                r = db.query(SensorConnectorRecord).filter(SensorConnectorRecord.id == connector_id).first()
+                if r:
+                    r.status = "error"
+                    r.last_error = str(e)[:300]
+                    db.commit()
+                    result = _connector_row_to_api(r)
+            raise HTTPException(status_code=400, detail=f"MQTT-брокер недоступен {broker}:{port}: {e}")
+
+    elif protocol == "modbus_tcp":
+        host = (cfg.get("host") or "").strip()
+        if not host:
+            raise HTTPException(status_code=400, detail="Укажите IP-адрес Modbus TCP устройства.")
+        import socket
+        port = int(cfg.get("port") or 502)
+        try:
+            with socket.create_connection((host, port), timeout=8):
+                pass
+            with SessionLocal() as db:
+                r = db.query(SensorConnectorRecord).filter(SensorConnectorRecord.id == connector_id).first()
+                if r:
+                    r.status = "connected"
+                    r.last_error = None
+                    db.commit()
+                    result = _connector_row_to_api(r)
+            return {"status": "connected", "message": f"Modbus TCP {host}:{port} — TCP-соединение установлено.", "connector": result}
+        except OSError as e:
+            with SessionLocal() as db:
+                r = db.query(SensorConnectorRecord).filter(SensorConnectorRecord.id == connector_id).first()
+                if r:
+                    r.status = "error"
+                    r.last_error = str(e)[:300]
+                    db.commit()
+                    result = _connector_row_to_api(r)
+            raise HTTPException(status_code=400, detail=f"Modbus TCP недоступен {host}:{port}: {e}")
+
+    raise HTTPException(status_code=400, detail=f"Неизвестный протокол: {protocol}")
+
+
+@app.post("/sensors/webhook/{connector_id}")
+def receive_webhook(connector_id: str, body: dict):
+    """Sensor pushes data here. Parse according to connector field_map and ingest telemetry."""
+    with SessionLocal() as db:
+        row = db.query(SensorConnectorRecord).filter(SensorConnectorRecord.id == connector_id).first()
+        if not row:
+            raise HTTPException(status_code=404, detail="Connector not found")
+        cfg = json.loads(row.config_json or "{}")
+        field_id = row.field_id
+        field_name = row.field_name
+        device_name = row.device_name
+
+    field_map = cfg.get("field_map") or {}
+
+    def extract(obj, path):
+        if not path:
+            return None
+        for key in str(path).split("."):
+            if isinstance(obj, dict):
+                obj = obj.get(key)
+            else:
+                return None
+        try:
+            return float(obj) if obj is not None else None
+        except (TypeError, ValueError):
+            return None
+
+    def get_field(key):
+        path = field_map.get(key, "")
+        v = extract(body, path) if path else None
+        if v is None:
+            v = extract(body, key)
+        return v
+
+    payload = IoTTelemetryInput(
+        fieldId=field_id, fieldName=field_name, deviceId=connector_id,
+        temperature=get_field("temperature"),
+        humidity=get_field("humidity"),
+        soilMoisture=get_field("soilMoisture"),
+        precipitation=get_field("precipitation"),
+        windSpeed=get_field("windSpeed"),
+        solarRadiation=get_field("solarRadiation"),
+        lat=get_field("lat"), lng=get_field("lng"),
+    )
+    ping = datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+    with SessionLocal() as db:
+        rec = IoTTelemetryRecord(
+            field_id=payload.fieldId, field_name=payload.fieldName, device_id=connector_id,
+            temperature=payload.temperature, humidity=payload.humidity, soil_moisture=payload.soilMoisture,
+            precipitation=payload.precipitation, wind_speed=payload.windSpeed, solar_radiation=payload.solarRadiation,
+            lat=payload.lat, lng=payload.lng,
+        )
+        db.add(rec)
+        db.flush()
+        if rec.created_at:
+            ping = rec.created_at.isoformat() + "Z"
+        _upsert_equipment_from_telemetry_payload(db, payload, ping)
+        db.commit()
+
+    if payload.soilMoisture is not None:
+        _update_field_moisture(payload.fieldId, payload.soilMoisture)
+
+    with SessionLocal() as db:
+        r = db.query(SensorConnectorRecord).filter(SensorConnectorRecord.id == connector_id).first()
+        if r:
+            r.status = "connected"
+            r.last_data_at = ping
+            r.records_ingested = (r.records_ingested or 0) + 1
+            r.last_error = None
+            db.commit()
+
+    return {"status": "accepted", "fieldId": field_id}
 
 
 @app.get("/ops/audit-log")
