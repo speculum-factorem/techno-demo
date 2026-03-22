@@ -192,27 +192,36 @@
 .statValue { font-size: $font-size-lg; font-weight: 700; color: $text-primary; line-height: 1; }
 .statLabel { font-size: $font-size-xs; color: $text-tertiary; margin-top: 2px; }
 
-// ─── MOCK DASHBOARD ───────────────────────────────────────────
+// ─── HERO WIREFRAME (no fake KPI numbers) ────────────────────
 .heroVisual {
+  @include flex(column, flex-start, stretch, 10px);
   @media (max-width: 960px) { display: none; }
 }
 
-.mockDashboard {
+.wireframeDisclaimer {
+  font-size: $font-size-xs;
+  color: $text-secondary;
+  line-height: 1.45;
+  margin: 0;
+  padding: 0 4px;
+}
+
+.wireframe {
   background: #fff;
   border-radius: 16px;
-  box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+  box-shadow: 0 20px 60px rgba(0,0,0,0.12);
   overflow: hidden;
   border: 1px solid $outline;
 }
 
-.mockHeader {
+.wireframeTopBar {
   @include flex(row, center, flex-start, 10px);
   background: $surface-variant;
   padding: 12px 16px;
   border-bottom: 1px solid $outline;
 }
 
-.mockDots {
+.wireframeDots {
   @include flex(row, center, flex-start, 5px);
   span {
     width: 10px; height: 10px;
@@ -223,64 +232,63 @@
   }
 }
 
-.mockTitle { font-size: $font-size-xs; color: $text-tertiary; }
+.wireframeTitle { font-size: $font-size-xs; color: $text-tertiary; }
 
-.mockBody { padding: 16px; @include flex(column, stretch, flex-start, 12px); }
+.wireframeBody {
+  padding: 16px;
+  @include flex(column, stretch, flex-start, 14px);
+}
 
-.mockCards {
+.wireframeGrid {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 8px;
+  gap: 10px;
 }
 
-.mockCard {
-  @include flex(row, center, flex-start, 8px);
-  border-left: 3px solid;
-  padding: 8px 10px;
+.wireframeCard {
+  @include flex(column, flex-start, flex-start, 4px);
+  padding: 12px;
   background: $surface-variant;
   border-radius: $radius-md;
+  border: 1px dashed rgba(0, 0, 0, 0.12);
+  .material-icons-round { font-size: 22px !important; color: $text-tertiary; }
 }
 
-.mockCardVal { font-size: $font-size-base; font-weight: 700; color: $text-primary; line-height: 1; }
-.mockCardLbl { font-size: 10px; color: $text-tertiary; }
+.wireframeCardLabel {
+  font-size: $font-size-sm;
+  font-weight: 600;
+  color: $text-primary;
+}
 
-.mockChart {
+.wireframeCardHint {
+  font-size: 10px;
+  color: $text-tertiary;
+}
+
+.wireframeChart {
   background: $surface-variant;
   border-radius: $radius-md;
   padding: 12px;
+  border: 1px dashed rgba(0, 0, 0, 0.1);
 }
 
-.mockChartLabel { font-size: 10px; color: $text-tertiary; margin-bottom: 8px; }
-
-.mockBars {
-  @include flex(row, flex-end, space-around);
-  height: 60px;
-  gap: 8px;
+.wireframeChartLabel {
+  font-size: $font-size-xs;
+  color: $text-tertiary;
+  margin-bottom: 10px;
+  display: block;
 }
 
-.mockBarGroup {
-  @include flex(column, center, center, 4px);
-  flex: 1;
-}
-
-.mockBar {
-  width: 100%;
-  background: linear-gradient(180deg, $primary 0%, lighten($primary, 15%) 100%);
-  border-radius: 3px 3px 0 0;
-  transition: height 0.4s;
-}
-
-.mockBarLabel { font-size: 10px; color: $text-tertiary; }
-
-.mockAlerts { @include flex(column, stretch, flex-start, 4px); }
-
-.mockAlert {
-  @include flex(row, center, flex-start, 6px);
-  border: 1px solid;
-  border-radius: $radius-md;
-  padding: 6px 10px;
-  font-size: 11px;
-  color: $text-secondary;
+.wireframeChartPlaceholder {
+  height: 72px;
+  border-radius: $radius-sm;
+  background: repeating-linear-gradient(
+    -45deg,
+    rgba(26, 115, 232, 0.06),
+    rgba(26, 115, 232, 0.06) 8px,
+    transparent 8px,
+    transparent 16px
+  );
 }
 
 // ─── SECTIONS COMMON ─────────────────────────────────────────
@@ -513,7 +521,17 @@
   background: rgba(255,255,255,0.1);
   border-radius: $radius-full;
   padding: 8px 18px;
+  line-height: 1.5;
+  max-width: 520px;
+  margin-left: auto;
+  margin-right: auto;
   strong { color: rgba(255,255,255,0.9); }
+  code {
+    font-size: 0.9em;
+    background: rgba(0, 0, 0, 0.2);
+    padding: 2px 6px;
+    border-radius: 4px;
+  }
 }
 
 // ─── FOOTER ───────────────────────────────────────────────────
