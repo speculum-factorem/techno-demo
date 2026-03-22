@@ -43,7 +43,7 @@ public class User {
     private boolean emailVerified = false;
 
     /** Учётная запись активна (RBAC: блокировка без удаления) */
-    @Column(name = "active", nullable = false)
+    @Column(name = "active", nullable = false, columnDefinition = "boolean NOT NULL DEFAULT true")
     @Builder.Default
     private boolean active = true;
 

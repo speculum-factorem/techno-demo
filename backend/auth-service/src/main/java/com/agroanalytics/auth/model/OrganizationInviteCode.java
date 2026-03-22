@@ -34,7 +34,7 @@ public class OrganizationInviteCode {
      * Если true — после успешной регистрации код помечается использованным (индивидуальные приглашения).
      * Демо-код организации обычно с false + глобальный {@code invite-single-use:false}.
      */
-    @Column(name = "consumable_once", nullable = false)
+    @Column(name = "consumable_once", nullable = false, columnDefinition = "boolean NOT NULL DEFAULT false")
     @Builder.Default
     private boolean consumableOnce = false;
 
