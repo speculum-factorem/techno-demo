@@ -112,7 +112,7 @@ const LoginPage: React.FC = () => {
           <div className={styles.formHeader}>
             <span className={`material-icons-round ${styles.formIcon}`}>eco</span>
             <h1 className={styles.formTitle}>Вход в систему</h1>
-            <p className={styles.formSub}>Центр-Инвест · Предиктивная аналитика</p>
+            <p className={styles.formSub}>Предиктивная аналитика полей</p>
           </div>
 
           {error && (

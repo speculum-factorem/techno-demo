@@ -182,7 +182,7 @@ public class EmailNotificationService {
             "  border-top:1px solid #e8eaed;'>" +
             "<p style='margin:0 0 4px;font-size:12px;color:#9aa0a6;'>" +
             "Это автоматическое уведомление — отвечать не нужно.</p>" +
-            "<p style='margin:0;font-size:12px;color:#9aa0a6;'>© 2025 АгроАналитика · Центр-Инвест</p>" +
+            "<p style='margin:0;font-size:12px;color:#9aa0a6;'>© 2025 АгроАналитика</p>" +
             "</td></tr>" +
 
             "</table></td></tr></table>" +

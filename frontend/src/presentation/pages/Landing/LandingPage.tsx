@@ -55,7 +55,7 @@ const LandingPage: React.FC = () => {
           <div className={styles.brand}>
             <span className={`material-icons-round ${styles.brandIcon}`}>eco</span>
             <span className={styles.brandName}>АгроАналитика</span>
-            <span className={styles.brandSub}>Центр-Инвест</span>
+            <span className={styles.brandSub}>Аналитика полей</span>
           </div>
           <div className={styles.navLinks}>
             <a href="#features" className={styles.navLink}>Возможности</a>
@@ -346,7 +346,7 @@ const LandingPage: React.FC = () => {
             <span className={`material-icons-round ${styles.footerIcon}`}>eco</span>
             <div>
               <div className={styles.footerName}>АгроАналитика</div>
-              <div className={styles.footerSub}>Разработано в рамках хакатона · Центр-Инвест 2025</div>
+              <div className={styles.footerSub}>Разработано в рамках хакатона · 2025</div>
             </div>
           </div>
           <div className={styles.footerLinks}>

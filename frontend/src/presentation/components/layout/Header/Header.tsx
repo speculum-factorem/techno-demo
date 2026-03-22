@@ -30,7 +30,7 @@ const Header: React.FC<HeaderProps> = ({ onMenuClick }) => {
           <span className={`material-icons-round ${styles.logoIcon}`}>eco</span>
           <div className={styles.logoText}>
             <span className={styles.logoTitle}>АгроАналитика</span>
-            <span className={styles.logoSub}>Центр-Инвест</span>
+            <span className={styles.logoSub}>Аналитика полей</span>
           </div>
         </Link>
       </div>

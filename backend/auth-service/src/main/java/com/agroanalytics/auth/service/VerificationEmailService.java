@@ -105,7 +105,7 @@ public class VerificationEmailService {
             "<div style='font-size:22px;font-weight:700;color:#ffffff;letter-spacing:-0.3px;'>" +
             "АгроАналитика</div>" +
             "<div style='font-size:13px;color:rgba(255,255,255,0.75);margin-top:4px;'>" +
-            "Предиктивная аналитика полей · Центр-Инвест</div>" +
+            "Предиктивная аналитика полей</div>" +
             "</td></tr>" +
 
             // Body
@@ -119,7 +119,7 @@ public class VerificationEmailService {
             "<p style='margin:0 0 6px;font-size:12px;color:#9aa0a6;'>" +
             "Это автоматическое письмо — отвечать не нужно.</p>" +
             "<p style='margin:0;font-size:12px;color:#9aa0a6;'>" +
-            "© 2025 АгроАналитика · Центр-Инвест</p>" +
+            "© 2025 АгроАналитика</p>" +
             "</td></tr>" +
 
             "</table>" + // /card
