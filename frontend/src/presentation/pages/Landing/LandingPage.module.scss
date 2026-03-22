@@ -98,12 +98,13 @@
   min-height: calc(100vh - 64px);
   background: linear-gradient(135deg, #f0f7ff 0%, #f0faf4 50%, #fffbf0 100%);
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 48px;
+  /* Правая колонка с макетом «Приложение · обзор» чуть шире — визуально спокойнее */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.28fr);
+  gap: 40px 56px;
   align-items: center;
-  max-width: 1200px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 60px 24px;
+  padding: 60px 28px;
   @media (max-width: 960px) { grid-template-columns: 1fr; }
 }
 
@@ -280,7 +281,7 @@
 }
 
 .wireframeChartPlaceholder {
-  height: 72px;
+  height: 88px;
   border-radius: $radius-sm;
   background: repeating-linear-gradient(
     -45deg,
