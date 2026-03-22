@@ -504,7 +504,7 @@ public class AuthService {
         String code = generateSixDigitCode();
         LocalDateTime now = LocalDateTime.now();
         LoginVerificationCode challenge = LoginVerificationCode.builder()
-                .requestId(UUID.randomUUID().toString() + UUID.randomUUID())
+                .requestId(UUID.randomUUID().toString())
                 .code(code)
                 .user(user)
                 .expiresAt(now.plusMinutes(loginCodeTtlMinutes))
